@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wqb-agent-lab.local/schemas/memory_event.schema.json",
+  "title": "Memory Event",
+  "type": "object",
+  "required": ["memory_id", "event_type", "layer", "source_artifact", "evidence_score"],
+  "additionalProperties": false,
+  "properties": {
+    "memory_id": { "type": "string" },
+    "event_type": {
+      "type": "string",
+      "enum": ["ingest", "retrieve", "promote", "decay", "forget", "quarantine"]
+    },
+    "layer": {
+      "type": "string",
+      "enum": ["short_term", "long_term", "graph", "quarantine"]
+    },
+    "source_artifact": { "type": "string" },
+    "evidence_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "dependencies": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "created_at": { "type": "string" }
+  }
+}

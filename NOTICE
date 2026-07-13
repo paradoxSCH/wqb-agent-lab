@@ -1,0 +1,21 @@
+WQB Agent Lab
+Copyright 2026 paradoxSCH and WQB Agent Lab contributors
+
+Software in this distribution is licensed under the Apache License, Version 2.0.
+
+Documentation prose and visual assets, including README.md, docs/**, and
+docs/assets/**, are licensed under the Creative Commons Attribution 4.0
+International License (CC BY 4.0), except where otherwise noted. Code snippets
+in documentation are licensed under Apache-2.0 unless explicitly marked.
+
+WorldQuant, WorldQuant BRAIN, and related names and marks belong to their
+respective owners. WQB Agent Lab is independent and is not affiliated with,
+endorsed by, or sponsored by WorldQuant.
+
+Third-party software and content remain under their respective licenses.
+The wqb Python package is a third-party community dependency and is not an
+official WorldQuant client.
+
+The packaged operator catalog under src/wqb_agent_lab/platform/resources/ is
+maintainer-reviewed factual interoperability metadata. It does not reproduce
+WorldQuant documentation prose and does not imply platform endorsement.

@@ -1,0 +1,90 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wqb-agent-lab"
+version = "0.1.0"
+description = "Local-first, agent-native WorldQuant BRAIN research harness."
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "LICENSES/*.txt"]
+authors = [
+  { name = "paradoxSCH" }
+]
+keywords = [
+  "worldquant",
+  "worldquant-brain",
+  "alpha-research",
+  "agent",
+  "mcp",
+  "quant"
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Financial and Insurance Industry",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Information Analysis"
+]
+
+dependencies = [
+  "pandas>=2.0",
+  "python-dotenv>=1.0.0",
+  "requests>=2.31",
+  "wqb==0.2.5"
+]
+
+[project.urls]
+Homepage = "https://github.com/paradoxSCH/wqb-agent-lab"
+Repository = "https://github.com/paradoxSCH/wqb-agent-lab"
+Issues = "https://github.com/paradoxSCH/wqb-agent-lab/issues"
+
+[project.optional-dependencies]
+mcp = [
+  "mcp>=1.0.0"
+]
+dev = [
+  "build>=1.2",
+  "pip-audit>=2.7",
+  "pytest>=8.0",
+  "ruff>=0.5"
+]
+
+[project.scripts]
+wqb-engine = "src.wqb_engine.cli:main"
+release-audit = "scripts.checks.release_audit:main"
+
+[tool.setuptools]
+include-package-data = true
+py-modules = ["run_scan"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "scripts*", "schemas"]
+
+[tool.setuptools.package-data]
+"schemas" = ["*.json"]
+"src.wqb_agent_lab.platform" = ["resources/*.json"]
+
+[tool.setuptools.data-files]
+"share/wqb-agent-lab" = ["CITATION.cff"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+target-version = "py311"
+extend-exclude = [
+  ".local",
+  "build",
+  "dist",
+  "node_modules",
+]
+
+[tool.uv]
+required-version = ">=0.8.0"

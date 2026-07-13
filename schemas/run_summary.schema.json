@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wqb-agent-lab.local/schemas/run_summary.schema.json",
+  "title": "Run Summary",
+  "type": "object",
+  "required": ["run_id", "mode", "budget", "counters", "artifacts"],
+  "additionalProperties": false,
+  "properties": {
+    "run_id": { "type": "string" },
+    "mode": {
+      "type": "string",
+      "enum": ["dry_run", "live"]
+    },
+    "budget": {
+      "type": "object",
+      "required": ["planned", "used", "remaining"],
+      "additionalProperties": false,
+      "properties": {
+        "planned": { "type": "integer", "minimum": 0 },
+        "used": { "type": "integer", "minimum": 0 },
+        "remaining": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "counters": {
+      "type": "object",
+      "additionalProperties": { "type": "integer", "minimum": 0 },
+      "properties": {}
+    },
+    "artifacts": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "started_at": { "type": "string" },
+    "completed_at": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "null" }
+      ]
+    }
+  }
+}

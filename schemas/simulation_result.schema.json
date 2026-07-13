@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wqb-agent-lab.local/schemas/simulation_result.schema.json",
+  "title": "Simulation Result",
+  "type": "object",
+  "required": ["candidate_id", "status", "metrics", "checks"],
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": { "type": "string" },
+    "alpha_id": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["pending", "running", "pass", "fail", "error"]
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": {
+        "anyOf": [
+          { "type": "number" },
+          { "type": "integer" },
+          { "type": "null" }
+        ]
+      },
+      "properties": {
+        "sharpe": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "fitness": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "turnover": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "returns": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "drawdown": { "anyOf": [{ "type": "number" }, { "type": "null" }] },
+        "margin": { "anyOf": [{ "type": "number" }, { "type": "null" }] }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": true,
+        "properties": {
+          "name": { "type": "string" },
+          "result": { "anyOf": [{ "type": "string" }, { "type": "null" }] },
+          "message": { "anyOf": [{ "type": "string" }, { "type": "null" }] }
+        }
+      }
+    }
+  }
+}

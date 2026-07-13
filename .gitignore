@@ -1,0 +1,61 @@
+# Environment
+.env
+.env.local
+.local/
+.local/logs/
+.local/data/runs/**
+.local/data/callbacks/**
+.local/data/memory/**
+.local/data/registry/**
+!.local/data/registry/.gitkeep
+.local/research/scans/**
+.local/research/workflows/**
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+dist/public-snapshot/
+build/
+*.egg
+.venv/
+.uv-cache/
+venv/
+env/
+
+# Node
+node_modules/
+packages/*/node_modules/
+packages/*/dist/
+
+# IDE
+.vscode/
+.idea/
+.claude/settings.local.json
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Runtime process state
+*.pid
+.dashboard.pid
+.workflow.pid
+.submission_worker.pid
+
+# Generated browser/test artifacts
+output/playwright/**
+.playwright-cli/
+
+# Local scratch outputs
+/run/
+
+# Generated research configurations and private historical artifacts
+worldquant_interview_defense.html

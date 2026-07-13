@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wqb-agent-lab.local/schemas/simulation_request.schema.json",
+  "title": "Simulation Request",
+  "type": "object",
+  "required": ["candidate_id", "expression", "settings"],
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": { "type": "string" },
+    "expression": { "type": "string" },
+    "settings": {
+      "type": "object",
+      "required": ["instrumentType", "region", "universe", "delay", "decay", "neutralization", "truncation"],
+      "additionalProperties": true,
+      "properties": {
+        "instrumentType": { "type": "string" },
+        "region": { "type": "string" },
+        "universe": { "type": "string" },
+        "delay": { "type": "integer", "minimum": 0 },
+        "decay": { "type": "integer", "minimum": 0 },
+        "neutralization": { "type": "string" },
+        "truncation": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "alpha_type": {
+      "type": "string",
+      "enum": ["REGULAR", "SUPER"]
+    }
+  }
+}
