@@ -1,0 +1,12 @@
+include README.md
+include LICENSE
+include NOTICE
+include CITATION.cff
+recursive-include LICENSES *.txt
+recursive-include schemas *.json
+recursive-include src/wqb_agent_lab/platform/resources *.json
+include docs/README.md
+recursive-include docs/user *.md
+recursive-include docs/architecture *.md
+recursive-include docs/maintainers *.md
+recursive-include docs/assets *.svg *.png

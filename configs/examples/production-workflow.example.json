@@ -1,0 +1,56 @@
+{
+  "workflow_name": "local-wqb-agent-research",
+  "daily_run_tag_prefix": "wqb-agent-research",
+  "capacity_estimate": {
+    "recommended_mode": "standard",
+    "max_scan_concurrency": 3
+  },
+  "llm_provider": {
+    "provider": "disabled"
+  },
+  "research_policy": {
+    "version": 1,
+    "budget": {
+      "daily_simulation_limit": 200,
+      "exploration_share_limit": 0.2,
+      "exploration_stages": [
+        "direction_probe"
+      ],
+      "stage_allocations": {
+        "direction_probe": 40,
+        "scale_winners": 100,
+        "holdout": 60
+      }
+    },
+    "behavioral_boundaries": {
+      "block_unclassified_candidates": true,
+      "require_kill_conditions": true,
+      "forbid_pure_price_volume": true,
+      "mechanisms": [
+        {
+          "mechanism_id": "reference_point_disposition_drift",
+          "enabled": true,
+          "allowed_proxy_fields": [
+            "anl*",
+            "fundamental_*"
+          ],
+          "kill_conditions": [
+            "SELF_CORRELATION",
+            "LOW_FITNESS"
+          ]
+        }
+      ]
+    }
+  },
+  "auto_submit_direct": false,
+  "autonomous_loop": {
+    "enabled": false,
+    "auto_submit": false,
+    "pause_on_guardrail": true
+  },
+  "paths": {
+    "runs_root": ".local/data/runs/continuous-alpha",
+    "scan_configs_root": ".local/research/scans/continuous-alpha",
+    "memory_db": ".local/data/memory/alpha_memory.db"
+  }
+}

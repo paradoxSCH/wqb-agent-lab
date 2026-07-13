@@ -1,0 +1,641 @@
+{
+  "version": "brain-base",
+  "categories": [
+    "Arithmetic",
+    "Logical",
+    "Time Series",
+    "Cross Sectional",
+    "Vector",
+    "Transformational",
+    "Group"
+  ],
+  "operators": [
+    {
+      "name": "abs",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "abs(x)",
+      "description": "Returns the absolute value of a number, removing any negative sign.",
+      "params": [{"name": "x", "required": true}]
+    },
+    {
+      "name": "add",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "add(x, y, filter=false)",
+      "aliases": ["x + y"],
+      "description": "Adds two or more inputs element wise. Set filter=true to treat NaNs as 0 before summing.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "y", "required": true},
+        {"name": "filter", "required": false, "default": "false"}
+      ]
+    },
+    {
+      "name": "densify",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "densify(x)",
+      "description": "Converts a grouping field of many buckets into lesser number of only available buckets so as to make working with grouping fields computationally efficient.",
+      "params": [{"name": "x", "required": true}]
+    },
+    {
+      "name": "divide",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "divide(x, y)",
+      "aliases": ["x / y"],
+      "description": "Divides x by y.",
+      "params": [{"name": "x", "required": true}, {"name": "y", "required": true}]
+    },
+    {
+      "name": "inverse",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "inverse(x)",
+      "description": "Returns 1 / x.",
+      "params": [{"name": "x", "required": true}]
+    },
+    {
+      "name": "log",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "log(x)",
+      "description": "Calculates the natural logarithm of the input value. Commonly used to transform data that has positive values.",
+      "params": [{"name": "x", "required": true}]
+    },
+    {
+      "name": "max",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "max(x, y, ..)",
+      "description": "Maximum value of all inputs. At least 2 inputs are required.",
+      "params": [{"name": "x", "required": true}, {"name": "y", "required": true}]
+    },
+    {
+      "name": "min",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "min(x, y, ..)",
+      "description": "Minimum value of all inputs. At least 2 inputs are required.",
+      "params": [{"name": "x", "required": true}, {"name": "y", "required": true}]
+    },
+    {
+      "name": "multiply",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "multiply(x, y, ..., filter=false)",
+      "aliases": ["x * y"],
+      "description": "Multiplies two or more inputs element wise. Set filter=true to treat NaNs as 0 before multiplication.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "y", "required": true},
+        {"name": "filter", "required": false, "default": "false"}
+      ]
+    },
+    {
+      "name": "power",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "power(x, y)",
+      "description": "Returns x ^ y.",
+      "params": [{"name": "x", "required": true}, {"name": "y", "required": true}]
+    },
+    {
+      "name": "reverse",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "reverse(x)",
+      "description": "Returns -x.",
+      "params": [{"name": "x", "required": true}]
+    },
+    {
+      "name": "sign",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "sign(x)",
+      "description": "Returns the sign of a number: +1 for positive, -1 for negative, and 0 for zero. If the input is NaN, returns NaN.",
+      "params": [{"name": "x", "required": true}]
+    },
+    {
+      "name": "signed_power",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "signed_power(x, y)",
+      "description": "Returns x raised to the power of y such that final result preserves sign of x.",
+      "params": [{"name": "x", "required": true}, {"name": "y", "required": true}]
+    },
+    {
+      "name": "sqrt",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "sqrt(x)",
+      "description": "Returns the non negative square root of x. Equivalent to power(x, 0.5); for signed roots use signed_power(x, 0.5).",
+      "params": [{"name": "x", "required": true}]
+    },
+    {
+      "name": "subtract",
+      "category": "Arithmetic",
+      "level": "base",
+      "signature": "subtract(x, y, filter=false)",
+      "aliases": ["x - y"],
+      "description": "Subtracts inputs left to right: x - y - ... Supports two or more inputs. Set filter=true to treat NaNs as 0 before subtraction.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "y", "required": true},
+        {"name": "filter", "required": false, "default": "false"}
+      ]
+    },
+    {
+      "name": "and",
+      "category": "Logical",
+      "level": "base",
+      "signature": "and(input1, input2)",
+      "description": "Returns 1 ('true') if both inputs are 1 ('true'). Otherwise, returns 0 ('false').",
+      "params": [{"name": "input1", "required": true}, {"name": "input2", "required": true}]
+    },
+    {
+      "name": "if_else",
+      "category": "Logical",
+      "level": "base",
+      "signature": "if_else(input1, input2, input3)",
+      "description": "Returns input2 if input1 is true, otherwise returns input3.",
+      "params": [
+        {"name": "input1", "required": true},
+        {"name": "input2", "required": true},
+        {"name": "input3", "required": true}
+      ]
+    },
+    {
+      "name": "less",
+      "category": "Logical",
+      "level": "base",
+      "signature": "input1 < input2",
+      "description": "Returns 1 ('true') if input1 is smaller than input2. Otherwise, returns 0 ('false').",
+      "params": [{"name": "input1", "required": true}, {"name": "input2", "required": true}]
+    },
+    {
+      "name": "less_equal",
+      "category": "Logical",
+      "level": "base",
+      "signature": "input1 <= input2",
+      "description": "Returns 1 ('true') if input1 is smaller or the same as input2. Otherwise, returns 0 ('false').",
+      "params": [{"name": "input1", "required": true}, {"name": "input2", "required": true}]
+    },
+    {
+      "name": "equal",
+      "category": "Logical",
+      "level": "base",
+      "signature": "input1 == input2",
+      "description": "Returns 1 ('true') if input1 and input2 are the same. Otherwise, returns 0 ('false').",
+      "params": [{"name": "input1", "required": true}, {"name": "input2", "required": true}]
+    },
+    {
+      "name": "greater",
+      "category": "Logical",
+      "level": "base",
+      "signature": "input1 > input2",
+      "description": "Returns 1 ('true') if input1 is larger than input2. Otherwise, returns 0 ('false').",
+      "params": [{"name": "input1", "required": true}, {"name": "input2", "required": true}]
+    },
+    {
+      "name": "greater_equal",
+      "category": "Logical",
+      "level": "base",
+      "signature": "input1 >= input2",
+      "description": "Returns 1 ('true') if input1 is larger or the same as input2. Otherwise, returns 0 ('false').",
+      "params": [{"name": "input1", "required": true}, {"name": "input2", "required": true}]
+    },
+    {
+      "name": "not_equal",
+      "category": "Logical",
+      "level": "base",
+      "signature": "input1 != input2",
+      "description": "Returns 1 ('true') if input1 and input2 are different numbers. Otherwise, returns 0 ('false').",
+      "params": [{"name": "input1", "required": true}, {"name": "input2", "required": true}]
+    },
+    {
+      "name": "is_nan",
+      "category": "Logical",
+      "level": "base",
+      "signature": "is_nan(input)",
+      "description": "If (input == NaN) return 1 else return 0.",
+      "params": [{"name": "input", "required": true}]
+    },
+    {
+      "name": "not",
+      "category": "Logical",
+      "level": "base",
+      "signature": "not(x)",
+      "description": "Returns the logical negation of x. Returns 0 when x is 1 ('true') and 1 when x is 0 ('false').",
+      "params": [{"name": "x", "required": true}]
+    },
+    {
+      "name": "or",
+      "category": "Logical",
+      "level": "base",
+      "signature": "or(input1, input2)",
+      "description": "Returns 1 if either input is true (either input1 or input2 has a value of 1), otherwise it returns 0.",
+      "params": [{"name": "input1", "required": true}, {"name": "input2", "required": true}]
+    },
+    {
+      "name": "days_from_last_change",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "days_from_last_change(x)",
+      "description": "Calculates the number of days since the last change in the value of a given variable.",
+      "params": [{"name": "x", "required": true}]
+    },
+    {
+      "name": "hump",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "hump(x, hump=0.01)",
+      "description": "Limits amount and magnitude of changes in input (thus reducing turnover).",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "hump", "required": false, "default": "0.01"}
+      ]
+    },
+    {
+      "name": "kth_element",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "kth_element(x, d, k, ignore='NaN')",
+      "description": "Returns the K-th value from a time series by looking back over a specified number of ('d') days, with the option to ignore certain values. Commonly used for backfilling missing data.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "d", "required": true},
+        {"name": "k", "required": true},
+        {"name": "ignore", "required": false, "default": "'NaN'"}
+      ]
+    },
+    {
+      "name": "last_diff_value",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "last_diff_value(x, d)",
+      "description": "Returns the most recent value of x from the past d days that is different from the current value of x.",
+      "params": [{"name": "x", "required": true}, {"name": "d", "required": true}]
+    },
+    {
+      "name": "ts_arg_max",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_arg_max(x, d)",
+      "description": "Returns the number of days since the maximum value occurred in the last d days of a time series. If today's value is the maximum, returns 0; if it was yesterday, returns 1, and so on.",
+      "params": [{"name": "x", "required": true}, {"name": "d", "required": true}]
+    },
+    {
+      "name": "ts_arg_min",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_arg_min(x, d)",
+      "description": "Returns the number of days since the minimum value occurred in a time series over the past d days. If today's value is the minimum, returns 0; if it was yesterday, returns 1, and so on.",
+      "params": [{"name": "x", "required": true}, {"name": "d", "required": true}]
+    },
+    {
+      "name": "ts_av_diff",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_av_diff(x, d)",
+      "description": "Calculates the difference between a value and its mean over a specified period, ignoring NaN values in the mean calculation. In short, it returns x - ts_mean(x, d) with NaNs ignored.",
+      "params": [{"name": "x", "required": true}, {"name": "d", "required": true}]
+    },
+    {
+      "name": "ts_backfill",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_backfill(x, lookback=d, k=1)",
+      "description": "Replaces missing (NaN) values in a time series with the most recent valid value from a specified lookback window, improving data coverage and reducing risk from missing data.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "lookback", "required": true},
+        {"name": "k", "required": false, "default": "1"}
+      ]
+    },
+    {
+      "name": "ts_corr",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_corr(x, y, d)",
+      "description": "Calculates the Pearson correlation between two variables, x and y, over the past d days, showing how closely they move together.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "y", "required": true},
+        {"name": "d", "required": true}
+      ]
+    },
+    {
+      "name": "ts_count_nans",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_count_nans(x, d)",
+      "description": "Counts the number of missing (NaN) values in a data series over a specified number of days.",
+      "params": [{"name": "x", "required": true}, {"name": "d", "required": true}]
+    },
+    {
+      "name": "ts_covariance",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_covariance(y, x, d)",
+      "description": "Calculates the covariance between two time-series variables, y and x, over the past d days. Useful for measuring how two variables move together within a specified historical window.",
+      "params": [
+        {"name": "y", "required": true},
+        {"name": "x", "required": true},
+        {"name": "d", "required": true}
+      ]
+    },
+    {
+      "name": "ts_decay_linear",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_decay_linear(x, d, dense=false)",
+      "description": "Applies a linear decay to time-series data over a set number of days, smoothing the data by averaging recent values and reducing the impact of older or missing data.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "d", "required": true},
+        {"name": "dense", "required": false, "default": "false"}
+      ]
+    },
+    {
+      "name": "ts_delay",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_delay(x, d)",
+      "description": "Returns the value of a variable x from d days ago. Use this operator to access historical data points by specifying the desired time lag in days.",
+      "params": [{"name": "x", "required": true}, {"name": "d", "required": true}]
+    },
+    {
+      "name": "ts_delta",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_delta(x, d)",
+      "description": "Calculates the difference between a value and its delayed version over a specified period. Useful for measuring changes or momentum in time-series data.",
+      "params": [{"name": "x", "required": true}, {"name": "d", "required": true}]
+    },
+    {
+      "name": "ts_mean",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_mean(x, d)",
+      "description": "Calculates the simple average (mean) value of a variable x over the past d days.",
+      "params": [{"name": "x", "required": true}, {"name": "d", "required": true}]
+    },
+    {
+      "name": "ts_product",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_product(x, d)",
+      "description": "Returns the product of the values of x over the past d days. Useful for calculating geometric means and compounding returns or growth rates.",
+      "params": [{"name": "x", "required": true}, {"name": "d", "required": true}]
+    },
+    {
+      "name": "ts_quantile",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_quantile(x, d, driver='gaussian')",
+      "description": "Calculates the ts_rank of the input and transforms it using the inverse cumulative distribution function (quantile function) of a specified probability distribution (default: Gaussian/normal). This helps to normalize or reshape the distribution of your data over a rolling window.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "d", "required": true},
+        {"name": "driver", "required": false, "default": "'gaussian'"}
+      ]
+    },
+    {
+      "name": "ts_rank",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_rank(x, d, constant=0)",
+      "description": "Ranks the value of a variable for each instrument over a specified number of past days, returning the rank of the current value (optionally adjusted by a constant). Useful for normalizing time-series data and highlighting relative performance over time.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "d", "required": true},
+        {"name": "constant", "required": false, "default": "0"}
+      ]
+    },
+    {
+      "name": "ts_regression",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_regression(y, x, d, lag=0, rettype=0)",
+      "description": "Returns various parameters related to regression function.",
+      "params": [
+        {"name": "y", "required": true},
+        {"name": "x", "required": true},
+        {"name": "d", "required": true},
+        {"name": "lag", "required": false, "default": "0"},
+        {"name": "rettype", "required": false, "default": "0"}
+      ]
+    },
+    {
+      "name": "ts_scale",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_scale(x, d, constant=0)",
+      "description": "Scales a time series to a 0-1 range based on its minimum and maximum values over a specified period, with an optional constant shift.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "d", "required": true},
+        {"name": "constant", "required": false, "default": "0"}
+      ]
+    },
+    {
+      "name": "ts_std_dev",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_std_dev(x, d)",
+      "description": "Calculates the standard deviation of a data series x over the past d days, measuring how much the values deviate from their mean during that period.",
+      "params": [{"name": "x", "required": true}, {"name": "d", "required": true}]
+    },
+    {
+      "name": "ts_step",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_step(1)",
+      "description": "Returns a counter of days, incrementing by one each day.",
+      "params": [{"name": "x", "required": true}]
+    },
+    {
+      "name": "ts_sum",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_sum(x, d)",
+      "description": "Sum values of x for the past d days.",
+      "params": [{"name": "x", "required": true}, {"name": "d", "required": true}]
+    },
+    {
+      "name": "ts_zscore",
+      "category": "Time Series",
+      "level": "base",
+      "signature": "ts_zscore(x, d)",
+      "description": "Calculates the Z-score of a time series, showing how far today's value is from the recent average, measured in standard deviations. Useful for standardizing and comparing values over time.",
+      "params": [{"name": "x", "required": true}, {"name": "d", "required": true}]
+    },
+    {
+      "name": "normalize",
+      "category": "Cross Sectional",
+      "level": "base",
+      "signature": "normalize(x, useStd=false, limit=0.0)",
+      "description": "Centers a daily cross section by subtracting the market mean; optionally divide by the cross sectional standard deviation and clamp the result to [-limit, +limit]. NaNs are ignored in mean/std.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "useStd", "required": false, "default": "false"},
+        {"name": "limit", "required": false, "default": "0.0"}
+      ]
+    },
+    {
+      "name": "quantile",
+      "category": "Cross Sectional",
+      "level": "base",
+      "signature": "quantile(x, driver=gaussian, sigma=1.0)",
+      "description": "Ranks and shifts a vector of Alpha values, then applies a chosen statistical distribution (gaussian, cauchy, or uniform) to reduce outliers. The sigma parameter controls the scale of the output.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "driver", "required": false, "default": "gaussian"},
+        {"name": "sigma", "required": false, "default": "1.0"}
+      ]
+    },
+    {
+      "name": "rank",
+      "category": "Cross Sectional",
+      "level": "base",
+      "signature": "rank(x, rate=2)",
+      "description": "Ranks the values of the input x among all instruments, returning numbers evenly spaced between 0.0 and 1.0. Useful for normalizing data and reducing the impact of outliers.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "rate", "required": false, "default": "2"}
+      ]
+    },
+    {
+      "name": "scale",
+      "category": "Cross Sectional",
+      "level": "base",
+      "signature": "scale(x, scale=1, longscale=1, shortscale=1)",
+      "description": "Scales the input so that the sum of absolute values across all instruments equals a specified book size. Allows separate scaling for long and short positions using optional parameters.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "scale", "required": false, "default": "1"},
+        {"name": "longscale", "required": false, "default": "1"},
+        {"name": "shortscale", "required": false, "default": "1"}
+      ]
+    },
+    {
+      "name": "winsorize",
+      "category": "Cross Sectional",
+      "level": "base",
+      "signature": "winsorize(x, std=4)",
+      "description": "Winsorize limits values in a data to within a specified number of standard deviations from the mean, reducing the impact of extreme outliers.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "std", "required": false, "default": "4"}
+      ]
+    },
+    {
+      "name": "zscore",
+      "category": "Cross Sectional",
+      "level": "base",
+      "signature": "zscore(x)",
+      "description": "Z-score is a numerical measurement that describes a value's relationship to the mean of a group of values. Z-score is measured in terms of standard deviations from the mean.",
+      "params": [{"name": "x", "required": true}]
+    },
+    {
+      "name": "vec_avg",
+      "category": "Vector",
+      "level": "base",
+      "signature": "vec_avg(x)",
+      "description": "Calculates the mean (average) of all elements in a vector field for each instrument and date, converting vector data to a single matrix value.",
+      "params": [{"name": "x", "required": true}]
+    },
+    {
+      "name": "vec_sum",
+      "category": "Vector",
+      "level": "base",
+      "signature": "vec_sum(x)",
+      "description": "Calculates the sum of all values in a vector field.",
+      "params": [{"name": "x", "required": true}]
+    },
+    {
+      "name": "bucket",
+      "category": "Transformational",
+      "level": "base",
+      "signature": "bucket(rank(x), range='0,1,0.1', skipBoth=false, NaNGroup=false)",
+      "description": "The bucket operator creates custom groups by dividing data into buckets (ranges) based on ranked values of any data field. These buckets can then be used with group operators like group_neutralize, group_rank, group_zscore etc.",
+      "params": [
+        {"name": "rank(x)", "required": true},
+        {"name": "range", "required": false, "default": "'0,1,0.1'"},
+        {"name": "skipBoth", "required": false, "default": "false"},
+        {"name": "NaNGroup", "required": false, "default": "false"}
+      ]
+    },
+    {
+      "name": "trade_when",
+      "category": "Transformational",
+      "level": "base",
+      "signature": "trade_when(x, y, z)",
+      "description": "The trade_when operator changes Alpha values only when a specific condition is met, keeps previous values otherwise, and can close positions by assigning NaN under an exit condition. It is useful for reducing turnover and controlling when trades are executed.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "y", "required": true},
+        {"name": "z", "required": true}
+      ]
+    },
+    {
+      "name": "group_backfill",
+      "category": "Group",
+      "level": "base",
+      "signature": "group_backfill(x, group, d, std=4.0)",
+      "description": "Fills missing (NaN) values for instruments within the same group by calculating a winsorized mean of all non-NaN values over the past d days. The winsorized mean is computed by trimming extreme values based on a specified standard deviation multiplier (std, default 4.0).",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "group", "required": true},
+        {"name": "d", "required": true},
+        {"name": "std", "required": false, "default": "4.0"}
+      ]
+    },
+    {
+      "name": "group_mean",
+      "category": "Group",
+      "level": "base",
+      "signature": "group_mean(x, weight, group)",
+      "description": "Calculates the harmonic mean of a data field within each specified group.",
+      "params": [
+        {"name": "x", "required": true},
+        {"name": "weight", "required": true},
+        {"name": "group", "required": true}
+      ]
+    },
+    {
+      "name": "group_neutralize",
+      "category": "Group",
+      "level": "base",
+      "signature": "group_neutralize(x, group)",
+      "description": "Neutralizes Alpha values within each specified group by subtracting the group mean from each value. Groups can be industry, sector, country, or any custom grouping.",
+      "params": [{"name": "x", "required": true}, {"name": "group", "required": true}]
+    },
+    {
+      "name": "group_rank",
+      "category": "Group",
+      "level": "base",
+      "signature": "group_rank(x, group)",
+      "description": "Ranks each element within its group based on the input field, assigning a value between 0.0 and 1.0. This helps compare items within the same group, such as stocks in the same industry.",
+      "params": [{"name": "x", "required": true}, {"name": "group", "required": true}]
+    },
+    {
+      "name": "group_scale",
+      "category": "Group",
+      "level": "base",
+      "signature": "group_scale(x, group)",
+      "description": "Normalizes values within each group to a range between 0 and 1, making data comparable across different groups.",
+      "params": [{"name": "x", "required": true}, {"name": "group", "required": true}]
+    },
+    {
+      "name": "group_zscore",
+      "category": "Group",
+      "level": "base",
+      "signature": "group_zscore(x, group)",
+      "description": "Calculates the Z-score of each value within its group, showing how far each value is from the group mean in terms of standard deviations. Useful for comparing values relative to their group.",
+      "params": [{"name": "x", "required": true}, {"name": "group", "required": true}]
+    }
+  ]
+}

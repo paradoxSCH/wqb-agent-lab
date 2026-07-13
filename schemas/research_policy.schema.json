@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wqb-agent-lab.local/schemas/research_policy.schema.json",
+  "title": "Research Policy",
+  "type": "object",
+  "required": ["version", "budget", "behavioral_boundaries"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "integer",
+      "enum": [1]
+    },
+    "budget": {
+      "type": "object",
+      "required": ["daily_simulation_limit", "exploration_share_limit", "exploration_stages", "stage_allocations"],
+      "additionalProperties": false,
+      "properties": {
+        "daily_simulation_limit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "exploration_share_limit": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "exploration_stages": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "stage_allocations": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "behavioral_boundaries": {
+      "type": "object",
+      "required": [
+        "block_unclassified_candidates",
+        "require_kill_conditions",
+        "forbid_pure_price_volume",
+        "mechanisms"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "block_unclassified_candidates": { "type": "boolean" },
+        "require_kill_conditions": { "type": "boolean" },
+        "forbid_pure_price_volume": { "type": "boolean" },
+        "mechanisms": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["mechanism_id", "enabled", "allowed_proxy_fields", "kill_conditions"],
+            "additionalProperties": false,
+            "properties": {
+              "mechanism_id": { "type": "string" },
+              "enabled": { "type": "boolean" },
+              "allowed_proxy_fields": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "kill_conditions": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

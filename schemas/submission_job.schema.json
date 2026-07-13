@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wqb-agent-lab.local/schemas/submission_job.schema.json",
+  "title": "Submission Job",
+  "type": "object",
+  "required": ["job_id", "alpha_id", "state", "auto_submit"],
+  "additionalProperties": false,
+  "properties": {
+    "job_id": { "type": "string" },
+    "alpha_id": { "type": "string" },
+    "state": {
+      "type": "string",
+      "enum": ["queued", "checking", "submitted", "rejected", "throttled", "failed", "confirmed"]
+    },
+    "auto_submit": { "type": "boolean" },
+    "expression": { "type": "string" },
+    "candidate_id": { "type": "string" },
+    "attempts": { "type": "integer", "minimum": 0 },
+    "last_error": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "null" }
+      ]
+    }
+  }
+}

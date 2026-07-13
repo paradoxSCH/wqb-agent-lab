@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wqb-agent-lab.local/schemas/candidate.schema.json",
+  "title": "Candidate",
+  "type": "object",
+  "required": ["candidate_id", "expression", "status", "hypothesis"],
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": { "type": "string" },
+    "expression": { "type": "string" },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "preflight_passed", "simulated", "blocked", "submit_ready"]
+    },
+    "hypothesis": {
+      "type": "object",
+      "required": ["mechanism_id", "thesis", "proxy_fields"],
+      "additionalProperties": false,
+      "properties": {
+        "mechanism_id": { "type": "string" },
+        "thesis": { "type": "string" },
+        "proxy_fields": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "tags": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "created_at": { "type": "string" }
+  }
+}
