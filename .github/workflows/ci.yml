@@ -141,7 +141,7 @@ jobs:
           npm ci --prefix packages/wqb-agent-ui
 
       - name: Scan repository secrets
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
 
       - name: Run complete release verification
         run: uv run python -m scripts.dev release-check --json
