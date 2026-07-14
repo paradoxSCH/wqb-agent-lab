@@ -12,7 +12,7 @@ wqb-agent-lab/
 |   `-- maintainers/            发布与依赖治理
 |-- packages/
 |   |-- wqb-agent-mcp/          可选 TypeScript MCP 工具面
-|   `-- wqb-agent-ui/           可选 React 运行监控器
+|   `-- wqb-agent-ui/           daemon 工作台的 React 前端与运行 API 消费者
 |-- release/                    公开快照与依赖许可规则
 |-- schemas/                    Python/TypeScript JSON contract
 |-- scripts/
@@ -25,6 +25,7 @@ wqb-agent-lab/
 |   `-- maintenance/            显式维护任务，不属于日常入口
 |-- src/
 |   |-- wqb_agent_lab/          稳定产品命名空间
+|-- wqb_agent_lab/              安装后使用的标准公开命名空间适配层
 |   |-- wqb_engine/             机器可读 CLI
 |   |-- wqb_mcp/                Python MCP adapter
 |   |-- alpha_memory/           记忆存储、检索、治理和评估

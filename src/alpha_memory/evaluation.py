@@ -4,6 +4,8 @@ import math
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from src.alpha_memory.retrieval import retrieve_memory
+
 
 OUTCOME_METRICS = (
     "submit_ready_per_1000",
@@ -23,6 +25,53 @@ def evaluate_memory_runs(variants: dict[str, Sequence[dict[str, object]]]) -> di
         report["delta"] = _delta_metrics(baseline, comparison)
 
     return report
+
+
+def evaluate_retrieval_rankings(cases: Sequence[Mapping[str, Any]]) -> dict[str, float]:
+    """Evaluate labeled retrieval output with metrics that remain comparable across backends."""
+    if not cases:
+        return {"recall_at_k": 0.0, "mrr": 0.0, "ndcg_at_k": 0.0}
+
+    recalls: list[float] = []
+    reciprocal_ranks: list[float] = []
+    ndcgs: list[float] = []
+    for case in cases:
+        relevant = {str(item) for item in case.get("relevant_ids") or []}
+        retrieved = [str(item) for item in case.get("retrieved_ids") or []]
+        if not relevant:
+            recalls.append(0.0)
+            reciprocal_ranks.append(0.0)
+            ndcgs.append(0.0)
+            continue
+        hits = [1 if item in relevant else 0 for item in retrieved]
+        recalls.append(len(relevant.intersection(retrieved)) / len(relevant))
+        first_hit = next((index for index, hit in enumerate(hits, start=1) if hit), None)
+        reciprocal_ranks.append(0.0 if first_hit is None else 1.0 / first_hit)
+        dcg = sum(hit / math.log2(index + 1) for index, hit in enumerate(hits, start=1))
+        ideal_hits = min(len(relevant), len(retrieved))
+        ideal_dcg = sum(1.0 / math.log2(index + 1) for index in range(1, ideal_hits + 1))
+        ndcgs.append(0.0 if ideal_dcg == 0.0 else dcg / ideal_dcg)
+
+    count = float(len(cases))
+    return {
+        "recall_at_k": round(sum(recalls) / count, 6),
+        "mrr": round(sum(reciprocal_ranks) / count, 6),
+        "ndcg_at_k": round(sum(ndcgs) / count, 6),
+    }
+
+
+def run_retrieval_benchmark(store: Any, cases: Sequence[Mapping[str, Any]], *, top_k: int = 5) -> dict[str, Any]:
+    rankings: list[dict[str, Any]] = []
+    for case in cases:
+        result = retrieve_memory(store, str(case.get("query") or ""), top_k=top_k)
+        rankings.append(
+            {
+                "case_id": str(case.get("case_id") or ""),
+                "relevant_ids": list(case.get("relevant_ids") or []),
+                "retrieved_ids": [item.node.id for item in result.memories],
+            }
+        )
+    return {"top_k": top_k, "case_count": len(rankings), "metrics": evaluate_retrieval_rankings(rankings), "rankings": rankings}
 
 
 def _summarize_runs(runs: Sequence[Mapping[str, Any]]) -> dict[str, float]:
@@ -78,4 +127,4 @@ def _precision_for(metric: str) -> int:
     return 3
 
 
-__all__ = ["evaluate_memory_runs"]
+__all__ = ["evaluate_memory_runs", "evaluate_retrieval_rankings", "run_retrieval_benchmark"]

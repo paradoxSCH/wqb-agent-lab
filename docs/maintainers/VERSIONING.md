@@ -3,8 +3,9 @@
 WQB Agent Lab uses semantic versioning for public commands, `wqb-engine` operations, MCP
 contracts, configuration schemas, and documented Python imports.
 
-The current public release is `v0.1.1-alpha`; package metadata is `0.1.1` and remains in
-alpha development status. `v0.1.0-alpha` was the first history-free public release.
+The current public release is `v0.2.0a1`; Python metadata uses PEP 440 `0.2.0a1` and npm
+metadata uses equivalent SemVer `0.2.0-alpha.1`. The project remains in alpha development
+status. `v0.1.0-alpha` was the first history-free public release.
 
 - Patch releases fix behavior without changing public contracts.
 - Minor releases may add compatible operations, fields, providers, or diagnostics.

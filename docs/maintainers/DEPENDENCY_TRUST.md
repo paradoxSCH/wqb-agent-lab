@@ -6,7 +6,7 @@
 reproducible lock. CI installs with `uv sync --extra dev --extra mcp --frozen`.
 
 WQB credentials are handled only by the repository-owned implementations under
-`src.wqb_agent_lab.platform`. The transport uses `requests` and targets the configured WQB
+`wqb_agent_lab.platform`. The transport uses `requests` and targets the configured WQB
 API origin; authentication, retry, pagination, and side-effect entry points have contract
 tests that run without credentials or network access.
 

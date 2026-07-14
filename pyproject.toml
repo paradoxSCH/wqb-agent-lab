@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wqb-agent-lab"
-version = "0.1.1"
+version = "0.2.0a1"
 description = "Auditable agent research workflow for WorldQuant BRAIN."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
@@ -32,6 +32,7 @@ classifiers = [
 ]
 
 dependencies = [
+  "packaging>=24",
   "pandas>=2.0",
   "python-dotenv>=1.0.0",
   "requests>=2.31"
@@ -50,7 +51,9 @@ mcp = [
 dev = [
   "build>=1.2",
   "pip-audit>=2.7",
+  "pyright>=1.1.400",
   "pytest>=8.0",
+  "pytest-cov>=6.0",
   "ruff>=0.5"
 ]
 
@@ -64,11 +67,11 @@ py-modules = ["run_scan"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*", "scripts*", "schemas"]
+include = ["wqb_agent_lab*", "src*", "scripts*", "schemas"]
 
 [tool.setuptools.package-data]
 "schemas" = ["*.json"]
-"src.wqb_agent_lab.platform" = ["resources/*.json"]
+"wqb_agent_lab.platform" = ["resources/*.json"]
 
 [tool.setuptools.data-files]
 "share/wqb-agent-lab" = ["CITATION.cff"]
@@ -76,6 +79,10 @@ include = ["src*", "scripts*", "schemas"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+
+[tool.pyright]
+pythonVersion = "3.11"
+reportMissingModuleSource = false
 
 [tool.ruff]
 target-version = "py311"
@@ -87,4 +94,4 @@ extend-exclude = [
 ]
 
 [tool.uv]
-required-version = ">=0.8.0"
+required-version = ">=0.11.27"

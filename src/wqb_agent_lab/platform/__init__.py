@@ -1,29 +1,4 @@
-"""Canonical WorldQuant BRAIN platform access boundary."""
+"""Compatibility namespace; use :mod:`wqb_agent_lab.platform`."""
 
-from .check_readiness import CheckReadiness, evaluate_check_snapshot
-from .client import WQBClient
-from .models import (
-    WQBAlphaDetail,
-    WQBCheck,
-    WQBSubmitResult,
-    WQBSimulationCreated,
-    WQBSimulationRequest,
-    is_submitted_status,
-)
-from .operator_catalog import load_operator_names
-from .session import WQBAuthenticationError, WQBSession
-
-__all__ = [
-    "CheckReadiness",
-    "WQBAlphaDetail",
-    "WQBCheck",
-    "WQBClient",
-    "WQBAuthenticationError",
-    "WQBSession",
-    "WQBSubmitResult",
-    "WQBSimulationCreated",
-    "WQBSimulationRequest",
-    "evaluate_check_snapshot",
-    "is_submitted_status",
-    "load_operator_names",
-]
+from wqb_agent_lab.platform import *  # noqa: F403
+from wqb_agent_lab.platform import __all__ as __all__

@@ -71,6 +71,7 @@ if [ "$profile" = "full" ]; then
   fi
   npm ci --prefix packages/wqb-agent-mcp
   npm ci --prefix packages/wqb-agent-ui
+  npm run build --prefix packages/wqb-agent-ui
 fi
 
 uv run --python 3.12 python -m scripts.dev doctor --profile "$profile" --json

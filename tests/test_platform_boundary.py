@@ -6,11 +6,11 @@ from pathlib import Path
 
 from src.wqb import WQBClient as CompatibilityClient
 from src.wqb.check_readiness import evaluate_check_snapshot as compatibility_readiness
-from src.wqb_agent_lab.platform import WQBClient, evaluate_check_snapshot, load_operator_names
+from wqb_agent_lab.platform import WQBClient, evaluate_check_snapshot, load_operator_names
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CANONICAL_PLATFORM = ROOT / "src/wqb_agent_lab/platform"
+CANONICAL_PLATFORM = ROOT / "wqb_agent_lab/platform"
 
 
 class PlatformBoundaryTests(unittest.TestCase):
@@ -27,7 +27,7 @@ class PlatformBoundaryTests(unittest.TestCase):
 
     def test_no_runtime_module_imports_third_party_wqb(self) -> None:
         violations = []
-        for path in _python_files(ROOT / "src", ROOT / "scripts", ROOT / "run_scan.py"):
+        for path in _python_files(ROOT / "src", ROOT / "scripts", ROOT / "wqb_agent_lab", ROOT / "run_scan.py"):
             tree = ast.parse(path.read_text(encoding="utf-8-sig"), filename=str(path))
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import) and any(alias.name == "wqb" for alias in node.names):
@@ -40,7 +40,7 @@ class PlatformBoundaryTests(unittest.TestCase):
 
     def test_wqb_api_origin_is_declared_only_by_canonical_platform(self) -> None:
         violations = []
-        for path in _python_files(ROOT / "src", ROOT / "scripts", ROOT / "run_scan.py"):
+        for path in _python_files(ROOT / "src", ROOT / "scripts", ROOT / "wqb_agent_lab", ROOT / "run_scan.py"):
             if path.parent == CANONICAL_PLATFORM:
                 continue
             if "api.worldquantbrain.com" in path.read_text(encoding="utf-8-sig"):
@@ -50,7 +50,7 @@ class PlatformBoundaryTests(unittest.TestCase):
 
     def test_product_and_operational_modules_do_not_import_compatibility_package(self) -> None:
         violations = []
-        for path in _python_files(ROOT / "src", ROOT / "scripts", ROOT / "run_scan.py"):
+        for path in _python_files(ROOT / "src", ROOT / "scripts", ROOT / "wqb_agent_lab", ROOT / "run_scan.py"):
             if ROOT / "src/wqb" in path.parents:
                 continue
             tree = ast.parse(path.read_text(encoding="utf-8-sig"), filename=str(path))

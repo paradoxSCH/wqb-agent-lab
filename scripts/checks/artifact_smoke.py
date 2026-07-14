@@ -69,6 +69,14 @@ def smoke_stages(wheel: Path, temp_dir: Path) -> tuple[Stage, ...]:
     return (
         Stage("create-venv", (sys.executable, "-m", "venv", str(venv_dir))),
         Stage("install-wheel", (python, "-m", "pip", "install", str(wheel))),
+        Stage(
+            "namespace-import",
+            (
+                python,
+                "-c",
+                "from wqb_agent_lab.platform import WQBClient; from wqb_agent_lab.workflow import ResearchWorkflow",
+            ),
+        ),
         Stage("engine-help", (engine, "--help")),
         Stage("schemas-list", (engine, "schemas.list")),
         Stage("schema-digest", (engine, "schemas.digest", "--schema", "candidate")),

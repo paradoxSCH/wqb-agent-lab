@@ -18,7 +18,6 @@ class TSUISkeletonTests(unittest.TestCase):
             "package.json",
             "tsconfig.json",
             "index.html",
-            "public/index.html",
             "src/App.tsx",
             "src/main.tsx",
             "src/sampleRunSummary.ts",
@@ -41,7 +40,7 @@ class TSUISkeletonTests(unittest.TestCase):
         self.assertIn("typecheck", package["scripts"])
         self.assertIn("build", package["scripts"])
         self.assertIn("react", package["dependencies"])
-        self.assertIn("vite", package["dependencies"])
+        self.assertIn("vite", package["devDependencies"])
 
     def test_run_summary_view_consumes_public_contract(self) -> None:
         source = self.read("src/runSummaryView.ts")
@@ -51,26 +50,31 @@ class TSUISkeletonTests(unittest.TestCase):
         self.assertIn("submitReady", source)
         self.assertIn("budgetRemaining", source)
 
-    def test_app_is_readonly_chinese_run_monitor(self) -> None:
+    def test_app_is_chinese_research_workbench(self) -> None:
         app_source = self.read("src/App.tsx")
         css_source = self.read("src/styles.css")
 
-        self.assertIn("只读", app_source)
-        self.assertIn("预算", app_source)
-        self.assertIn("提交就绪", app_source)
-        self.assertIn("toRunSummaryViewModel", app_source)
+        self.assertIn("研究边界", app_source)
+        self.assertIn("行为经济学边界", app_source)
+        self.assertIn('fetch("/api/runs")', app_source)
+        self.assertIn('fetch("/api/policy", {', app_source)
+        self.assertIn('method: "PUT"', app_source)
         self.assertIn("oklch", css_source)
         self.assertNotIn("hero", app_source.lower())
 
     def test_ui_shell_does_not_touch_wqb_platform_or_python_internals(self) -> None:
-        source = "\n".join(path.read_text(encoding="utf-8") for path in (PACKAGE_ROOT / "src").glob("*.ts"))
+        source = "\n".join(
+            path.read_text(encoding="utf-8")
+            for path in (PACKAGE_ROOT / "src").rglob("*")
+            if path.suffix in {".ts", ".tsx"}
+        )
 
         forbidden = (
             "api.worldquantbrain.com",
             "WQB_EMAIL",
             "WQB_PASSWORD",
             "src/wqb",
-            "src\\\\wqb",
+            "src\\wqb",
             ".local/data/runs/continuous-alpha",
         )
 

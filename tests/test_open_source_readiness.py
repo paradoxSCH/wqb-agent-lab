@@ -111,7 +111,7 @@ class OpenSourceReadinessTests(unittest.TestCase):
             "docs/architecture/decisions/0001-layered-python-typescript-runtime.md",
             "docs/maintainers/OPEN_SOURCE_READINESS.md",
             "docs/maintainers/PUBLICATION_DECISIONS.md",
-            "scripts/dashboard_assets.py",
+            "packages/wqb-agent-ui/src/App.tsx",
             "src/wqb_agent_lab/__init__.py",
         )
 
@@ -196,11 +196,11 @@ class OpenSourceReadinessTests(unittest.TestCase):
         ui_package = json.loads(self.read("packages/wqb-agent-ui/package.json"))
         mcp_server = self.read("packages/wqb-agent-mcp/src/server.ts")
 
-        self.assertIn('version = "0.1.1"', pyproject)
-        self.assertIn("version: 0.1.1", citation)
-        self.assertEqual("0.1.1", mcp_package["version"])
-        self.assertEqual("0.1.1", ui_package["version"])
-        self.assertIn('version: "0.1.1"', mcp_server)
+        self.assertIn('version = "0.2.0a1"', pyproject)
+        self.assertIn("version: 0.2.0a1", citation)
+        self.assertEqual("0.2.0-alpha.1", mcp_package["version"])
+        self.assertEqual("0.2.0-alpha.1", ui_package["version"])
+        self.assertIn('version: "0.2.0-alpha.1"', mcp_server)
 
     def test_gitignore_blocks_private_runtime_artifacts_recursively(self) -> None:
         gitignore = self.read(".gitignore")
@@ -253,7 +253,7 @@ class OpenSourceReadinessTests(unittest.TestCase):
             package_json = self.read(package_path)
             self.assertIn('"license": "Apache-2.0"', package_json)
             self.assertNotIn('"license": "MIT"', package_json)
-        self.assertIn('include = ["src*", "scripts*", "schemas"]', pyproject)
+        self.assertIn('include = ["wqb_agent_lab*", "src*", "scripts*", "schemas"]', pyproject)
         self.assertIn('py-modules = ["run_scan"]', pyproject)
         self.assertIn('"schemas" = ["*.json"]', pyproject)
 
@@ -301,7 +301,7 @@ class OpenSourceReadinessTests(unittest.TestCase):
         self.assertIn("python -m scripts.dev build --json", ci)
         self.assertIn("python -m scripts.dev release-check --json", ci)
         self.assertIn("uv sync --extra dev --extra mcp --frozen", ci)
-        self.assertIn("gitleaks/gitleaks-action@v2", ci)
+        self.assertIn("gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7", ci)
         self.assertIn("GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}", ci)
         self.assertIn("pull-requests: read", ci)
         self.assertIn("fetch-depth: 0", ci)

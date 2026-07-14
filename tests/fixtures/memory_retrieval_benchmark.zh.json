@@ -1,0 +1,17 @@
+[
+  {
+    "case_id": "overreaction-reversal",
+    "query": "投资者过度反应之后的价格反转",
+    "relevant_ids": ["behavior-overreaction"]
+  },
+  {
+    "case_id": "anchoring-reference",
+    "query": "锚定效应和历史参考点",
+    "relevant_ids": ["behavior-anchoring"]
+  },
+  {
+    "case_id": "attention-salience",
+    "query": "注意力驱动的显著性偏差",
+    "relevant_ids": ["behavior-attention"]
+  }
+]

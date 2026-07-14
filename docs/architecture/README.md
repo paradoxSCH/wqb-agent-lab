@@ -1,8 +1,9 @@
 # Current Architecture
 
 WQB Agent Lab is a research system for WorldQuant BRAIN. Python owns quantitative research,
-workflow state, policy, memory, evaluation, and the WQB platform boundary. TypeScript owns
-the MCP protocol shell and monitoring UI.
+workflow state, policy, memory, evaluation, the WQB platform boundary, and the daemon
+workbench. TypeScript owns the MCP protocol shell and an optional `run_summary` contract
+consumer.
 
 ![Current WQB Agent Lab architecture](../assets/wqb-agent-architecture-current-zh.svg)
 
@@ -21,9 +22,9 @@ wqb_agent_lab.platform
 WorldQuant BRAIN transport
 ```
 
-- `src.wqb_agent_lab.platform` is the canonical WQB client, model, readiness, and operator
+- `wqb_agent_lab.platform` is the canonical installed WQB client, model, readiness, and operator
   catalog boundary.
-- `src.wqb_agent_lab.workflow.ResearchWorkflow` is the public production orchestrator.
+- `wqb_agent_lab.workflow.ResearchWorkflow` is the public production orchestrator.
 - `src.wqb` and `scripts.kimi_daily_workflow` are one-cycle compatibility surfaces only.
 - Transport and MCP tools expose facts and capabilities. Governance decides budgets,
   retries, pauses, promotion, and side effects.

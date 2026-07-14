@@ -9,7 +9,25 @@ import tempfile
 from src.alpha_memory.schema import MemoryEdge, MemoryNode
 
 
-_FTS_TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
+_FTS_TOKEN_RE = re.compile(r"[\w]+", re.UNICODE)
+_HAN_RUN_RE = re.compile(r"[\u3400-\u9fff]+")
+
+
+def _han_ngrams(value: str, sizes: tuple[int, ...] = (2, 3)) -> list[str]:
+    grams: list[str] = []
+    for run in _HAN_RUN_RE.findall(value):
+        for size in sizes:
+            if len(run) < size:
+                grams.append(run)
+            else:
+                grams.extend(run[index:index + size] for index in range(len(run) - size + 1))
+    return grams
+
+
+def _fts_document(*parts: str) -> str:
+    source = " ".join(parts)
+    grams = _han_ngrams(source)
+    return " ".join([source, *grams])
 
 
 class SQLiteMemoryStore:
@@ -93,6 +111,7 @@ class SQLiteMemoryStore:
                 """
             )
             conn.execute("INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)", (1,))
+            conn.execute("INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)", (2,))
             conn.commit()
         finally:
             conn.close()
@@ -138,7 +157,12 @@ class SQLiteMemoryStore:
             conn.execute("DELETE FROM memory_nodes_fts WHERE id = ?", (node.id,))
             conn.execute(
                 "INSERT INTO memory_nodes_fts (id, title, summary, tags) VALUES (?, ?, ?, ?)",
-                (node.id, node.title, node.summary, " ".join(node.tags)),
+                (
+                    node.id,
+                    _fts_document(node.title),
+                    _fts_document(node.summary),
+                    _fts_document(" ".join(node.tags)),
+                ),
             )
             conn.commit()
         finally:
@@ -286,7 +310,15 @@ class SQLiteMemoryStore:
             rows = conn.execute("SELECT id, title, summary, tags FROM memory_nodes ORDER BY id").fetchall()
             conn.executemany(
                 "INSERT INTO memory_nodes_fts (id, title, summary, tags) VALUES (?, ?, ?, ?)",
-                [(row["id"], row["title"], row["summary"], " ".join(json.loads(row["tags"]))) for row in rows],
+                [
+                    (
+                        row["id"],
+                        _fts_document(row["title"]),
+                        _fts_document(row["summary"]),
+                        _fts_document(" ".join(json.loads(row["tags"]))),
+                    )
+                    for row in rows
+                ],
             )
             conn.commit()
         finally:
@@ -294,7 +326,11 @@ class SQLiteMemoryStore:
 
     def _normalize_fts_query(self, query: str) -> str:
         tokens = _FTS_TOKEN_RE.findall(query)
-        return " OR ".join(tokens)
+        expanded: list[str] = []
+        for token in tokens:
+            expanded.append(token)
+            expanded.extend(_han_ngrams(token))
+        return " OR ".join(dict.fromkeys(expanded))
 
     def _list_events(self, conn: sqlite3.Connection) -> list[dict[str, object]]:
         rows = conn.execute(

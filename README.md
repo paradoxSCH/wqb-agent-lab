@@ -85,9 +85,15 @@ WQB_LIVE_SUBMIT_CAPABILITY=0
 
 每次研究运行生成完整证据链：输入政策、候选来源、预算消耗、平台结果、诊断决策、记忆变化和提交状态。架构所有权与依赖方向见[当前架构](docs/architecture/README.md)。
 
+安装 `full` profile 后，React 工作台由 Python 运行 API 托管：
+
+```powershell
+uv run python -m scripts.daily_workflow_dashboard --host 127.0.0.1 --port 8765
+```
+
 ## 项目状态
 
-当前版本为 `v0.1.1-alpha`，面向单用户 WorldQuant BRAIN 研究流程。Python 负责研究语义与平台边界；TypeScript MCP 和监控 UI 是可选接口。
+当前版本为 `v0.2.0a1`，面向单用户 WorldQuant BRAIN 研究流程。Python 负责研究语义与平台边界；TypeScript MCP 和监控 UI 提供标准接口。
 
 项目依赖非官方的平台互操作接口，平台变更可能导致部分能力失效。首次公开版本优先保证可安装、可诊断、可审计，所有平台副作用均需显式授权；项目不承诺研究收益。
 

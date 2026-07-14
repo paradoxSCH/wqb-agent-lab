@@ -6,10 +6,22 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from scripts.registry_worker import RegistryWorker, registry_state_path
+from scripts.registry_worker import RegistryWorker, RegistryWorkerLock, registry_state_path
 
 
 class RegistryWorkerTests(unittest.TestCase):
+    def test_lock_reclaims_dead_worker_pid(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            lock_path = root / ".local/data/registry/registry_worker.lock"
+            lock_path.parent.mkdir(parents=True, exist_ok=True)
+            lock_path.write_text(json.dumps({"pid": 999999}), encoding="utf-8")
+
+            with RegistryWorkerLock(root, pid_checker=lambda _pid: False):
+                self.assertTrue(lock_path.exists())
+
+            self.assertFalse(lock_path.exists())
+
     def test_run_once_writes_success_state(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

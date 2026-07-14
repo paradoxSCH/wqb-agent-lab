@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import io
 import json
+import sys
+import tempfile
 import unittest
 from unittest.mock import patch
 from pathlib import Path
@@ -27,6 +29,21 @@ class RecordingRunner:
 
 
 class DevCLITests(unittest.TestCase):
+    def test_python_build_clears_stale_setuptools_cache(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            stale = root / "build" / "lib" / "stale.py"
+            stale.parent.mkdir(parents=True)
+            stale.write_text("stale", encoding="utf-8")
+
+            result = dev.run_process(
+                dev.Stage("python-build", (sys.executable, "-c", "print('ok')")),
+                root,
+            )
+
+            self.assertEqual(0, result.returncode)
+            self.assertFalse((root / "build").exists())
+
     def test_invalid_command_returns_two(self) -> None:
         stdout = io.StringIO()
         stderr = io.StringIO()
@@ -46,6 +63,7 @@ class DevCLITests(unittest.TestCase):
             [
                 "environment-doctor",
                 "python-ruff",
+                "python-product-typecheck",
                 "python-compile",
                 "mcp-typecheck",
                 "ui-typecheck",
@@ -63,7 +81,7 @@ class DevCLITests(unittest.TestCase):
 
         self.assertEqual(1, exit_code)
         self.assertEqual(
-            ["environment-doctor", "python-ruff", "python-compile"],
+            ["environment-doctor", "python-ruff", "python-product-typecheck", "python-compile"],
             [stage.name for stage in runner.calls],
         )
         self.assertNotIn("super-secret", stderr.getvalue())

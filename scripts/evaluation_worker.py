@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
+from src.atomic_json import atomic_write_json
+from src.process_lock import PidFileLock
 from src.workflow_daemon import CompletionHookResult, run_completion_hooks
 
 
@@ -39,30 +40,13 @@ class EvaluationWorker:
             "message": result.message,
         }
         path = evaluation_state_path(self.root)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+        atomic_write_json(path, payload)
         return payload
 
 
-class EvaluationWorkerLock:
-    def __init__(self, root: Path | str) -> None:
-        self.path = Path(root) / EVALUATION_LOCK
-
-    def __enter__(self) -> "EvaluationWorkerLock":
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            fd = os.open(str(self.path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError as exc:
-            raise RuntimeError(f"evaluation worker already running: {self.path}") from exc
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump({"pid": os.getpid(), "created_at": datetime.now().isoformat(timespec="seconds")}, handle, ensure_ascii=False)
-        return self
-
-    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
-        try:
-            self.path.unlink()
-        except FileNotFoundError:
-            return
+class EvaluationWorkerLock(PidFileLock):
+    def __init__(self, root: Path | str, *, pid_checker: Callable[[int], bool] | None = None) -> None:
+        super().__init__(Path(root) / EVALUATION_LOCK, owner="evaluation worker", pid_checker=pid_checker)
 
 
 def main() -> int:

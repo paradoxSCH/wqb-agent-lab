@@ -172,7 +172,7 @@ class PublicSnapshotExportTests(unittest.TestCase):
             self.assertEqual("ready", report["status"])
             self.assertTrue(report["publish_ready"])
 
-    def test_export_copies_bytes_and_writes_hash_and_blocker_metadata(self) -> None:
+    def test_export_copies_source_and_writes_metadata_to_sidecar(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
             root = base / "workspace"
@@ -188,15 +188,55 @@ class PublicSnapshotExportTests(unittest.TestCase):
 
             self.assertEqual(readme_bytes, (output / "README.md").read_bytes())
             self.assertEqual("draft", result.report["status"])
-            metadata = json.loads((output / "PUBLIC_SNAPSHOT_MANIFEST.json").read_text(encoding="utf-8"))
-            blockers = json.loads((output / "PUBLIC_SNAPSHOT_BLOCKERS.json").read_text(encoding="utf-8"))
+            self.assertFalse((output / "PUBLIC_SNAPSHOT_MANIFEST.json").exists())
+            self.assertFalse((output / "PUBLIC_SNAPSHOT_BLOCKERS.json").exists())
+            metadata_path = result.audit_path / "PUBLIC_SNAPSHOT_MANIFEST.json"
+            blockers_path = result.audit_path / "PUBLIC_SNAPSHOT_BLOCKERS.json"
+            metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+            blockers = json.loads(blockers_path.read_text(encoding="utf-8"))
             self.assertNotIn("output_path", metadata)
-            self.assertNotIn(str(output), (output / "PUBLIC_SNAPSHOT_MANIFEST.json").read_text(encoding="utf-8"))
+            self.assertNotIn(str(output), metadata_path.read_text(encoding="utf-8"))
             rows = {item["path"]: item for item in metadata["files"]}
             self.assertEqual(hashlib.sha256(readme_bytes).hexdigest(), rows["README.md"]["sha256"])
             self.assertEqual(len(readme_bytes), rows["README.md"]["size"])
             self.assertFalse(metadata["publish_ready"])
             self.assertEqual("side_effect_governance", blockers["release_blockers"][0]["id"])
+
+    def test_export_rejects_audit_output_inside_snapshot(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "workspace"
+            output = base / "public-snapshot"
+            root.mkdir()
+            self.write(root, "README.md", "readme")
+            manifest_path = self.write_manifest(root, self.manifest_payload())
+
+            with self.assertRaises(SnapshotExportError) as raised:
+                export_public_snapshot(
+                    root,
+                    output,
+                    manifest_path,
+                    audit_output=output / "audit",
+                )
+
+            self.assertEqual("audit_output_overlaps_snapshot", raised.exception.code)
+
+    def test_export_rejects_non_empty_audit_output(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp)
+            root = base / "workspace"
+            output = base / "public-snapshot"
+            audit = base / "public-snapshot-audit"
+            root.mkdir()
+            audit.mkdir()
+            self.write(audit, "stale.json", "{}")
+            self.write(root, "README.md", "readme")
+            manifest_path = self.write_manifest(root, self.manifest_payload())
+
+            with self.assertRaises(SnapshotExportError) as raised:
+                export_public_snapshot(root, output, manifest_path, audit_output=audit)
+
+            self.assertEqual("audit_output_not_empty", raised.exception.code)
 
     def test_export_rejects_non_empty_output(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

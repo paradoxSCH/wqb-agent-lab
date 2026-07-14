@@ -1,6 +1,6 @@
-"""Compatibility module for :mod:`src.wqb_agent_lab.platform.models`."""
+"""Compatibility module for :mod:`wqb_agent_lab.platform.models`."""
 
-from src.wqb_agent_lab.platform.models import (
+from wqb_agent_lab.platform.models import (
     WQBAlphaDetail,
     WQBCheck,
     WQBSubmitResult,

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.2.0a1] - 2026-07-14
+
+- Added durable side-effect operation journal and replayable workflow outbox.
+- Added Chinese memory retrieval benchmark and n-gram recall.
+- Added read-only WQB API contract canary and fake-server drift tests.
+- Moved the canonical platform implementation to `wqb_agent_lab.platform`.
+- Replaced the embedded Python dashboard with the React research workbench.
+- Adopted equivalent PEP 440 and SemVer prerelease metadata.
+
 All notable changes to WQB Agent Lab are documented in this file.
 
 The project follows Semantic Versioning after the first public release. While the project is pre-1.0, minor releases may contain breaking contract changes and will call them out here.
@@ -48,7 +57,8 @@ The project follows Semantic Versioning after the first public release. While th
 - Aligned agent-facing operator and direction knowledge with the current catalog and production workflow configuration.
 - Documented the open memory, evaluation, and automatic-submission feedback links and replaced the stale self-evolution architecture image.
 - Made `pyproject.toml` plus `uv.lock` the only committed Python dependency source and removed the unused OpenAI SDK dependency.
-- Moved the canonical WQB boundary to `src.wqb_agent_lab.platform`; `src.wqb` remains a one-cycle compatibility import.
+- Moved the canonical WQB boundary to `wqb_agent_lab.platform`; `src.wqb` and
+  `src.wqb_agent_lab.platform` remain one-cycle compatibility imports.
 - Standardized the production launcher as `python -m scripts.run.workflow`; the provider-specific launcher is deprecated until `0.3.0`.
 - Split current documentation into user, architecture, and maintainer sections; historical implementation records are archived and excluded from releases.
 - Removed the operator-catalog manual gate after maintainer confirmation; GitHub Private Vulnerability Reporting remains the only external publication gate.

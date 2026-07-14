@@ -62,10 +62,18 @@ Do not push the private research repository or reuse its Git history. Review the
 Create a draft filesystem snapshot only after reviewing the selected paths:
 
 ```powershell
-.\.venv\Scripts\python.exe -m scripts.release.export_public_snapshot --workspace-root . --output dist/public-snapshot --json
+.\.venv\Scripts\python.exe -m scripts.release.export_public_snapshot --workspace-root . --output dist/public-snapshot --audit-output dist/public-snapshot-audit --json
 ```
 
-The source of truth is `release/public_snapshot_manifest.json`. Exported metadata records source provenance, per-file SHA-256 values, and structured release blockers. A snapshot with `publish_ready=false` must not be initialized or pushed as the public repository.
+The source of truth is `release/public_snapshot_manifest.json`. The source snapshot is
+immutable after export; smoke builds run from a temporary copy. The sidecar audit directory
+records source provenance, per-file SHA-256 values, and structured release blockers and is
+not copied into the public repository. A snapshot with `publish_ready=false` must not be
+initialized or pushed as the public repository.
+
+Never publish `dist/release-check/public-snapshot` from an interrupted or older command.
+Use the pristine snapshot reported by the completed release check, and verify that it does
+not contain `build/`, `dist/`, `*.egg-info`, `__pycache__`, or inline snapshot audit files.
 
 Historical records under `docs/archive/**` and private workflow configurations are
 excluded even though reviewed current files under `docs/` or `configs/` may be publishable.

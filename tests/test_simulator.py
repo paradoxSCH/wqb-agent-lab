@@ -50,6 +50,9 @@ class FakeSingleSession:
             return None
         return FakeResponse(ok=True, headers={"Location": "simulation/1"})
 
+    def create_simulation(self, target, *_args, **_kwargs):
+        return self.post("simulations", json=target)
+
     def get(self, url):
         if str(url).endswith("alpha-1"):
             return self._alpha_response

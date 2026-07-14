@@ -43,13 +43,13 @@ class ArchitectureBoundaryTests(unittest.TestCase):
         self.assertEqual(
             violations,
             [],
-            "Active agent layers must route WQB access through src.wqb_agent_lab.platform.WQBClient.",
+            "Active agent layers must route WQB access through wqb_agent_lab.platform.WQBClient.",
         )
 
     def test_production_scan_uses_canonical_wqb_client(self) -> None:
         source = (ROOT / "run_scan.py").read_text(encoding="utf-8")
 
-        self.assertIn("from src.wqb_agent_lab.platform import WQBClient", source)
+        self.assertIn("from wqb_agent_lab.platform import WQBClient", source)
         self.assertNotIn("from src.session import", source)
         self.assertNotIn("from src.simulator import", source)
 

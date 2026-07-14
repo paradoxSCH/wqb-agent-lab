@@ -31,7 +31,7 @@ from src.llm_provider.registry import create_llm_provider
 from src.llm_template_generator import LLMTemplateGenerator
 from src.wq.storage.paths import ProjectLayout, resolve_state_path as resolve_layout_state_path
 from src.self_corr_policy import SELF_CORR_NEAR_REPAIR_MAX, self_corr_bucket as _policy_self_corr_bucket
-from src.wqb_agent_lab.platform import WQBClient, load_operator_names
+from wqb_agent_lab.platform import WQBClient, load_operator_names
 
 
 PASS_SHARPE = 1.25
@@ -115,8 +115,7 @@ def _read_json(path: Path, default: Any) -> Any:
 
 
 def _write_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    atomic_write_json(path, payload)
 
 
 def _write_text(path: Path, content: str) -> None:

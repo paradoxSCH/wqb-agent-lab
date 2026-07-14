@@ -8,15 +8,16 @@ from typing import Any
 
 from requests import Response
 
+from wqb_agent_lab.runtime import SideEffectUncertainError
+
 from .alpha_generator import build_alpha_object
 from .config import Config
 from .session import BrainSession
 from .side_effect_governance import require_side_effect_capability
-from .wqb_agent_lab.platform.session import (
+from wqb_agent_lab.platform.session import (
     LOCATION,
     RETRY_AFTER,
     URL_ALPHAS_ALPHAID,
-    URL_SIMULATIONS,
     WQBSession,
 )
 
@@ -71,13 +72,7 @@ async def simulate_until_alpha_response(
     """
     require_side_effect_capability("simulation")
     raw_session = _unwrap_session(session)
-    resp = raw_session.post(
-        URL_SIMULATIONS,
-        json=alpha_obj,
-        expected=raw_session.expected_location,
-        max_tries=60,
-        delay_unexpected=5.0,
-    )
+    resp = raw_session.create_simulation(alpha_obj)
     if resp is None or not resp.ok:
         return resp
 
@@ -189,6 +184,17 @@ async def simulate_single(
             "status_code": resp.status_code,
             "success": True,
             "data": alpha_data,
+        }
+    except SideEffectUncertainError as e:
+        logger.error("模拟 Alpha '%s' 的远端提交结果未知: %s", expression, e)
+        return {
+            "expression": expression,
+            "settings": settings_dict,
+            "success": False,
+            "diagnosis": "simulation_unknown_commit",
+            "operation_id": e.record.operation_id,
+            "operation_fingerprint": e.record.fingerprint,
+            "error": str(e),
         }
     except Exception as e:
         logger.error("模拟 Alpha '%s' 失败：%s", expression, e)

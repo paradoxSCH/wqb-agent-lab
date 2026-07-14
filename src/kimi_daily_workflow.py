@@ -32,6 +32,7 @@ from src.research_policy import (
     policy_digest,
 )
 from src.self_corr_policy import SELF_CORR_NEAR_REPAIR_MAX, self_corr_bucket as _policy_self_corr_bucket
+from wqb_agent_lab.runtime import OperationJournal
 
 
 DEFAULT_WORKFLOW_CONFIG = Path(".local/research/workflows/production.json")
@@ -69,8 +70,9 @@ def read_json(path: Path, default: Any) -> Any:
 
 
 def write_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+    from src.atomic_json import atomic_write_json
+
+    atomic_write_json(path, payload)
 
 
 def write_text(path: Path, content: str) -> None:
@@ -1064,6 +1066,54 @@ class KimiDailyWorkflow:
         self.run_dir = self.root / RUNS_ROOT / self.run_tag
         self.config_dir = self.root / CONFIGS_ROOT / self.run_tag
         self.ledger_path = self.run_dir / "daily_budget_ledger.json"
+        self.operation_journal = OperationJournal(self.run_dir / "operations.db")
+
+    def _enqueue_stage_event(
+        self,
+        event_type: str,
+        ledger: dict[str, Any],
+        *,
+        stage: str,
+        extra: dict[str, Any],
+    ) -> None:
+        payload = {
+            "ledger": ledger,
+            "stage": stage,
+            "callback_event": event_type,
+            "extra": extra,
+        }
+        identity = hashlib.sha256(
+            json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+        ).hexdigest()[:20]
+        self.operation_journal.enqueue(
+            "workflow.stage_finalized",
+            payload,
+            idempotency_key=f"{self.run_tag}:{stage}:{identity}",
+        )
+
+    def drain_workflow_outbox(self) -> int:
+        delivered = 0
+        for event in self.operation_journal.pending_events():
+            if event["event_type"] != "workflow.stage_finalized":
+                continue
+            payload = event["payload"]
+            try:
+                ledger = dict(payload["ledger"])
+                self._active_ledger = ledger
+                self._score_decision_attribution()
+                self.write_closed_loop_artifacts(ledger)
+                self._emit_progress_callback(
+                    str(payload["callback_event"]),
+                    ledger,
+                    stage=str(payload["stage"]),
+                    extra=dict(payload.get("extra") or {}),
+                )
+                write_json(self.ledger_path, ledger)
+                self.operation_journal.mark_delivered(event["event_id"])
+                delivered += 1
+            except Exception as exc:
+                self.operation_journal.mark_failed(event["event_id"], str(exc))
+        return delivered
 
     def advance_to_next_day(self) -> None:
         self._set_run_date(self.run_date + timedelta(days=1))
@@ -1990,8 +2040,7 @@ class KimiDailyWorkflow:
                 ledger["current_stage"] = f"{plan.stage}_complete"
                 self._refresh_remaining(ledger)
                 if not self.dry_run:
-                    self.write_closed_loop_artifacts(ledger)
-                    self._emit_progress_callback(
+                    self._enqueue_stage_event(
                         "stage_skipped",
                         ledger,
                         stage=plan.stage,
@@ -2001,7 +2050,7 @@ class KimiDailyWorkflow:
                             "stage_budget": int(plan.budget),
                         },
                     )
-                    write_json(self.ledger_path, ledger)
+                    self.drain_workflow_outbox()
                 print(f"INFO: stage {plan.stage} has no available candidates; marked complete", flush=True)
             return 0
 
@@ -2017,7 +2066,10 @@ class KimiDailyWorkflow:
             "--max-concurrency",
             str(min(int(ledger.get("max_scan_concurrency") or 3), 3)),
         ]
-        result = subprocess.run(command, cwd=self.root, check=False)
+        scan_env = os.environ.copy()
+        scan_env["WQB_RUN_ID"] = self.run_tag
+        scan_env["WQB_OPERATION_JOURNAL"] = str(self.run_dir / "operations.db")
+        result = subprocess.run(command, cwd=self.root, check=False, env=scan_env)
         if result.returncode != 0:
             print(f"WARNING: scan stage {plan.stage} exited with code {result.returncode}; using partial results", flush=True)
         completed_count = completed_candidate_count(plan.output_path or Path(), candidates)
@@ -2040,9 +2092,7 @@ class KimiDailyWorkflow:
 
         self._refresh_remaining(ledger)
         if not self.dry_run:
-            self._score_decision_attribution()
-            self.write_closed_loop_artifacts(ledger)
-            self._emit_progress_callback(
+            self._enqueue_stage_event(
                 "stage_scan_complete" if completed_count >= plan.candidate_count else "stage_scan_partial",
                 ledger,
                 stage=plan.stage,
@@ -2053,7 +2103,7 @@ class KimiDailyWorkflow:
                     "result_path": relative_path(plan.output_path or Path(), self.root),
                 },
             )
-            write_json(self.ledger_path, ledger)
+            self.drain_workflow_outbox()
         return newly_credited
 
     def _auto_submit_direct(self) -> str | None:
@@ -2333,8 +2383,11 @@ class KimiDailyWorkflow:
 
     def run_once(self, *, now: datetime | None = None, summary_only: bool = False) -> list[str]:
         now = now or datetime.now()
+        replayed = self.drain_workflow_outbox() if not self.dry_run else 0
         ledger = self.load_or_create_ledger()
         messages = [f"ledger: {relative_path(self.ledger_path, self.root)}"]
+        if replayed:
+            messages.append(f"replayed workflow outbox events={replayed}")
         if self.reconcile_existing_stage_progress(ledger):
             messages.append("reconciled existing stage progress")
             if not self.dry_run:

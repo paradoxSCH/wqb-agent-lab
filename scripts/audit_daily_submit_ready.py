@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from src.kimi_daily_workflow import read_json, relative_path
-from src.wqb_agent_lab.workflow import ResearchWorkflow
+from wqb_agent_lab.workflow import ResearchWorkflow
 
 
 def _date_from_run_tag(run_tag: str) -> str:
