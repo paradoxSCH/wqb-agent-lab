@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import time
 from collections.abc import Callable
 from typing import Any
@@ -18,6 +17,7 @@ from .models import (
     WQBSimulationRequest,
     extract_checks,
 )
+from .session import WQBSession
 
 
 class WQBClient:
@@ -39,17 +39,12 @@ class WQBClient:
         cfg = config or load_config()
         if not cfg.email or not cfg.password:
             raise ValueError("WQB_EMAIL and WQB_PASSWORD must be configured in .env")
-        session = requests.Session()
-        credentials = f"{cfg.email}:{cfg.password}"
-        encoded = base64.b64encode(credentials.encode("utf-8")).decode("ascii")
-        response = session.request(
-            "POST",
-            "https://api.worldquantbrain.com/authentication",
-            headers={"Authorization": f"Basic {encoded}"},
-            timeout=cfg.request_backoff_seconds + 30.0,
+        session = WQBSession(
+            (cfg.email, cfg.password),
+            auth_max_tries=cfg.request_max_attempts,
+            auth_delay_unexpected=cfg.request_backoff_seconds,
+            request_timeout_seconds=30.0,
         )
-        if response.status_code != 201:
-            raise RuntimeError(f"WQB authentication failed: HTTP {response.status_code} {response.text[:200]}")
         return cls(session=session, request_timeout_seconds=30.0)
 
     def auth_status(self) -> dict[str, Any]:

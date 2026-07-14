@@ -1,55 +1,86 @@
 flowchart TB
-    user["本地研究者<br/>维护预算与行为经济学边界"]
-    supervisor["Daemon / Supervisor<br/>PID 去重、健康检查、失败重启"]
-    gate["Capability + Session Preflight<br/>simulation / submission 分别授权"]
-    ledger["每日预算账本<br/>阶段预算与运行状态"]
-    planner["DeepSeek 研究规划器<br/>行为代理 + 历史结果 + Policy Feedback"]
-    prepare["候选准备<br/>预算切片、去重、blocklist、表达式预检"]
-    simulate["WQB Simulation<br/>当前生产并发上限：3"]
-    diagnose["结构化失败诊断<br/>数值分档 + diagnosis_type"]
-    triage["结果分流<br/>Direct Submit / Optimize Next / Low Value"]
-    artifacts[("Run Artifacts<br/>Dashboard + Progress Callback")]
+    user["研究者<br/>维护研究预算与行为经济学边界"]
 
-    policy["Policy Evaluator<br/>修复动作、方向降权、预算限制"]
-    backlog[("Submission Backlog")]
-    submission["独立 Submission Worker<br/>live check、POST、确认、重试"]
-    wqb["WorldQuant BRAIN API"]
-    registry["Registry Worker<br/>同步 Submitted Alpha"]
-    registry_db[("Submitted Registry")]
+    subgraph access["运行入口"]
+        direction LR
+        cli["wqb-engine / CLI"]
+        mcp["TypeScript MCP"]
+    end
 
-    memory_worker["Memory Worker<br/>证据分级、晋升、衰减、遗忘"]
-    memory_db[("SQLite Memory + Graph")]
-    evaluation["Evaluation Worker<br/>效果评估 + Ablation"]
-    reports[("Evaluation Reports")]
+    subgraph control["运行控制与治理"]
+        direction TB
+        supervisor["Daemon / Supervisor<br/>PID 去重、健康检查、失败重启"]
+        research_policy["Research Policy<br/>每日预算、阶段分配、行为边界"]
+        preflight["Capability + Session Preflight<br/>simulation / submission 独立授权"]
+        ledger[("每日预算账本<br/>阶段进度与运行状态")]
+    end
 
-    gap_memory["未闭合<br/>生产 planner 尚未自动检索记忆"]
-    gap_eval["未闭合<br/>评估尚未直接重分配预算"]
-    gap_submit["待统一<br/>自动 backlog 尚未经过结构化治理"]
+    subgraph research["因子研究主循环"]
+        direction TB
+        llm["统一 LLM Provider<br/>OpenAI-compatible / Anthropic / Gemini / Ollama / CLI"]
+        candidate["行为候选生成<br/>机制、代理字段、kill conditions"]
+        prepare["候选准备<br/>预算切片、去重、blocklist、表达式与字段预检"]
+        simulate["WQB Simulation"]
+        diagnose["结构化失败诊断<br/>diagnosis_type、数值分档、置信度"]
+        policy["Policy Evaluator<br/>修复动作、方向降权、预算上限"]
+        triage["结果分流<br/>Submit Ready / Optimize Next / Low Value"]
+        feedback["Policy Feedback<br/>写入下一轮候选与预算控制"]
+    end
 
-    user --> supervisor --> gate --> ledger --> planner --> prepare
-    prepare --> simulate --> diagnose --> triage --> artifacts
+    subgraph async_lanes["异步执行、记忆与评估"]
+        direction LR
+        artifacts[("Run Artifacts<br/>进度回调、诊断、决策归因")]
 
-    triage --> policy --> planner
-    triage --> backlog --> submission --> wqb
-    wqb --> registry --> registry_db
-    registry_db --> planner
+        subgraph submission_lane["提交与平台同步"]
+            direction TB
+            backlog[("Submission Backlog")]
+            submission["Submission Worker<br/>live check、POST、确认、重试、限流"]
+            wqb["WorldQuant BRAIN API"]
+            registry["Registry Worker<br/>同步 Submitted Alpha"]
+            registry_db[("Submitted Registry")]
+        end
 
-    diagnose -. "阶段后异步同步" .-> memory_worker --> memory_db
-    ledger -. "运行完成后异步评估" .-> evaluation --> reports
-    reports --> artifacts
+        subgraph memory_lane["分层记忆治理"]
+            direction TB
+            memory_worker["Memory Worker<br/>证据分级、晋升、衰减、遗忘"]
+            memory_db[("SQLite Memory<br/>短期 / 长期 / FTS / Graph")]
+            memory_tools["Memory CLI + Dashboard<br/>查询、完整性检查、图关系管理"]
+        end
 
-    memory_db -.-> gap_memory
-    reports -.-> gap_eval
-    backlog -.-> gap_submit
+        subgraph evaluation_lane["评估与可观测性"]
+            direction TB
+            evaluation["Evaluation Worker<br/>效果评估、Ablation、Policy Effectiveness"]
+            reports[("Evaluation Reports")]
+            dashboard["Dashboard"]
+        end
+    end
 
-    classDef control fill:#E8F1F5,stroke:#28536B,color:#102A3A,stroke-width:1.5px;
-    classDef mining fill:#EAF4EC,stroke:#2E6B45,color:#153A24,stroke-width:1.5px;
+    user --> cli
+    user --> mcp
+    cli --> supervisor
+    mcp --> supervisor
+    supervisor --> research_policy --> preflight --> ledger
+    ledger --> llm --> candidate --> prepare --> simulate --> diagnose --> policy --> triage
+    triage --> feedback --> candidate
+
+    triage --> artifacts
+    ledger --> artifacts
+    triage --> backlog --> submission --> wqb --> registry --> registry_db
+    artifacts --> memory_worker --> memory_db --> memory_tools
+    artifacts --> evaluation --> reports --> dashboard
+
+    classDef person fill:#17324D,stroke:#17324D,color:#FFFFFF,stroke-width:1.5px;
+    classDef interface fill:#E8F1F5,stroke:#28536B,color:#102A3A,stroke-width:1.5px;
+    classDef controlNode fill:#EAF4EC,stroke:#2E6B45,color:#153A24,stroke-width:1.5px;
+    classDef researchNode fill:#EEF3FF,stroke:#4969A8,color:#1C315B,stroke-width:1.5px;
     classDef worker fill:#F2ECF8,stroke:#65458A,color:#34204D,stroke-width:1.5px;
     classDef store fill:#FFF6DD,stroke:#9A7424,color:#49360D,stroke-width:1.5px;
-    classDef gap fill:#FFF0F0,stroke:#A84848,color:#5A2020,stroke-width:1.5px,stroke-dasharray:5 4;
+    classDef external fill:#FCECEC,stroke:#9A4545,color:#4D2020,stroke-width:1.5px;
 
-    class user,supervisor,gate,ledger,planner control;
-    class prepare,simulate,diagnose,triage,policy mining;
+    class user person;
+    class cli,mcp,memory_tools,dashboard interface;
+    class supervisor,research_policy,preflight controlNode;
+    class llm,candidate,prepare,simulate,diagnose,policy,triage,feedback researchNode;
     class submission,registry,memory_worker,evaluation worker;
-    class artifacts,backlog,registry_db,memory_db,reports store;
-    class gap_memory,gap_eval,gap_submit gap;
+    class ledger,backlog,registry_db,memory_db,artifacts,reports store;
+    class wqb external;

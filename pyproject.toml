@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "wqb-agent-lab"
-version = "0.1.0"
-description = "Local-first, agent-native WorldQuant BRAIN research harness."
+version = "0.1.1"
+description = "Auditable agent research workflow for WorldQuant BRAIN."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 license = "Apache-2.0"
@@ -34,14 +34,14 @@ classifiers = [
 dependencies = [
   "pandas>=2.0",
   "python-dotenv>=1.0.0",
-  "requests>=2.31",
-  "wqb==0.2.5"
+  "requests>=2.31"
 ]
 
 [project.urls]
 Homepage = "https://github.com/paradoxSCH/wqb-agent-lab"
 Repository = "https://github.com/paradoxSCH/wqb-agent-lab"
 Issues = "https://github.com/paradoxSCH/wqb-agent-lab/issues"
+Documentation = "https://github.com/paradoxSCH/wqb-agent-lab/tree/main/docs"
 
 [project.optional-dependencies]
 mcp = [

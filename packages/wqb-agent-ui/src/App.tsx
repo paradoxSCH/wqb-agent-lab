@@ -23,7 +23,7 @@ export function App() {
       <aside className="sidebar" aria-label="WQB Agent Lab">
         <div className="brand">
           <h1>WQB Agent Lab</h1>
-          <p>本地研究 cockpit</p>
+          <p>因子研究 cockpit</p>
         </div>
         <nav className="nav" aria-label="主导航">
           <a aria-current="page" href="#run">运行概览</a>

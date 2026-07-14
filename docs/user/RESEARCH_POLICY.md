@@ -1,6 +1,6 @@
 # 研究政策
 
-`research_policy` 是公开生产配置中唯一的预算与行为经济学边界来源。策略验证完全在本地执行，不需要 WQB 凭证，也不会发起网络请求。
+`research_policy` 是公开生产配置中唯一的预算与行为经济学边界来源。策略验证是离线操作，不需要 WQB 凭证，也不会发起网络请求。
 
 ## 用户维护面
 
@@ -41,7 +41,7 @@
 
 边界评估发生在候选多样性选择和模拟预算提交之前。未知、禁用或缺失的 `behavioral_mechanism`，越界或缺失的 `fields`，缺失的 `kill_conditions`，以及政策禁止的纯价量候选都会被阻断，并且消耗 0 次模拟预算。
 
-当前 live mining 仍需要 **agent 或本地生成器** 生成包含上述元数据的 scan config。行为机制研究、字段选择和表达式生成到生产 scan config 的自动编排尚未自动闭合；政策层负责验证和阻断，不会替代候选生成，也不会根据表达式猜测行为机制。
+当前 live mining 仍需要 **agent 或生成器** 生成包含上述元数据的 scan config。行为机制研究、字段选择和表达式生成到生产 scan config 的自动编排尚未自动闭合；政策层负责验证和阻断，不会替代候选生成，也不会根据表达式猜测行为机制。
 
 ## 配置与验证
 
@@ -72,7 +72,7 @@ copy configs\examples\production-workflow.example.json .local\research\workflows
 
 launcher 按顺序检查策略、side-effect capability 和 session。`.env.example` 的凭证默认为空，`WQB_LIVE_SIMULATION_CAPABILITY=0`、`WQB_LIVE_SUBMIT_CAPABILITY=0`；空凭证会在创建网络 session 前快速失败。
 
-进行真实模拟时才填写本地 `.env` 并把 simulation capability 改为 `1`。提交是独立能力，还需要 submission capability 为 `1` 和显式的 `--auto-submit`。
+进行真实模拟时才填写项目根目录的 `.env` 并把 simulation capability 改为 `1`。提交是独立能力，还需要 submission capability 为 `1` 和显式的 `--auto-submit`。
 
 ## 审计产物
 

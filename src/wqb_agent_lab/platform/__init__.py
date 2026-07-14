@@ -11,12 +11,15 @@ from .models import (
     is_submitted_status,
 )
 from .operator_catalog import load_operator_names
+from .session import WQBAuthenticationError, WQBSession
 
 __all__ = [
     "CheckReadiness",
     "WQBAlphaDetail",
     "WQBCheck",
     "WQBClient",
+    "WQBAuthenticationError",
+    "WQBSession",
     "WQBSubmitResult",
     "WQBSimulationCreated",
     "WQBSimulationRequest",

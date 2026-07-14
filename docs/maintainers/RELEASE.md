@@ -16,6 +16,11 @@ Release verification covers full Ruff, Python/MCP/UI tests and builds, non-edita
 installation, clean-checkout build, public-snapshot audit, vulnerability reports, license
 inventory, and CycloneDX SBOMs. Generated outputs remain under ignored `dist/` paths.
 
+Push a reviewed `v*` tag only from the clean public repository. The release workflow runs
+the same verification and publishes the wheel, source distribution, Python/MCP/UI
+CycloneDX SBOMs, and `SHA256SUMS`. Do not publish artifacts built in the private research
+workspace.
+
 ## Publication gates
 
 The operator-catalog, history, capability, research-asset, identity, and support decisions

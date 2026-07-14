@@ -1,0 +1,30 @@
+%%{init: {"theme":"base","themeVariables":{"background":"#F7F9FC","fontFamily":"Microsoft YaHei, Noto Sans CJK SC, Arial, sans-serif","fontSize":"18px","primaryTextColor":"#172033","lineColor":"#667085"},"flowchart":{"curve":"basis","htmlLabels":true,"nodeSpacing":32,"rankSpacing":50,"padding":24}}}%%
+flowchart TB
+    user["<div style='width:560px'><b>研究者</b><br/>维护研究预算与行为经济学边界</div>"]
+
+    entry["<div style='width:560px'><b>01 · 运行入口</b><br/><br/>wqb-engine / CLI　·　TypeScript MCP</div>"]
+
+    governance["<div style='width:560px'><b>02 · 运行控制与治理</b><br/><br/>Daemon / Supervisor<br/>PID 去重　·　健康检查　·　失败重启<br/><br/>Research Policy　·　Capability + Session Preflight<br/>预算分配　·　行为边界　·　模拟与提交独立授权<br/><br/>每日预算账本　·　阶段进度　·　运行状态</div>"]
+
+    research["<div style='width:560px'><b>03 · 因子研究主循环</b><br/><br/>统一 LLM Provider<br/>↓<br/>行为候选生成　→　候选准备　→　WQB Simulation<br/>↓<br/>结构化失败诊断　→　Policy Evaluator　→　结果分流<br/>↓<br/>Policy Feedback　↺　更新下一轮候选与预算</div>"]
+
+    artifacts[("<div style='width:460px'><b>Run Artifacts</b><br/>进度　·　诊断　·　决策归因</div>")]
+
+    workers["<div style='width:560px'><b>04 · 异步执行、记忆与评估</b><br/><br/><b>提交与平台同步</b><br/>Submission Worker → WorldQuant BRAIN → Registry<br/>确认　·　重试　·　限流<br/><br/><b>分层记忆治理</b><br/>Memory Worker → SQLite Memory → Memory Dashboard<br/>短期　·　长期　·　FTS　·　Graph　·　晋升　·　衰减　·　遗忘<br/><br/><b>评估与可观测性</b><br/>Evaluation Worker → Reports → Dashboard<br/>效果评估　·　Ablation　·　Policy</div>"]
+
+    user --> entry --> governance --> research --> artifacts
+    artifacts --> workers
+
+    classDef userNode fill:#193F5B,stroke:#193F5B,color:#FFFFFF,stroke-width:2px;
+    classDef entryNode fill:#E8F1F5,stroke:#35647A,color:#173B4C,stroke-width:1.5px;
+    classDef governanceNode fill:#EAF5EE,stroke:#3E7A56,color:#1F4B30,stroke-width:1.5px;
+    classDef researchNode fill:#EDF2FF,stroke:#5872B8,color:#263F7A,stroke-width:1.8px;
+    classDef artifactNode fill:#FFF5D9,stroke:#A57A27,color:#533C0C,stroke-width:1.5px;
+    classDef workerNode fill:#F3EDFA,stroke:#735397,color:#432B61,stroke-width:1.8px;
+
+    class user userNode;
+    class entry entryNode;
+    class governance governanceNode;
+    class research researchNode;
+    class artifacts artifactNode;
+    class workers workerNode;

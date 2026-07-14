@@ -1,4 +1,4 @@
-"""Public package for the local-first WQB agent research product."""
+"""Public package for the WQB agent research product."""
 
 from importlib import import_module
 from types import ModuleType

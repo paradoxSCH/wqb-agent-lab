@@ -3,8 +3,8 @@
 WQB Agent Lab uses semantic versioning for public commands, `wqb-engine` operations, MCP
 contracts, configuration schemas, and documented Python imports.
 
-The planned first public Git tag is `v0.1.0-alpha`. Package metadata remains `0.1.0` with
-alpha development status until that tag is created from the clean public repository.
+The current public release is `v0.1.1-alpha`; package metadata is `0.1.1` and remains in
+alpha development status. `v0.1.0-alpha` was the first history-free public release.
 
 - Patch releases fix behavior without changing public contracts.
 - Minor releases may add compatible operations, fields, providers, or diagnostics.

@@ -6,6 +6,28 @@ The project follows Semantic Versioning after the first public release. While th
 
 ## [Unreleased]
 
+## [0.1.1-alpha] - 2026-07-14
+
+### Added
+
+- Repository-owned WQB session transport with authentication, pagination, simulation,
+  check, and submission compatibility contracts.
+- Release artifacts with checksums and CycloneDX software bills of materials.
+- Protected public `main` branch and docs-as-code repository settings.
+
+### Changed
+
+- Replaced the third-party `wqb` runtime package with the repository-owned platform
+  client and session boundary.
+- Condensed the Chinese-first README and replaced the architecture image with the
+  implemented runtime path only.
+- Synchronized package metadata, release evidence, and publication records with the
+  public repository.
+- Removed positioning language that described ordinary execution defaults as product
+  differentiators.
+
+## [0.1.0-alpha] - 2026-07-13
+
 ### Added
 
 - History-free public snapshot exporter with manifest-driven private asset exclusion.

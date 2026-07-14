@@ -14,7 +14,7 @@ from typing import Any
 from .evaluator import AlphaMetrics
 from .session import BrainSession
 from .side_effect_governance import require_side_effect_capability
-from .wqb_agent_lab.platform.third_party import wqb_sdk as wqb
+from .wqb_agent_lab.platform import WQBSession
 
 
 logger = logging.getLogger(__name__)
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 
-def _unwrap_session(session: wqb.WQBSession | BrainSession) -> wqb.WQBSession:
+def _unwrap_session(session: WQBSession | BrainSession) -> WQBSession:
     """兼容原始 ``WQBSession`` 和 ``BrainSession`` 封装。"""
     return session.session if isinstance(session, BrainSession) else session
 
@@ -90,7 +90,7 @@ class SubmissionRecord:
 
 
 def check_submission(
-    session: wqb.WQBSession | BrainSession,
+    session: WQBSession | BrainSession,
     alpha_id: str,
 ) -> dict[str, Any]:
     """检查 Alpha 是否满足提交前置条件。"""
@@ -120,7 +120,7 @@ def check_submission(
 
 
 def submit_alpha(
-    session: wqb.WQBSession | BrainSession,
+    session: WQBSession | BrainSession,
     alpha_id: str,
 ) -> dict[str, Any]:
     """向 BRAIN 提交 Alpha。"""
@@ -183,7 +183,7 @@ class SubmissionQueue:
 
     def __init__(
         self,
-        session: wqb.WQBSession | BrainSession,
+        session: WQBSession | BrainSession,
         policy: SubmissionPolicy | None = None,
         tracker: "SubmissionTracker | None" = None,
     ) -> None:
@@ -446,7 +446,7 @@ def format_progress_text(report: dict[str, Any]) -> str:
 
 
 def batch_check_and_submit(
-    session: wqb.WQBSession | BrainSession,
+    session: WQBSession | BrainSession,
     candidates: list[AlphaMetrics],
     dry_run: bool = True,
 ) -> list[dict[str, Any]]:

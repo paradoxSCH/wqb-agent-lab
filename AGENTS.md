@@ -1,6 +1,6 @@
 # Agent Onboarding
 
-Treat this repository as a local-first research system. Do not enable live simulation or
+Treat this repository as a WQB research system. Do not enable live simulation or
 submission capabilities during setup.
 
 Read `docs/architecture/REPOSITORY_LAYOUT.md` before choosing an entry point. Root-level

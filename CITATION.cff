@@ -4,7 +4,7 @@ title: "WQB Agent Lab"
 type: software
 authors:
   - name: "paradoxSCH"
-version: 0.1.0
+version: 0.1.1
 license: Apache-2.0
-abstract: "A local-first, agent-native research harness for WorldQuant BRAIN workflows."
+abstract: "An auditable agent research workflow for WorldQuant BRAIN."
 repository-code: "https://github.com/paradoxSCH/wqb-agent-lab"

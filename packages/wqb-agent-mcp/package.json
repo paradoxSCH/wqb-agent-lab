@@ -1,6 +1,6 @@
 {
   "name": "@wqb-agent-lab/mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "TypeScript MCP shell for WQB Agent Lab. Delegates research operations to wqb-engine.",
   "type": "module",
   "private": true,

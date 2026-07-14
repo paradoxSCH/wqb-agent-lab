@@ -1083,26 +1083,13 @@ wheels = [
 ]
 
 [[package]]
-name = "wqb"
-version = "0.2.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "requests" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/cd/d2/0f9d4b51f07e4b5cff5f787fb1d923c6e2b186092b5a1b0eb498ce5bdb40/wqb-0.2.5.tar.gz", hash = "sha256:7df53e01c3eaec3e7cced118efd27de4c7b16313b0cd9b3c23e1116cc503d9bf", size = 19804, upload-time = "2025-02-20T03:23:32.053Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/26/80/b57f2f08ff1076642d1306f0ecc4076cd4e26d2194f954dd2f1478416f5b/wqb-0.2.5-py3-none-any.whl", hash = "sha256:6b1197ba06b6bf4542857015254fb62ceb6ac138d8898451139af3692c0d5830", size = 17724, upload-time = "2025-02-20T03:23:30.233Z" },
-]
-
-[[package]]
 name = "wqb-agent-lab"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "." }
 dependencies = [
     { name = "pandas" },
     { name = "python-dotenv" },
     { name = "requests" },
-    { name = "wqb" },
 ]
 
 [package.optional-dependencies]
@@ -1126,6 +1113,5 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "requests", specifier = ">=2.31" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.5" },
-    { name = "wqb", specifier = "==0.2.5" },
 ]
 provides-extras = ["mcp", "dev"]

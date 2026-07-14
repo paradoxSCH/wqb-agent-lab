@@ -24,6 +24,7 @@ class OpenSourceReadinessTests(unittest.TestCase):
             "LICENSE",
             "LICENSES/CC-BY-4.0.txt",
             "CITATION.cff",
+            "GOVERNANCE.md",
             "pyproject.toml",
             "uv.lock",
             "CONTRIBUTING.md",
@@ -38,6 +39,8 @@ class OpenSourceReadinessTests(unittest.TestCase):
             "docs/user/RESEARCH_POLICY.md",
             "docs/user/TROUBLESHOOTING.md",
             ".github/workflows/ci.yml",
+            ".github/workflows/release.yml",
+            ".github/CODEOWNERS",
             ".github/dependabot.yml",
             ".github/pull_request_template.md",
             ".github/ISSUE_TEMPLATE/bug_report.yml",
@@ -62,19 +65,17 @@ class OpenSourceReadinessTests(unittest.TestCase):
         readme = self.read("README.md")
 
         required_markers = (
-            "本地优先",
-            "agent-native",
             "WorldQuant BRAIN",
+            "可审计的研究工作流",
             "Not affiliated with WorldQuant",
-            "默认不会自动提交",
+            "真实平台副作用初始为关闭状态",
             "uv run python -m scripts.dev check",
             "scripts.dev doctor --profile runtime --json",
             "wqb-agent-lab",
-            "uv run wqb-engine --help",
-            "packages/wqb-agent-mcp",
-            "packages/wqb-agent-ui",
-            "scripts.checks.public_snapshot_smoke",
-            "publish_ready",
+            "uv run wqb-engine demo",
+            "docs/user/GETTING_STARTED.md",
+            "docs/user/RESEARCH_POLICY.md",
+            "docs/user/LLM_PROVIDERS.md",
             "Apache-2.0",
             "CC BY 4.0",
             "CITATION.cff",
@@ -83,6 +84,9 @@ class OpenSourceReadinessTests(unittest.TestCase):
         for marker in required_markers:
             self.assertIn(marker, readme)
         self.assertNotIn("## License\n\nMIT. See [LICENSE](LICENSE).", readme)
+
+        for vague_positioning in ("本地优先", "local-first", "agent-native"):
+            self.assertNotIn(vague_positioning, readme.lower())
 
     def test_readme_declares_exact_dual_license_scope_and_citation_request(self) -> None:
         readme = self.read("README.md")
@@ -95,6 +99,26 @@ class OpenSourceReadinessTests(unittest.TestCase):
             "This citation request does not add a\nrestriction beyond the applicable licenses.",
         ):
             self.assertIn(marker, readme)
+
+    def test_public_positioning_uses_concrete_product_language(self) -> None:
+        positioning_files = (
+            "AGENTS.md",
+            "CITATION.cff",
+            "PRODUCT.md",
+            "README.md",
+            "pyproject.toml",
+            "docs/architecture/README.md",
+            "docs/architecture/decisions/0001-layered-python-typescript-runtime.md",
+            "docs/maintainers/OPEN_SOURCE_READINESS.md",
+            "docs/maintainers/PUBLICATION_DECISIONS.md",
+            "scripts/dashboard_assets.py",
+            "src/wqb_agent_lab/__init__.py",
+        )
+
+        for relative_path in positioning_files:
+            content = self.read(relative_path).lower()
+            for vague_positioning in ("本地优先", "local-first", "agent-native"):
+                self.assertNotIn(vague_positioning, content, relative_path)
 
     def test_notice_declares_scope_and_boundary_terms(self) -> None:
         notice = self.read("NOTICE")
@@ -165,6 +189,19 @@ class OpenSourceReadinessTests(unittest.TestCase):
             package_lock = json.loads(self.read(relative_path))
             self.assertEqual("Apache-2.0", package_lock["packages"][""]["license"])
 
+    def test_public_package_versions_are_synchronized(self) -> None:
+        pyproject = self.read("pyproject.toml")
+        citation = self.read("CITATION.cff")
+        mcp_package = json.loads(self.read("packages/wqb-agent-mcp/package.json"))
+        ui_package = json.loads(self.read("packages/wqb-agent-ui/package.json"))
+        mcp_server = self.read("packages/wqb-agent-mcp/src/server.ts")
+
+        self.assertIn('version = "0.1.1"', pyproject)
+        self.assertIn("version: 0.1.1", citation)
+        self.assertEqual("0.1.1", mcp_package["version"])
+        self.assertEqual("0.1.1", ui_package["version"])
+        self.assertIn('version: "0.1.1"', mcp_server)
+
     def test_gitignore_blocks_private_runtime_artifacts_recursively(self) -> None:
         gitignore = self.read(".gitignore")
 
@@ -197,7 +234,8 @@ class OpenSourceReadinessTests(unittest.TestCase):
         self.assertIn('name = "wqb-agent-lab"', pyproject)
         self.assertIn('requires-python = ">=3.11,<3.13"', pyproject)
         self.assertNotIn("Programming Language :: Python :: 3.10", pyproject)
-        self.assertIn('"wqb==0.2.5"', pyproject)
+        self.assertIn('"requests>=2.31"', pyproject)
+        self.assertNotRegex(pyproject, re.compile(r'(?m)^\s*"wqb(?:[<>=!~].*)?"'))
         self.assertIn("[project.optional-dependencies]", pyproject)
         self.assertRegex(pyproject, re.compile(r"mcp\s*=\s*\[", re.MULTILINE))
         self.assertRegex(pyproject, re.compile(r"dev\s*=\s*\[", re.MULTILINE))
@@ -264,11 +302,27 @@ class OpenSourceReadinessTests(unittest.TestCase):
         self.assertIn("python -m scripts.dev release-check --json", ci)
         self.assertIn("uv sync --extra dev --extra mcp --frozen", ci)
         self.assertIn("gitleaks/gitleaks-action@v2", ci)
+        self.assertIn("GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}", ci)
+        self.assertIn("pull-requests: read", ci)
+        self.assertIn("fetch-depth: 0", ci)
         self.assertIn("npm ci --prefix packages/wqb-agent-mcp", ci)
         self.assertIn("npm ci --prefix packages/wqb-agent-ui", ci)
         self.assertNotIn("WQB_EMAIL", ci)
         self.assertNotIn("WQB_PASSWORD", ci)
         self.assertNotIn("submit-worker --daemon", ci)
+
+    def test_release_workflow_publishes_verifiable_assets(self) -> None:
+        workflow = self.read(".github/workflows/release.yml")
+
+        for marker in (
+            "uv run python -m scripts.dev release-check --json",
+            "*.whl",
+            "*.tar.gz",
+            "*.cdx.json",
+            "SHA256SUMS",
+            "gh release create",
+        ):
+            self.assertIn(marker, workflow)
 
     def test_public_examples_disable_live_side_effect_capabilities(self) -> None:
         env_example = self.read(".env.example")
@@ -322,26 +376,36 @@ class OpenSourceReadinessTests(unittest.TestCase):
         self.assertIn(policy_path, manifest["include"]["files"])
         self.assertIn(policy_path, manifest["required_files"])
 
-    def test_readme_documents_clean_clone_research_policy_journey(self) -> None:
+    def test_readme_is_a_concise_public_project_entry_point(self) -> None:
         readme = self.read("README.md")
 
         required_markers = (
-            r"copy configs\examples\production-workflow.example.json .local\research\workflows\production.json",
-            r".\.venv\Scripts\wqb-engine.exe policy.validate --config .local\research\workflows\production.json",
-            r".\.venv\Scripts\wqb-engine.exe policy.show --config .local\research\workflows\production.json",
-            '"daily_simulation_limit": 20',
-            '"direction_probe": 8',
-            '"scale_winners": 8',
-            '"holdout": 4',
-            "research_policy_evaluation.json",
-            "behavioral_mechanism",
-            "kill_conditions",
+            "scripts/bootstrap.ps1 -Profile runtime",
+            "scripts/bootstrap.sh --profile runtime",
+            "scripts.dev doctor --profile runtime --json",
+            "uv run wqb-engine demo",
+            "configs\\examples\\production-workflow.example.json",
+            "uv run wqb-engine policy.validate",
+            "uv run wqb-engine llm.validate",
             "WQB_LIVE_SIMULATION_CAPABILITY=0",
             "WQB_LIVE_SUBMIT_CAPABILITY=0",
-            "scripts.launch_daemon",
+            "docs/architecture/README.md",
+            "docs/user/TROUBLESHOOTING.md",
         )
         for marker in required_markers:
             self.assertIn(marker, readme)
+
+        for maintainer_detail in (
+            "## 公开快照",
+            "scripts.release.export_public_snapshot",
+            "scripts.checks.public_snapshot_smoke",
+            "publish_ready",
+            "当前私有工作仓库不应直接推送",
+            "## Python / TypeScript Contract",
+        ):
+            self.assertNotIn(maintainer_detail, readme)
+
+        self.assertLessEqual(len(readme.splitlines()), 160)
 
 
 

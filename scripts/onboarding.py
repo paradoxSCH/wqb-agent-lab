@@ -123,7 +123,7 @@ def _tool_check(
 
 
 def _runtime_dependency_check() -> DoctorCheck:
-    required = ("wqb-agent-lab", "pandas", "python-dotenv", "requests", "wqb")
+    required = ("wqb-agent-lab", "pandas", "python-dotenv", "requests")
     missing: list[str] = []
     installed: list[str] = []
     for distribution in required:

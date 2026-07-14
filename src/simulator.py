@@ -12,13 +12,19 @@ from .alpha_generator import build_alpha_object
 from .config import Config
 from .session import BrainSession
 from .side_effect_governance import require_side_effect_capability
-from .wqb_agent_lab.platform.third_party import wqb_sdk as wqb
+from .wqb_agent_lab.platform.session import (
+    LOCATION,
+    RETRY_AFTER,
+    URL_ALPHAS_ALPHAID,
+    URL_SIMULATIONS,
+    WQBSession,
+)
 
 
 logger = logging.getLogger(__name__)
 
 # BRAIN API simulation endpoint URL prefix
-_ALPHAS_URL = "https://api.worldquantbrain.com/alphas/{}"
+_ALPHAS_URL = URL_ALPHAS_ALPHAID
 
 
 def _response_json_or_none(resp: Response | None) -> dict[str, Any] | list[Any] | None:
@@ -50,7 +56,7 @@ def summarize_simulation_payload(payload: Any) -> str:
 
 
 async def simulate_until_alpha_response(
-    session: wqb.WQBSession | BrainSession,
+    session: WQBSession | BrainSession,
     alpha_obj: dict[str, Any] | list[Any],
     *,
     max_polls: int = 600,
@@ -66,7 +72,7 @@ async def simulate_until_alpha_response(
     require_side_effect_capability("simulation")
     raw_session = _unwrap_session(session)
     resp = raw_session.post(
-        wqb.URL_SIMULATIONS,
+        URL_SIMULATIONS,
         json=alpha_obj,
         expected=raw_session.expected_location,
         max_tries=60,
@@ -75,7 +81,7 @@ async def simulate_until_alpha_response(
     if resp is None or not resp.ok:
         return resp
 
-    poll_url = resp.headers.get(wqb.LOCATION)
+    poll_url = resp.headers.get(LOCATION)
     if not poll_url:
         return None
 
@@ -89,7 +95,7 @@ async def simulate_until_alpha_response(
         if isinstance(payload, dict) and payload.get("alpha"):
             return last_resp
 
-        retry_after = last_resp.headers.get(wqb.RETRY_AFTER)
+        retry_after = last_resp.headers.get(RETRY_AFTER)
         if retry_after is not None:
             try:
                 delay = float(retry_after)
@@ -112,13 +118,13 @@ async def simulate_until_alpha_response(
     return last_resp
 
 
-def _unwrap_session(session: wqb.WQBSession | BrainSession) -> wqb.WQBSession:
+def _unwrap_session(session: WQBSession | BrainSession) -> WQBSession:
     """兼容原始 ``WQBSession`` 和 ``BrainSession`` 封装。"""
     return session.session if isinstance(session, BrainSession) else session
 
 
 async def simulate_single(
-    session: wqb.WQBSession | BrainSession,
+    session: WQBSession | BrainSession,
     expression: str,
     settings_dict: dict,
 ) -> dict[str, Any]:
@@ -195,7 +201,7 @@ async def simulate_single(
 
 
 def simulate_batch(
-    session: wqb.WQBSession | BrainSession,
+    session: WQBSession | BrainSession,
     expressions: list[str],
     config: Config,
     *,
