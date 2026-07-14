@@ -17,6 +17,7 @@ class CIGovernanceTests(unittest.TestCase):
             self.assertIn(marker, self.workflow)
         self.assertIn("runs-on: ${{ matrix.os }}", self.workflow)
         self.assertIn("python-version: ${{ matrix.python }}", self.workflow)
+        self.assertIn("UV_PYTHON: ${{ matrix.python }}", self.workflow)
 
     def test_ci_uses_frozen_dependency_installs(self) -> None:
         self.assertGreaterEqual(

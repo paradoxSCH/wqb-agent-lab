@@ -300,7 +300,7 @@ def _node_checks(root: Path) -> list[DoctorCheck]:
         checks.append(
             DoctorCheck(
                 "dashboard_build",
-                "fail",
+                "warn",
                 "The React dashboard production build is missing.",
                 expected="packages/wqb-agent-ui/dist/index.html",
                 fix_command="npm run build --prefix packages/wqb-agent-ui",
