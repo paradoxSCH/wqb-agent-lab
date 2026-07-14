@@ -304,6 +304,7 @@ class OpenSourceReadinessTests(unittest.TestCase):
         self.assertIn("gitleaks/gitleaks-action@v2", ci)
         self.assertIn("GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}", ci)
         self.assertIn("pull-requests: read", ci)
+        self.assertIn("fetch-depth: 0", ci)
         self.assertIn("npm ci --prefix packages/wqb-agent-mcp", ci)
         self.assertIn("npm ci --prefix packages/wqb-agent-ui", ci)
         self.assertNotIn("WQB_EMAIL", ci)
