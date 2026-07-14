@@ -1,4 +1,4 @@
-"""基于 wqb 的 BRAIN API 会话封装。"""
+"""基于仓库自有传输层的 BRAIN API 会话封装。"""
 
 from __future__ import annotations
 
@@ -13,7 +13,7 @@ from typing import Any
 from requests import Response
 
 from .config import Config
-from .wqb_agent_lab.platform.third_party import wqb_sdk as wqb
+from .wqb_agent_lab.platform import WQBSession
 
 
 logger = logging.getLogger(__name__)
@@ -35,8 +35,8 @@ def _relocate_root_wqb_logs(repo_root: Path, log_dir: Path) -> None:
 
 
 def _configure_wqb_logger(config: Config) -> logging.Logger:
-    """将 wqb 文件日志固定输出到独立目录。"""
-    wqb_logger = wqb.wqb_logger()
+    """将 WQB 文件日志固定输出到独立目录。"""
+    wqb_logger = logging.getLogger("wqb_agent_lab.platform.session")
     wqb_logger.setLevel(getattr(logging, config.log_level, logging.INFO))
 
     repo_root = Path(__file__).resolve().parent.parent
@@ -72,11 +72,11 @@ class BrainAPIError(RuntimeError):
 
 
 class BrainSession:
-    """对 ``wqb.WQBSession`` 的同步业务封装。"""
+    """对仓库自有 ``WQBSession`` 的同步业务封装。"""
 
     def __init__(
         self,
-        session: wqb.WQBSession,
+        session: WQBSession,
         retry_policy: RetryPolicy | None = None,
     ) -> None:
         self.session = session
@@ -332,14 +332,14 @@ class BrainSession:
         )
 
 
-def create_session(config: Config) -> wqb.WQBSession:
+def create_session(config: Config) -> WQBSession:
     """创建带自动认证能力的 ``WQBSession``。"""
     if not config.email or not config.password:
         raise ValueError("必须在 .env 中设置 WQB_EMAIL 和 WQB_PASSWORD")
 
     wqb_logger = _configure_wqb_logger(config)
 
-    session = wqb.WQBSession(
+    session = WQBSession(
         (config.email, config.password),
         logger=wqb_logger,
         auth_max_tries=10,

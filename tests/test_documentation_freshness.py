@@ -149,7 +149,7 @@ class DocumentationFreshnessTests(unittest.TestCase):
             "kill_conditions",
             "research_policy_evaluation.json",
             "daily_budget_ledger.json",
-            "agent 或本地生成器",
+            "agent 或生成器",
             "尚未自动闭合",
         ):
             self.assertIn(marker, docs)
@@ -158,24 +158,26 @@ class DocumentationFreshnessTests(unittest.TestCase):
         readme = read("README.md")
 
         self.assertIn("scripts/bootstrap.ps1 -Profile runtime", readme)
+        self.assertIn("scripts/bootstrap.sh --profile runtime", readme)
         self.assertIn("scripts.dev doctor --profile runtime --json", readme)
-        self.assertIn("uv run wqb-engine --help", readme)
+        self.assertIn("uv run wqb-engine demo", readme)
         self.assertNotRegex(readme, re.compile(r"(?m)^wqb-engine\s"))
 
     def test_public_docs_use_current_product_boundaries(self) -> None:
         readme = read("README.md")
+        architecture = read("docs/architecture/README.md")
         product = read("PRODUCT.md")
 
-        self.assertIn("src.wqb_agent_lab.workflow.ResearchWorkflow", readme)
-        self.assertIn("src.wqb_agent_lab.platform.WQBClient", readme)
         self.assertIn("WQB_LIVE_SIMULATION_CAPABILITY", readme)
         self.assertIn("WQB_LIVE_SUBMIT_CAPABILITY", readme)
+        self.assertIn("src.wqb_agent_lab.workflow.ResearchWorkflow", architecture)
+        self.assertIn("src.wqb_agent_lab.platform", architecture)
         self.assertIn("ResearchWorkflow", product)
 
     def test_readme_uses_current_versioned_architecture_diagram(self) -> None:
         readme = read("README.md")
-        self.assertIn("docs/assets/wqb-agent-architecture-current-zh.svg", readme)
-        self.assertNotIn("wqb-agent-architecture-ai-zh-vertical.png", readme)
+        self.assertIn("docs/assets/wqb-agent-architecture-readme-zh-v2.png", readme)
+        self.assertNotIn("docs/assets/wqb-agent-architecture-current-zh.svg", readme)
 
 
 if __name__ == "__main__":

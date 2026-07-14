@@ -1,8 +1,8 @@
 # Current Architecture
 
-WQB Agent Lab is a local-first research system. Python owns quantitative research,
+WQB Agent Lab is a research system for WorldQuant BRAIN. Python owns quantitative research,
 workflow state, policy, memory, evaluation, and the WQB platform boundary. TypeScript owns
-the MCP protocol shell and local monitoring UI.
+the MCP protocol shell and monitoring UI.
 
 ![Current WQB Agent Lab architecture](../assets/wqb-agent-architecture-current-zh.svg)
 
@@ -33,4 +33,4 @@ WorldQuant BRAIN transport
 ## Verification
 
 The architecture boundaries are executable in `tests/test_architecture_boundaries.py` and
-`tests/test_platform_boundary.py`. Local and CI verification share `python -m scripts.dev`.
+`tests/test_platform_boundary.py`. Developer and CI verification share `python -m scripts.dev`.

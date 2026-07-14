@@ -34,7 +34,8 @@ class DependencyGovernanceTests(unittest.TestCase):
         runtime = set(project["project"]["dependencies"])
         optional = project["project"]["optional-dependencies"]
 
-        self.assertIn("wqb==0.2.5", runtime)
+        self.assertIn("requests>=2.31", runtime)
+        self.assertFalse(any(dependency == "wqb" or dependency.startswith("wqb==") for dependency in runtime))
         self.assertNotIn("openai>=1.0", runtime)
         self.assertIn("pytest>=8.0", optional["dev"])
         self.assertIn("mcp>=1.0.0", optional["mcp"])

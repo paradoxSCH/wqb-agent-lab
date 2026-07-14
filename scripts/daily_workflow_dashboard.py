@@ -177,7 +177,7 @@ HTML_PAGE = """<!doctype html>
 <body>
   <main class="shell">
     <section class="hero">
-      <div class="eyebrow">WorldQuant 本地监控</div>
+      <div class="eyebrow">WorldQuant 研究监控</div>
       <h1>每日挖掘进度总览</h1>
       <p>只读本地仪表盘。自动刷新，直接从 run ledger 和结果文件推断当前进度，不依赖 workflow 额外写新状态。</p>
       <div class="stats" id="top-stats"></div>

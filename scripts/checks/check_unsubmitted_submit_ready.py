@@ -17,16 +17,19 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-import requests
-from src.wqb_agent_lab.platform.third_party import wqb_sdk as wqb
-
 from src.config import load_config
 from src.evaluator import AlphaMetrics, FilterCriteria, compute_composite_score
+from src.wqb_agent_lab.platform import WQBSession
+from src.wqb_agent_lab.platform.session import (
+    URL_ALPHAS_ALPHAID,
+    URL_ALPHAS_ALPHAID_CHECK,
+    URL_USERS_SELF_ALPHAS,
+)
 
 
-ALPHAS_URL = "https://api.worldquantbrain.com/alphas/{}"
-CHECK_URL = "https://api.worldquantbrain.com/alphas/{}/check"
-USER_ALPHAS_URL = "https://api.worldquantbrain.com/users/self/alphas"
+ALPHAS_URL = URL_ALPHAS_ALPHAID
+CHECK_URL = URL_ALPHAS_ALPHAID_CHECK
+USER_ALPHAS_URL = URL_USERS_SELF_ALPHAS
 OUTPUT_PATH = Path(".local/data/unsubmitted_submit_ready_check_report.json")
 PROGRESS_PATH = Path(".local/data/unsubmitted_submit_ready_check_progress.json")
 
@@ -52,7 +55,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 
-def _json_or_none(resp: requests.Response) -> dict[str, Any] | None:
+def _json_or_none(resp: Any) -> dict[str, Any] | None:
     if not resp.text.strip():
         return None
     try:
@@ -76,15 +79,11 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def _make_http_session(wqb_session: wqb.WQBSession) -> requests.Session:
-    http = requests.Session()
-    http.headers.update(wqb_session.headers)
-    for cookie_name, cookie_value in wqb_session.cookies.items():
-        http.cookies.set(cookie_name, cookie_value)
-    return http
+def _make_http_session(wqb_session: WQBSession) -> WQBSession:
+    return wqb_session
 
 
-def fetch_unsubmitted(http: requests.Session) -> list[dict[str, Any]]:
+def fetch_unsubmitted(http: WQBSession) -> list[dict[str, Any]]:
     alphas: list[dict[str, Any]] = []
     offset = 0
     limit = 100
@@ -197,7 +196,7 @@ def check_blockers(checks: list[dict[str, Any]]) -> list[str]:
     return sorted(set(blockers))
 
 
-def get_alpha_detail(http: requests.Session, alpha_id: str) -> tuple[dict[str, Any] | None, str | None]:
+def get_alpha_detail(http: WQBSession, alpha_id: str) -> tuple[dict[str, Any] | None, str | None]:
     resp = http.get(ALPHAS_URL.format(alpha_id), timeout=30)
     if resp.status_code == 429:
         return None, "HTTP 429 THROTTLED while fetching alpha detail"
@@ -210,7 +209,7 @@ def get_alpha_detail(http: requests.Session, alpha_id: str) -> tuple[dict[str, A
 
 
 def run_check(
-    http: requests.Session,
+    http: WQBSession,
     alpha_id: str,
     *,
     retries: int,
@@ -323,7 +322,7 @@ def main() -> int:
         logger.error("请在 .env 中配置 WQB_EMAIL 和 WQB_PASSWORD")
         return 1
 
-    wqb_session = wqb.WQBSession(
+    wqb_session = WQBSession(
         (cfg.email, cfg.password),
         auth_max_tries=10,
         auth_delay_unexpected=15.0,

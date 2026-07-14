@@ -48,6 +48,19 @@ class OnboardingTests(unittest.TestCase):
         self.assertNotIn("node", [item["id"] for item in report["checks"]])
         self.assertIn("wqb-engine demo", report["next_command"])
 
+    def test_runtime_dependency_check_uses_only_declared_owned_runtime(self) -> None:
+        requested: list[str] = []
+
+        def version(distribution: str) -> str:
+            requested.append(distribution)
+            return "1.0.0"
+
+        with patch("scripts.onboarding.importlib.metadata.version", side_effect=version):
+            check = onboarding._runtime_dependency_check()
+
+        self.assertEqual("pass", check.status)
+        self.assertEqual(["wqb-agent-lab", "pandas", "python-dotenv", "requests"], requested)
+
     def test_full_profile_reports_missing_node_with_action(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

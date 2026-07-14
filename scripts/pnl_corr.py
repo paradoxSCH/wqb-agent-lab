@@ -10,9 +10,10 @@ import pandas as pd
 
 from src.config import load_config
 from src.session import create_session
+from src.wqb_agent_lab.platform.session import URL_ALPHAS_ALPHAID_PNL
 
 
-PNL_URL = "https://api.worldquantbrain.com/alphas/{}/recordsets/pnl"
+PNL_URL = URL_ALPHAS_ALPHAID_PNL
 
 
 def read_json(path: Path) -> Any:

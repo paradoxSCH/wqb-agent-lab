@@ -382,7 +382,7 @@ HTML_PAGE = """<!doctype html>
       </div>
       <nav class="nav" id="nav"></nav>
       <div class="sidebar-footer" data-i18n-html="sidebarFooter">
-        本地优先操作台，读取 <span class="mono">.local/data/runs/continuous-alpha</span> 下的 ledger 和结果文件。
+        研究运行操作台，读取 <span class="mono">.local/data/runs/continuous-alpha</span> 下的 ledger 和结果文件。
       </div>
     </aside>
 
@@ -614,7 +614,7 @@ HTML_PAGE = """<!doctype html>
     const COPY = {
       zh: {
         brandSubtitle: '只维护预算和行为经济学边界，其余交给 agent',
-        sidebarFooter: '本地优先操作台，读取 <span class="mono">.local/data/runs/continuous-alpha</span> 下的 ledger 和结果文件。',
+        sidebarFooter: '研究运行操作台，读取 <span class="mono">.local/data/runs/continuous-alpha</span> 下的 ledger 和结果文件。',
         currentRun: '当前 run',
         language: '语言',
         refreshData: '刷新数据',
@@ -717,7 +717,7 @@ HTML_PAGE = """<!doctype html>
       },
       en: {
         brandSubtitle: 'Maintain budget and behavioral boundaries, let the agent handle the rest',
-        sidebarFooter: 'Local-first dashboard. Reads ledgers and result artifacts from <span class="mono">.local/data/runs/continuous-alpha</span>.',
+        sidebarFooter: 'Research run dashboard. Reads ledgers and result artifacts from <span class="mono">.local/data/runs/continuous-alpha</span>.',
         currentRun: 'Current run',
         language: 'Language',
         refreshData: 'Refresh data',

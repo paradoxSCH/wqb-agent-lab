@@ -14,7 +14,7 @@ WQB Agent Lab documentation is divided by authority and audience.
 
 - [Current architecture](architecture/README.md): runtime ownership and dependency direction.
 - [仓库目录](architecture/REPOSITORY_LAYOUT.md)：公开目录、稳定入口与兼容层边界。
-- [Architecture decisions](architecture/decisions/0001-local-first-layered-runtime.md): accepted design constraints.
+- [Architecture decisions](architecture/decisions/0001-layered-python-typescript-runtime.md): accepted design constraints.
 
 ## Maintainers
 

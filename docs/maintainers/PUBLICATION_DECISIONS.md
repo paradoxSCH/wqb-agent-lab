@@ -1,7 +1,7 @@
 # Publication Decisions
 
-This record captures repository-owner decisions required for the first public release.
-It is current as of 2026-07-13 and is owned by the maintainer `paradoxSCH`.
+This record captures repository-owner decisions for public releases. It is current as of
+2026-07-14 and is owned by the maintainer `paradoxSCH`.
 
 ## Confirmed decisions
 
@@ -20,10 +20,10 @@ It is current as of 2026-07-13 and is owned by the maintainer `paradoxSCH`.
    records, account state, run outputs, local memory stores, and private workflow
    configurations remain private. Public examples use synthetic or non-competitive data.
 6. **Identity and release**: the project name is `wqb-agent-lab`, the maintainer identity
-   is `paradoxSCH`, and the first public Git tag is planned as `v0.1.0-alpha`. Python and
-   npm package metadata remain at `0.1.0` with alpha development status until the tag is
-   cut.
-7. **Support commitment**: this is a best-effort, single-user, local-first alpha release.
+   is `paradoxSCH`, and the first public Git tag `v0.1.0-alpha` was published from a clean
+   snapshot on 2026-07-13. The current release is `v0.1.1-alpha`, with Python and npm
+   package metadata at `0.1.1`.
+7. **Support commitment**: this is a best-effort, single-user alpha release.
    The supported baseline is Python 3.11-3.12 and Node.js 22.12+ or 24 LTS. Windows and
    CI Ubuntu are the primary verified environments. No alpha quality, reward, profit, or
    long-term compatibility guarantee is made.
@@ -37,5 +37,5 @@ vulnerability. GitHub correctly rejected an attempt by the repository administra
 use the external-reporter endpoint against their own repository and directed the
 administrator to the private advisory workflow instead.
 
-All owner-controlled and external publication gates are therefore closed. The public
-snapshot may report `publish_ready=true` after machine verification passes.
+All owner-controlled and external publication gates are closed. Each public snapshot may
+report `publish_ready=true` only after its machine verification passes.

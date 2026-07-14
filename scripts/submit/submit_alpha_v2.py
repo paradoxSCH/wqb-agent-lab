@@ -5,9 +5,14 @@ import time
 from pathlib import Path
 
 import requests
-from src.wqb_agent_lab.platform.third_party import wqb_sdk as wqb
 
 from src.config import load_config
+from src.wqb_agent_lab.platform import WQBSession
+from src.wqb_agent_lab.platform.session import (
+    URL_ALPHAS_ALPHAID,
+    URL_ALPHAS_ALPHAID_CHECK,
+    URL_ALPHAS_ALPHAID_SUBMIT,
+)
 from src.side_effect_governance import SideEffectCapabilityDisabled, require_side_effect_capability
 
 
@@ -96,7 +101,7 @@ def _pending_checks(checks):
 
 
 def _fetch_alpha_detail(http: requests.Session, alpha_id: str):
-    detail_resp = _request_with_retries(http, "GET", f"https://api.worldquantbrain.com/alphas/{alpha_id}", timeout=30)
+    detail_resp = _request_with_retries(http, "GET", URL_ALPHAS_ALPHAID.format(alpha_id), timeout=30)
     if not detail_resp.ok:
         print(f"Alpha detail 失败: {detail_resp.status_code} {detail_resp.text[:200]}")
         return None
@@ -197,7 +202,7 @@ def main(alpha_id: str):
         return 1
 
     # WQB 认证
-    wqb_session = wqb.WQBSession(
+    wqb_session = WQBSession(
         (cfg.email, cfg.password),
         auth_max_tries=10,
         auth_delay_unexpected=15.0,
@@ -205,14 +210,10 @@ def main(alpha_id: str):
     wqb_session.get_authentication()
     print(f"认证成功: {cfg.email}")
 
-    # 创建独立 requests session
-    http = requests.Session()
-    http.headers.update(wqb_session.headers)
-    for cname, cval in wqb_session.cookies.items():
-        http.cookies.set(cname, cval)
+    http = wqb_session
 
     # 1. Check
-    check_url = f"https://api.worldquantbrain.com/alphas/{alpha_id}/check"
+    check_url = URL_ALPHAS_ALPHAID_CHECK.format(alpha_id)
     print(f"\nCheck: {check_url}")
     resp = _request_with_retries(http, "GET", check_url, timeout=30)
     print(f"Status: {resp.status_code}")
@@ -237,7 +238,7 @@ def main(alpha_id: str):
     print("Check: [OK] 可提交")
 
     # 2. Submit
-    submit_url = f"https://api.worldquantbrain.com/alphas/{alpha_id}/submit"
+    submit_url = URL_ALPHAS_ALPHAID_SUBMIT.format(alpha_id)
     print(f"\nSubmit: {submit_url}")
     resp = _request_with_retries(http, "POST", submit_url, timeout=30)
     print(f"Status: {resp.status_code}")

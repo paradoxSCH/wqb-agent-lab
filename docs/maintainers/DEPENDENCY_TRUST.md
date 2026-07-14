@@ -5,11 +5,10 @@
 `pyproject.toml` is the only hand-edited dependency declaration and `uv.lock` is the
 reproducible lock. CI installs with `uv sync --extra dev --extra mcp --frozen`.
 
-The third-party `wqb==0.2.5` package can access WQB credentials. Its direct import is
-isolated in `src.wqb_agent_lab.platform.third_party`; product and operational modules use
-the repository-owned platform contracts. Before upgrading it, review source provenance,
-authentication behavior, network destinations, license metadata, and adapter contract
-tests.
+WQB credentials are handled only by the repository-owned implementations under
+`src.wqb_agent_lab.platform`. The transport uses `requests` and targets the configured WQB
+API origin; authentication, retry, pagination, and side-effect entry points have contract
+tests that run without credentials or network access.
 
 ## Node
 

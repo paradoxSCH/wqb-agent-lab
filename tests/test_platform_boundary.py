@@ -25,11 +25,9 @@ class PlatformBoundaryTests(unittest.TestCase):
         self.assertGreater(len(load_operator_names()), 20)
         self.assertFalse((ROOT / "src/wqb/resources/operators.json").exists())
 
-    def test_only_platform_trust_boundary_imports_third_party_wqb(self) -> None:
+    def test_no_runtime_module_imports_third_party_wqb(self) -> None:
         violations = []
         for path in _python_files(ROOT / "src", ROOT / "scripts", ROOT / "run_scan.py"):
-            if path == CANONICAL_PLATFORM / "third_party.py":
-                continue
             tree = ast.parse(path.read_text(encoding="utf-8-sig"), filename=str(path))
             for node in ast.walk(tree):
                 if isinstance(node, ast.Import) and any(alias.name == "wqb" for alias in node.names):
@@ -38,6 +36,17 @@ class PlatformBoundaryTests(unittest.TestCase):
                     violations.append(str(path.relative_to(ROOT)))
 
         self.assertEqual([], sorted(set(violations)))
+        self.assertFalse((CANONICAL_PLATFORM / "third_party.py").exists())
+
+    def test_wqb_api_origin_is_declared_only_by_canonical_platform(self) -> None:
+        violations = []
+        for path in _python_files(ROOT / "src", ROOT / "scripts", ROOT / "run_scan.py"):
+            if path.parent == CANONICAL_PLATFORM:
+                continue
+            if "api.worldquantbrain.com" in path.read_text(encoding="utf-8-sig"):
+                violations.append(str(path.relative_to(ROOT)))
+
+        self.assertEqual([], violations)
 
     def test_product_and_operational_modules_do_not_import_compatibility_package(self) -> None:
         violations = []

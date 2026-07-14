@@ -1,6 +1,6 @@
 # Open Source Readiness
 
-This repository is designed to be published as a local-first WQB research agent. Keep the public tree small, reproducible, and free of private run state.
+Publish this WQB research agent as a small, reproducible codebase free of private run state.
 
 ## Public Source
 
@@ -99,10 +99,10 @@ Both default to disabled. Workflow configuration expresses intent but cannot gra
 
 ## Last Verified Baseline
 
-On 2026-07-13, the locked local environment completed:
+On 2026-07-14, the locked local environment completed:
 
 - full Ruff with no findings;
-- 650 Python tests passed, 1 skipped, and 201 subtests passed;
+- 665 Python tests passed, 1 skipped, and 201 subtests passed;
 - MCP and UI tests, type checks, and builds;
 - runtime and full-profile bootstrap from the generated public snapshot;
 - private-checkout, clean-checkout, and public-snapshot wheel installation smoke tests;
@@ -111,8 +111,8 @@ On 2026-07-13, the locked local environment completed:
 - Python, MCP, and UI vulnerability audits and CycloneDX SBOM generation with no known
   vulnerabilities or unresolved license decisions.
 
-`python -m scripts.dev release-check --json` completed all machine stages and returned
-`manual_gate` before the public repository existed. Operator-catalog redistribution and all
-other owner-controlled publication decisions are confirmed. GitHub Private Vulnerability
-Reporting is now enabled and tested; a new successful release check must return `pass`
-before the clean public snapshot is pushed.
+`python -m scripts.dev release-check --json` completed all 19 machine stages with
+`status=pass` and no manual gates. The generated public snapshot passed installation,
+secret scanning, vulnerability audits, dependency-license policy, and Python/MCP/UI SBOM
+generation. The public repository and GitHub Private Vulnerability Reporting are active;
+each later release must repeat this check before its clean snapshot is pushed.

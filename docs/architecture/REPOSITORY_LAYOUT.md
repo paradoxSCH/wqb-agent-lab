@@ -12,7 +12,7 @@ wqb-agent-lab/
 |   `-- maintainers/            发布与依赖治理
 |-- packages/
 |   |-- wqb-agent-mcp/          可选 TypeScript MCP 工具面
-|   `-- wqb-agent-ui/           可选 React 本地监控器
+|   `-- wqb-agent-ui/           可选 React 运行监控器
 |-- release/                    公开快照与依赖许可规则
 |-- schemas/                    Python/TypeScript JSON contract
 |-- scripts/
@@ -43,7 +43,7 @@ wqb-agent-lab/
 | 任务 | 唯一推荐入口 |
 | --- | --- |
 | 检查普通运行环境 | `uv run python -m scripts.dev doctor --profile runtime --json` |
-| 本地无凭证演示 | `uv run wqb-engine demo --workspace-root . --run-tag product-demo` |
+| 离线无凭证演示 | `uv run wqb-engine demo --workspace-root . --run-tag product-demo` |
 | 研究政策管理 | `uv run wqb-engine policy.validate` / `policy.show` |
 | 工作流运行 | `python -m scripts.run.workflow` |
 | 仓库工程检查 | `uv run python -m scripts.dev check` |

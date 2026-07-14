@@ -1,5 +1,5 @@
 name: Feature request
-description: Propose an improvement to the local research agent or its public interfaces.
+description: Propose an improvement to the research agent or its public interfaces.
 title: "[Feature]: "
 labels: ["enhancement"]
 body:
