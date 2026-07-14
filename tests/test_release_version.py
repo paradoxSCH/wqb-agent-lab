@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.checks.release_version import check_release_versions
+from scripts.checks.release_version import check_release_versions, github_release_tag
 
 
 class ReleaseVersionTests(unittest.TestCase):
@@ -22,6 +22,28 @@ class ReleaseVersionTests(unittest.TestCase):
             self.assertEqual("failed", report["status"])
             self.assertIn("packages/wqb-agent-ui/package.json", report["mismatches"])
             self.assertIn("does not match", report["tag_error"])
+
+    def test_github_tag_is_inferred_only_for_tag_refs(self) -> None:
+        self.assertEqual(
+            "v1.2.3a1",
+            github_release_tag(
+                {
+                    "GITHUB_REF_TYPE": "tag",
+                    "GITHUB_REF": "refs/tags/v1.2.3a1",
+                    "GITHUB_REF_NAME": "v1.2.3a1",
+                }
+            ),
+        )
+        self.assertEqual(
+            "",
+            github_release_tag(
+                {
+                    "GITHUB_REF_TYPE": "branch",
+                    "GITHUB_REF": "refs/pull/6/merge",
+                    "GITHUB_REF_NAME": "6/merge",
+                }
+            ),
+        )
 
     @staticmethod
     def _workspace(root: Path, *, version: str, ui_version: str | None = None, npm_version: str | None = None) -> Path:

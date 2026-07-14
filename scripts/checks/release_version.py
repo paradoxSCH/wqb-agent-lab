@@ -6,6 +6,7 @@ import os
 import re
 import sys
 import tomllib
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,14 @@ from scripts.json_output import write_json_line
 
 
 TAG_PATTERN = re.compile(r"^v(?P<version>\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?)$")
+
+
+def github_release_tag(environ: Mapping[str, str] = os.environ) -> str:
+    ref_type = environ.get("GITHUB_REF_TYPE", "")
+    ref = environ.get("GITHUB_REF", "")
+    if ref_type != "tag" and not ref.startswith("refs/tags/"):
+        return ""
+    return environ.get("GITHUB_REF_NAME", "") or ref.removeprefix("refs/tags/")
 
 
 def check_release_versions(root: Path, *, tag: str | None = None) -> dict[str, Any]:
@@ -73,7 +82,7 @@ def _python_version_from_semver(value: str) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Verify release metadata and tag version consistency.")
     parser.add_argument("--workspace-root", default=".")
-    parser.add_argument("--tag", default=os.environ.get("GITHUB_REF_NAME", ""))
+    parser.add_argument("--tag", default=github_release_tag())
     parser.add_argument("--json", action="store_true")
     return parser.parse_args()
 
