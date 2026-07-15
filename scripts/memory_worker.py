@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
 from src.agent_memory_sync import sync_run_memory
+from src.atomic_json import atomic_write_json
+from src.process_lock import PidFileLock
 
 
 MEMORY_STATE = "memory_sync_state.json"
@@ -55,32 +56,13 @@ class MemoryWorker:
                 "run_dir": _relative(self.run_dir, self.root),
                 "error": str(exc)[:500],
             }
-        memory_state_path(self.run_dir).write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True),
-            encoding="utf-8",
-        )
+        atomic_write_json(memory_state_path(self.run_dir), payload)
         return payload
 
 
-class MemoryWorkerLock:
-    def __init__(self, run_dir: Path | str) -> None:
-        self.path = Path(run_dir) / MEMORY_LOCK
-
-    def __enter__(self) -> "MemoryWorkerLock":
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            fd = os.open(str(self.path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError as exc:
-            raise RuntimeError(f"memory worker already running: {self.path}") from exc
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump({"pid": os.getpid(), "created_at": datetime.now().isoformat(timespec="seconds")}, handle, ensure_ascii=False)
-        return self
-
-    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
-        try:
-            self.path.unlink()
-        except FileNotFoundError:
-            return
+class MemoryWorkerLock(PidFileLock):
+    def __init__(self, run_dir: Path | str, *, pid_checker: Callable[[int], bool] | None = None) -> None:
+        super().__init__(Path(run_dir) / MEMORY_LOCK, owner="memory worker", pid_checker=pid_checker)
 
 
 def main() -> int:

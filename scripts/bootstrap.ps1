@@ -130,6 +130,7 @@ if ($Profile -eq "full") {
     }
     Invoke-Checked $npm.Source @("ci", "--prefix", "packages/wqb-agent-mcp")
     Invoke-Checked $npm.Source @("ci", "--prefix", "packages/wqb-agent-ui")
+    Invoke-Checked $npm.Source @("run", "build", "--prefix", "packages/wqb-agent-ui")
 }
 
 Invoke-Checked $uv @(

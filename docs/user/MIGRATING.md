@@ -18,9 +18,10 @@ to work.
 
 ## Python platform imports
 
-Use `src.wqb_agent_lab.platform` for the WQB client, normalized models, readiness checks,
-and operator catalog. Imports from `src.wqb` remain forwarding compatibility imports for
-one release cycle and will be removed in version `0.3.0`.
+Use `wqb_agent_lab.platform` for the installed WQB client, normalized models, readiness
+checks, and operator catalog. Imports from `src.wqb_agent_lab` and `src.wqb` remain
+forwarding compatibility imports through version `0.2.x` and will be removed in version
+`0.3.0`.
 
 ## LLM configuration
 

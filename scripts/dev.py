@@ -71,6 +71,17 @@ ENVIRONMENT_STAGE = Stage(
 CHECK_STAGES = (
     Stage("python-ruff", _python("-m", "ruff", "check", ".")),
     Stage(
+        "python-product-typecheck",
+        _python(
+            "-m",
+            "pyright",
+            "wqb_agent_lab",
+            "src/alpha_memory",
+            "src/process_lock.py",
+            "src/atomic_json.py",
+        ),
+    ),
+    Stage(
         "python-compile",
         _python(
             "-m",
@@ -88,7 +99,19 @@ CHECK_STAGES = (
 )
 
 TEST_STAGES = (
-    Stage("python-tests", _python("-m", "pytest", "-q")),
+    Stage(
+        "python-tests",
+        _python(
+            "-m",
+            "pytest",
+            "-q",
+            "--cov=src",
+            "--cov=scripts",
+            "--cov=wqb_agent_lab",
+            "--cov-report=term",
+            "--cov-fail-under=70",
+        ),
+    ),
     Stage("mcp-tests", _npm("test"), "packages/wqb-agent-mcp"),
     Stage("ui-tests", _npm("test"), "packages/wqb-agent-ui"),
 )
@@ -107,6 +130,7 @@ BUILD_STAGES = (
 )
 
 RELEASE_STAGES = (
+    Stage("release-version-consistency", _python("-m", "scripts.checks.release_version", "--json")),
     Stage(
         "clean-checkout-smoke",
         _python(
@@ -185,6 +209,11 @@ def redact(text: str) -> str:
 
 
 def run_process(stage: Stage, cwd: Path) -> ProcessResult:
+    if stage.name == "python-build":
+        build_cache = (cwd / "build").resolve()
+        if build_cache.parent != cwd.resolve():
+            raise RuntimeError(f"Refusing to clean build cache outside workspace: {build_cache}")
+        shutil.rmtree(build_cache, ignore_errors=True)
     completed = subprocess.run(
         list(stage.command),
         cwd=cwd / stage.working_directory,
@@ -343,6 +372,7 @@ def run(
             "dist/packages",
             "dist/public-packages",
             "dist/release-check/public-snapshot",
+            "dist/release-check/public-snapshot-audit",
             "dist/audit",
         )
     report = DevReport(

@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import asyncio
+import threading
 import unittest
+import tempfile
+from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
 import requests
 
-from src.wqb_agent_lab.platform.session import (
+from wqb_agent_lab.runtime import OperationJournal, SideEffectUncertainError
+
+from wqb_agent_lab.platform.session import (
     URL_AUTHENTICATION,
     WQBAuthenticationError,
     WQBSession,
@@ -81,6 +86,44 @@ class OwnedWQBSessionTests(unittest.TestCase):
         self.assertIn("limit=1", count_url)
         self.assertIn("limit=2", page_url)
 
+    def test_dataset_transport_options_are_not_encoded_as_filters(self) -> None:
+        response = FakeResponse(200, {"results": []})
+        with patch.object(requests.Session, "request", return_value=response) as request:
+            session = WQBSession(("researcher@example.com", "secret"), auto_authenticate=False)
+            session._authenticated = True
+            session.search_datasets_limited(
+                "USA",
+                1,
+                "TOP3000",
+                theme=True,
+                timeout=7,
+                headers={"X-Research-Trace": "trace-1"},
+            )
+
+        url = request.call_args.args[1]
+        self.assertIn("theme=true", url)
+        self.assertNotIn("timeout", url)
+        self.assertNotIn("headers", url)
+        self.assertEqual(7, request.call_args.kwargs["timeout"])
+        self.assertEqual({"X-Research-Trace": "trace-1"}, request.call_args.kwargs["headers"])
+
+    def test_explicit_request_kwargs_take_precedence(self) -> None:
+        response = FakeResponse(200, {"results": []})
+        with patch.object(requests.Session, "request", return_value=response) as request:
+            session = WQBSession(("researcher@example.com", "secret"), auto_authenticate=False)
+            session._authenticated = True
+            session.filter_alphas_limited(
+                status="UNSUBMITTED",
+                timeout=3,
+                request_kwargs={"timeout": 9, "verify": False},
+            )
+
+        url = request.call_args.args[1]
+        self.assertIn("status=UNSUBMITTED", url)
+        self.assertNotIn("timeout", url)
+        self.assertEqual(9, request.call_args.kwargs["timeout"])
+        self.assertFalse(request.call_args.kwargs["verify"])
+
     def test_check_and_submit_use_https_platform_endpoints(self) -> None:
         responses = [FakeResponse(200, {}), FakeResponse(201, {})]
         with patch.object(requests.Session, "request", side_effect=responses) as request:
@@ -97,6 +140,95 @@ class OwnedWQBSessionTests(unittest.TestCase):
             ],
             calls,
         )
+
+    def test_simulation_does_not_repeat_success_without_location(self) -> None:
+        response = FakeResponse(201, {})
+        with patch.object(requests.Session, "request", return_value=response) as request:
+            session = WQBSession(("researcher@example.com", "secret"), auto_authenticate=False)
+            session._authenticated = True
+            result = session.create_simulation({"type": "REGULAR"}, max_tries=5)
+
+        self.assertIs(response, result)
+        self.assertEqual(1, request.call_count)
+
+    def test_simulation_does_not_repeat_ambiguous_server_error(self) -> None:
+        response = FakeResponse(503, {"detail": "upstream failed"})
+        with patch.object(requests.Session, "request", return_value=response) as request:
+            session = WQBSession(("researcher@example.com", "secret"), auto_authenticate=False)
+            session._authenticated = True
+            result = session.create_simulation({"type": "REGULAR"}, max_tries=5)
+
+        self.assertIs(response, result)
+        self.assertEqual(1, request.call_count)
+
+    def test_simulation_retries_throttle_then_returns_location(self) -> None:
+        responses = [
+            FakeResponse(429, {"detail": "throttled"}, headers={"Retry-After": "0"}),
+            FakeResponse(201, {}, headers={"Location": "/simulations/S1"}),
+        ]
+        with patch.object(requests.Session, "request", side_effect=responses) as request:
+            session = WQBSession(("researcher@example.com", "secret"), auto_authenticate=False, sleep=lambda _: None)
+            session._authenticated = True
+            result = session.create_simulation({"type": "REGULAR"}, max_tries=5)
+
+        self.assertEqual("/simulations/S1", result.headers["Location"])
+        self.assertEqual(2, request.call_count)
+
+    def test_simulation_journal_distinguishes_connect_from_read_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            journal = OperationJournal(Path(tmp) / "operations.db")
+            responses = [requests.ConnectTimeout("connect"), FakeResponse(201, {}, headers={"Location": "/simulations/S1"})]
+            with patch.object(requests.Session, "request", side_effect=responses) as request:
+                session = WQBSession(
+                    ("researcher@example.com", "secret"),
+                    auto_authenticate=False,
+                    sleep=lambda _: None,
+                    operation_journal=journal,
+                    run_id="run-1",
+                )
+                session._authenticated = True
+                result = session.create_simulation({"type": "REGULAR"}, max_tries=2)
+            self.assertEqual("/simulations/S1", result.headers["Location"])
+            self.assertEqual(2, request.call_count)
+
+            with patch.object(requests.Session, "request", side_effect=requests.ReadTimeout("read")):
+                with self.assertRaises(SideEffectUncertainError) as raised:
+                    session.create_simulation({"type": "REGULAR"}, max_tries=2)
+            self.assertEqual("read_timeout_after_send", raised.exception.record.reason)
+            self.assertEqual(1, len(journal.unresolved("simulation.create")))
+
+    def test_submit_does_not_repeat_accepted_post_with_retry_after(self) -> None:
+        response = FakeResponse(201, {}, headers={"Retry-After": "5"})
+        with patch.object(requests.Session, "request", return_value=response) as request:
+            session = WQBSession(("researcher@example.com", "secret"), auto_authenticate=False)
+            session._authenticated = True
+            result = asyncio.run(session.submit("A1", max_tries=5))
+
+        self.assertIs(response, result)
+        self.assertEqual(1, request.call_count)
+
+    def test_concurrent_simulate_enters_transport_in_parallel(self) -> None:
+        barrier = threading.Barrier(3, timeout=2.0)
+
+        class ProbeSession(WQBSession):
+            def create_simulation(self, target, *args, **kwargs):
+                barrier.wait()
+                return FakeResponse(201, {}, headers={"Location": f"/simulations/{target['id']}"})
+
+            def get(self, url, *args, **kwargs):
+                return FakeResponse(200, {"alpha": str(url).rsplit("/", 1)[-1]})
+
+        session = ProbeSession(("researcher@example.com", "secret"), auto_authenticate=False)
+        session._authenticated = True
+        results = asyncio.run(
+            session.concurrent_simulate(
+                [{"id": "S1"}, {"id": "S2"}, {"id": "S3"}],
+                concurrency=3,
+            )
+        )
+
+        self.assertEqual(3, len(results))
+        self.assertTrue(all(result is not None and result.ok for result in results))
 
 
 if __name__ == "__main__":

@@ -10,7 +10,7 @@ import pandas as pd
 
 from src.config import load_config
 from src.session import create_session
-from src.wqb_agent_lab.platform.session import URL_ALPHAS_ALPHAID_PNL
+from wqb_agent_lab.platform.session import URL_ALPHAS_ALPHAID_PNL
 
 
 PNL_URL = URL_ALPHAS_ALPHAID_PNL

@@ -1,6 +1,6 @@
 """Compatibility imports for the canonical WQB platform package."""
 
-from src.wqb_agent_lab.platform import (
+from wqb_agent_lab.platform import (
     WQBAlphaDetail,
     WQBCheck,
     WQBClient,

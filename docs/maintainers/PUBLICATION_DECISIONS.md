@@ -21,8 +21,8 @@ This record captures repository-owner decisions for public releases. It is curre
    configurations remain private. Public examples use synthetic or non-competitive data.
 6. **Identity and release**: the project name is `wqb-agent-lab`, the maintainer identity
    is `paradoxSCH`, and the first public Git tag `v0.1.0-alpha` was published from a clean
-   snapshot on 2026-07-13. The current release is `v0.1.1-alpha`, with Python and npm
-   package metadata at `0.1.1`.
+   snapshot on 2026-07-13. The current release is `v0.2.0a1`, with equivalent PEP 440
+   and SemVer prerelease metadata for Python and npm packages.
 7. **Support commitment**: this is a best-effort, single-user alpha release.
    The supported baseline is Python 3.11-3.12 and Node.js 22.12+ or 24 LTS. Windows and
    CI Ubuntu are the primary verified environments. No alpha quality, reward, profit, or

@@ -59,7 +59,15 @@ class ArtifactSmokeTests(unittest.TestCase):
 
         self.assertEqual("pass", report.status)
         self.assertEqual(
-            ["create-venv", "install-wheel", "engine-help", "schemas-list", "schema-digest", "llm-disabled"],
+            [
+                "create-venv",
+                "install-wheel",
+                "namespace-import",
+                "engine-help",
+                "schemas-list",
+                "schema-digest",
+                "llm-disabled",
+            ],
             [stage.name for stage, _ in runner.calls],
         )
         install = runner.calls[1][0].command

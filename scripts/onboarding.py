@@ -18,7 +18,7 @@ from scripts.json_output import write_json_line
 
 
 PYTHON_TARGET = "3.12"
-UV_MINIMUM = (0, 8, 0)
+UV_MINIMUM = (0, 11, 27)
 SUPPORTED_NODE_RANGES = "Node.js 22.12+ or 24.x LTS"
 NODE_DOWNLOAD_URL = "https://nodejs.org/en/download"
 UV_INSTALL_URL = "https://docs.astral.sh/uv/getting-started/installation/"
@@ -295,6 +295,19 @@ def _node_checks(root: Path) -> list[DoctorCheck]:
         )
     else:
         checks.append(DoctorCheck("node_dependencies", "pass", "Locked Node dependencies are installed."))
+    ui_index = root / "packages/wqb-agent-ui/dist/index.html"
+    if not ui_index.is_file():
+        checks.append(
+            DoctorCheck(
+                "dashboard_build",
+                "warn",
+                "The React dashboard production build is missing.",
+                expected="packages/wqb-agent-ui/dist/index.html",
+                fix_command="npm run build --prefix packages/wqb-agent-ui",
+            )
+        )
+    else:
+        checks.append(DoctorCheck("dashboard_build", "pass", "The React dashboard production build is available."))
     return checks
 
 
@@ -317,7 +330,7 @@ def build_doctor_report(profile: str, workspace_root: Path) -> dict[str, object]
         _tool_check(
             check_id="uv",
             command_names=("uv",),
-            expected="uv >=0.8.0",
+            expected="uv >=0.11.27",
             supported=lambda version: version >= UV_MINIMUM,
             fix_command="Install uv from https://docs.astral.sh/uv/getting-started/installation/",
             docs_url=UV_INSTALL_URL,

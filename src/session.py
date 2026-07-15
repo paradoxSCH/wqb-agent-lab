@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import time
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -13,7 +14,8 @@ from typing import Any
 from requests import Response
 
 from .config import Config
-from .wqb_agent_lab.platform import WQBSession
+from wqb_agent_lab.platform import WQBSession
+from wqb_agent_lab.runtime import OperationJournal
 
 
 logger = logging.getLogger(__name__)
@@ -339,11 +341,20 @@ def create_session(config: Config) -> WQBSession:
 
     wqb_logger = _configure_wqb_logger(config)
 
+    repo_root = Path(__file__).resolve().parent.parent
+    journal_path = Path(
+        os.getenv(
+            "WQB_OPERATION_JOURNAL",
+            str(repo_root / ".local" / "data" / "runtime" / "operations.db"),
+        )
+    )
     session = WQBSession(
         (config.email, config.password),
         logger=wqb_logger,
         auth_max_tries=10,
         auth_delay_unexpected=15.0,
+        operation_journal=OperationJournal(journal_path),
+        run_id=str(os.getenv("WQB_RUN_ID") or ""),
     )
 
     logger.info("已为 %s 创建 BRAIN 会话", config.email)

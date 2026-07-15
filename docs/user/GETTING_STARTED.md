@@ -9,7 +9,7 @@
 
 | 组件 | 支持范围 | 用途 |
 | --- | --- | --- |
-| uv | 0.8.0 或更高 | 安装 Python、创建虚拟环境、按锁文件安装依赖 |
+| uv | 0.11.27 或更高 | 安装 Python、创建虚拟环境、按锁文件安装依赖 |
 | Python | 3.11 或 3.12，推荐 3.12 | 研究运行时 |
 | Node.js | 22.12+ 或 24 LTS | 仅 full 档位需要 |
 | npm | 10 或 11 | 仅 full 档位需要 |
@@ -65,6 +65,14 @@ powershell -ExecutionPolicy Bypass -File scripts/bootstrap.ps1 -Profile full
 uv run python -m scripts.dev doctor --profile full --json
 uv run python -m scripts.dev check
 ```
+
+`full` bootstrap 会构建 React 工作台。启动后可以在浏览器维护预算与行为边界，并查看运行、记忆和评估状态：
+
+```powershell
+uv run python -m scripts.daily_workflow_dashboard --host 127.0.0.1 --port 8765
+```
+
+如果工作台返回 503，运行 `npm run build --prefix packages/wqb-agent-ui`，再刷新页面。
 
 Node 20、23、25、26 或其他未验证版本会被 doctor 明确阻断，并提供 Node.js 官方下载地址。Node 不是 runtime 档位的依赖。
 

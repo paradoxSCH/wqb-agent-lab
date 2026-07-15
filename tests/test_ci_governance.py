@@ -17,6 +17,7 @@ class CIGovernanceTests(unittest.TestCase):
             self.assertIn(marker, self.workflow)
         self.assertIn("runs-on: ${{ matrix.os }}", self.workflow)
         self.assertIn("python-version: ${{ matrix.python }}", self.workflow)
+        self.assertIn("UV_PYTHON: ${{ matrix.python }}", self.workflow)
 
     def test_ci_uses_frozen_dependency_installs(self) -> None:
         self.assertGreaterEqual(
@@ -35,6 +36,13 @@ class CIGovernanceTests(unittest.TestCase):
         self.assertIn("if: runner.os != 'Windows'", self.workflow)
         self.assertIn("if: runner.os == 'Windows'", self.workflow)
         self.assertIn("uv run python -m pytest -vv", self.workflow)
+        self.assertIn("--cov-fail-under=70", self.workflow)
+
+    def test_actions_and_uv_are_immutably_pinned(self) -> None:
+        self.assertNotIn("actions/checkout@v", self.workflow)
+        self.assertNotIn("actions/setup-python@v", self.workflow)
+        self.assertNotIn("actions/setup-node@v", self.workflow)
+        self.assertIn("python -m pip install uv==0.11.27", self.workflow)
 
     def test_node_and_release_jobs_use_pinned_runtime_majors(self) -> None:
         self.assertIn("node-verification:", self.workflow)

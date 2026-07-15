@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import unittest
 
-from src.wqb_agent_lab.platform import load_operator_names
+from wqb_agent_lab.platform import load_operator_names
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -75,7 +75,7 @@ class DocumentationFreshnessTests(unittest.TestCase):
             self.assertEqual([], stale, relative_path)
 
     def test_operator_catalog_is_packaged_below_wqb_boundary(self) -> None:
-        catalog = ROOT / "src" / "wqb_agent_lab" / "platform" / "resources" / "operators.json"
+        catalog = ROOT / "wqb_agent_lab" / "platform" / "resources" / "operators.json"
         payload = json.loads(catalog.read_text(encoding="utf-8"))
         rows = payload.get("operators", []) if isinstance(payload, dict) else payload
 
@@ -170,8 +170,8 @@ class DocumentationFreshnessTests(unittest.TestCase):
 
         self.assertIn("WQB_LIVE_SIMULATION_CAPABILITY", readme)
         self.assertIn("WQB_LIVE_SUBMIT_CAPABILITY", readme)
-        self.assertIn("src.wqb_agent_lab.workflow.ResearchWorkflow", architecture)
-        self.assertIn("src.wqb_agent_lab.platform", architecture)
+        self.assertIn("wqb_agent_lab.workflow.ResearchWorkflow", architecture)
+        self.assertIn("wqb_agent_lab.platform", architecture)
         self.assertIn("ResearchWorkflow", product)
 
     def test_readme_uses_current_versioned_architecture_diagram(self) -> None:

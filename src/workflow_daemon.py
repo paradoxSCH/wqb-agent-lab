@@ -471,8 +471,9 @@ def _read_json(path: Path, default: Any) -> Any:
 
 
 def _write_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+    from src.atomic_json import atomic_write_json
+
+    atomic_write_json(path, payload)
 
 
 def _run_command(command: list[str]) -> int:

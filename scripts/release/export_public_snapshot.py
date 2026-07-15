@@ -53,6 +53,7 @@ class ExportedFile:
 @dataclass(frozen=True, slots=True)
 class SnapshotExportResult:
     output_path: Path
+    audit_path: Path
     report: dict[str, object]
     files: tuple[ExportedFile, ...]
 
@@ -187,14 +188,23 @@ def export_public_snapshot(
     workspace_root: Path | str,
     output: Path | str,
     manifest_path: Path | str,
+    audit_output: Path | str | None = None,
 ) -> SnapshotExportResult:
     root = Path(workspace_root).resolve()
     destination = Path(output).resolve()
+    audit_destination = (
+        Path(audit_output).resolve()
+        if audit_output is not None
+        else destination.parent / f"{destination.name}-audit"
+    )
     manifest = load_manifest(manifest_path)
     selected = select_snapshot_files(root, manifest)
     _validate_output(root, destination, manifest, selected)
+    _validate_audit_output(destination, audit_destination)
     output_preexisted = destination.exists()
+    audit_preexisted = audit_destination.exists()
     destination.mkdir(parents=True, exist_ok=True)
+    audit_destination.mkdir(parents=True, exist_ok=True)
 
     exported: list[ExportedFile] = []
     try:
@@ -234,14 +244,16 @@ def export_public_snapshot(
             "publish_ready": report["publish_ready"],
             "release_blockers": report["release_blockers"],
         }
-        _write_json_atomic(destination / "PUBLIC_SNAPSHOT_MANIFEST.json", metadata)
-        _write_json_atomic(destination / "PUBLIC_SNAPSHOT_BLOCKERS.json", blockers)
-        return SnapshotExportResult(destination, report, tuple(exported))
+        _write_json_atomic(audit_destination / "PUBLIC_SNAPSHOT_MANIFEST.json", metadata)
+        _write_json_atomic(audit_destination / "PUBLIC_SNAPSHOT_BLOCKERS.json", blockers)
+        return SnapshotExportResult(destination, audit_destination, report, tuple(exported))
     except SnapshotExportError:
         _cleanup_failed_output(destination, output_preexisted)
+        _cleanup_failed_output(audit_destination, audit_preexisted)
         raise
     except OSError as exc:
         _cleanup_failed_output(destination, output_preexisted)
+        _cleanup_failed_output(audit_destination, audit_preexisted)
         raise SnapshotExportError("copy_failed", "Unable to create public snapshot.") from exc
 
 
@@ -255,6 +267,7 @@ def run(
     parser.add_argument("--workspace-root", required=True)
     parser.add_argument("--manifest")
     parser.add_argument("--output", required=True)
+    parser.add_argument("--audit-output")
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--json", action="store_true", dest="as_json")
     args = parser.parse_args(list(argv) if argv is not None else None)
@@ -269,8 +282,17 @@ def run(
             selected = select_snapshot_files(root, manifest)
             report = build_snapshot_report(root, manifest, selected)
         else:
-            result = export_public_snapshot(root, Path(args.output), manifest_path)
-            report = result.report
+            result = export_public_snapshot(
+                root,
+                Path(args.output),
+                manifest_path,
+                audit_output=Path(args.audit_output) if args.audit_output else None,
+            )
+            report = {
+                **result.report,
+                "output_path": str(result.output_path),
+                "audit_path": str(result.audit_path),
+            }
     except SnapshotExportError as exc:
         payload = {"ok": False, "error": {"code": exc.code, "message": str(exc), "path": exc.path}}
         if args.as_json:
@@ -392,6 +414,27 @@ def _validate_output(
                 "Snapshot output overlaps an included source file.",
                 path=item.relative_path,
             )
+
+
+def _validate_audit_output(destination: Path, audit_destination: Path) -> None:
+    if audit_destination.is_symlink():
+        raise SnapshotExportError("audit_output_invalid", "Snapshot audit output cannot be a symlink.")
+    if audit_destination.exists() and (
+        not audit_destination.is_dir() or any(audit_destination.iterdir())
+    ):
+        raise SnapshotExportError(
+            "audit_output_not_empty",
+            "Snapshot audit output must be an empty directory.",
+        )
+    if (
+        audit_destination == destination
+        or audit_destination in destination.parents
+        or destination in audit_destination.parents
+    ):
+        raise SnapshotExportError(
+            "audit_output_overlaps_snapshot",
+            "Snapshot audit output must be outside the public source snapshot.",
+        )
 
 
 def _write_json_atomic(path: Path, payload: dict[str, object]) -> None:

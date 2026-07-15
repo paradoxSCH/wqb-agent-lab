@@ -16,12 +16,4 @@ def __getattr__(name: str) -> ModuleType:
     globals()[name] = module
     return module
 
-__all__ = [
-    "RepositoryLayout",
-    "evaluation",
-    "governance",
-    "memory",
-    "platform",
-    "research",
-    "workflow",
-]
+__all__ = ["RepositoryLayout"]

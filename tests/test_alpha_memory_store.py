@@ -15,7 +15,7 @@ class SQLiteMemoryStoreTests(unittest.TestCase):
             store = SQLiteMemoryStore(Path(tmp) / "memory.db")
             store.initialize()
 
-            self.assertEqual(store.schema_version(), 1)
+            self.assertEqual(store.schema_version(), 2)
             self.assertIn("schema_migrations", store.table_names())
             self.assertIn("memory_nodes", store.table_names())
             self.assertIn("memory_edges", store.table_names())

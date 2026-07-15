@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import sys
 import time
@@ -10,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
+from src.atomic_json import atomic_write_json
+from src.process_lock import PidFileLock
 
 REGISTRY_STATE = Path(".local/data/registry/registry_state.json")
 REGISTRY_LOCK = Path(".local/data/registry/registry_worker.lock")
@@ -52,34 +53,16 @@ class RegistryWorker:
         return payload
 
     def _write_state(self, payload: dict[str, Any]) -> None:
-        path = registry_state_path(self.root)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+        atomic_write_json(registry_state_path(self.root), payload)
 
     def _run_command(self, command: list[str]) -> int:
         completed = subprocess.run(command, cwd=self.root, check=False)
         return int(completed.returncode)
 
 
-class RegistryWorkerLock:
-    def __init__(self, root: Path | str) -> None:
-        self.path = Path(root) / REGISTRY_LOCK
-
-    def __enter__(self) -> "RegistryWorkerLock":
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            fd = os.open(str(self.path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError as exc:
-            raise RuntimeError(f"registry worker already running: {self.path}") from exc
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump({"pid": os.getpid(), "created_at": datetime.now().isoformat(timespec="seconds")}, handle, ensure_ascii=False)
-        return self
-
-    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
-        try:
-            self.path.unlink()
-        except FileNotFoundError:
-            return
+class RegistryWorkerLock(PidFileLock):
+    def __init__(self, root: Path | str, *, pid_checker: Callable[[int], bool] | None = None) -> None:
+        super().__init__(Path(root) / REGISTRY_LOCK, owner="registry worker", pid_checker=pid_checker)
 
 
 def main() -> int:

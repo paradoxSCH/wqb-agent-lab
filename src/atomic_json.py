@@ -8,8 +8,10 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from src.process_lock import pid_is_running
 
-def atomic_write_json(path: Path, payload: Mapping[str, Any]) -> None:
+
+def atomic_write_json(path: Path, payload: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = tempfile.NamedTemporaryFile(
         "w",
@@ -50,6 +52,9 @@ def locked_atomic_json_merge(
             )
         except (FileExistsError, PermissionError) as exc:
             if time.monotonic() >= deadline:
+                if isinstance(exc, FileExistsError) and _reclaim_stale_merge_lock(lock_path):
+                    deadline = time.monotonic() + timeout_seconds
+                    continue
                 if isinstance(exc, PermissionError):
                     raise
                 raise TimeoutError(f"Timed out acquiring JSON lock: {lock_path}")
@@ -77,3 +82,21 @@ def locked_atomic_json_merge(
         if descriptor is not None:
             os.close(descriptor)
         lock_path.unlink(missing_ok=True)
+
+
+def _reclaim_stale_merge_lock(lock_path: Path) -> bool:
+    try:
+        pid = int(lock_path.read_text(encoding="ascii").strip() or 0)
+    except (OSError, ValueError):
+        pid = 0
+    if pid <= 0 or pid == os.getpid():
+        return False
+    if pid > 0 and pid_is_running(pid):
+        return False
+    try:
+        lock_path.unlink()
+        return True
+    except FileNotFoundError:
+        return True
+    except PermissionError:
+        return False

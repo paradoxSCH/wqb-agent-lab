@@ -6,7 +6,7 @@ import unittest
 from dataclasses import dataclass
 from pathlib import Path
 
-from scripts.memory_worker import MemoryWorker, memory_state_path
+from scripts.memory_worker import MemoryWorker, MemoryWorkerLock, memory_state_path
 
 
 @dataclass(frozen=True)
@@ -18,6 +18,17 @@ class FakeSyncResult:
 
 
 class MemoryWorkerTests(unittest.TestCase):
+    def test_lock_reclaims_dead_worker_pid(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            lock_path = run_dir / "memory_worker.lock"
+            lock_path.write_text(json.dumps({"pid": 999999}), encoding="utf-8")
+
+            with MemoryWorkerLock(run_dir, pid_checker=lambda _pid: False):
+                self.assertTrue(lock_path.exists())
+
+            self.assertFalse(lock_path.exists())
+
     def test_run_once_writes_state_from_sync_result(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

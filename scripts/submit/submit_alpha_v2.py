@@ -7,8 +7,8 @@ from pathlib import Path
 import requests
 
 from src.config import load_config
-from src.wqb_agent_lab.platform import WQBSession
-from src.wqb_agent_lab.platform.session import (
+from wqb_agent_lab.platform import WQBSession
+from wqb_agent_lab.platform.session import (
     URL_ALPHAS_ALPHAID,
     URL_ALPHAS_ALPHAID_CHECK,
     URL_ALPHAS_ALPHAID_SUBMIT,

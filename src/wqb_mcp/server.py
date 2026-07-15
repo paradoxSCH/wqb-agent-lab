@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from src.wqb_agent_lab.platform import WQBClient
+from wqb_agent_lab.platform import WQBClient
 
 
 P0_TOOL_NAMES = (

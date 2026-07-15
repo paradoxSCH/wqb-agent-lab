@@ -5,7 +5,7 @@ from typing import Any, Iterable, Mapping, Sequence
 
 from .memory_gate import resolve_memory_promotion_permission
 from .types import OutputDiagnosis, OutputEvaluationRecord
-from src.wqb_agent_lab.platform import load_operator_names
+from wqb_agent_lab.platform import load_operator_names
 
 
 PRICE_VOLUME_FIELDS = {"close", "returns", "volume", "vwap", "adv20"}

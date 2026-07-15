@@ -49,7 +49,7 @@ import time
 from pathlib import Path
 
 from src.side_effect_governance import require_side_effect_capability
-from src.wqb_agent_lab.platform import WQBClient, evaluate_check_snapshot
+from wqb_agent_lab.platform import WQBClient, evaluate_check_snapshot
 
 
 def is_pass(metrics: dict, checks: list[dict] | None = None) -> bool:

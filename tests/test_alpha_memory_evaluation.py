@@ -2,10 +2,44 @@ from __future__ import annotations
 
 import unittest
 
-from src.alpha_memory.evaluation import evaluate_memory_runs
+from src.alpha_memory.evaluation import evaluate_memory_runs, evaluate_retrieval_rankings, run_retrieval_benchmark
+from src.alpha_memory.schema import MemoryNode
+from src.alpha_memory.store import SQLiteMemoryStore
+import tempfile
+from pathlib import Path
 
 
 class AlphaMemoryEvaluationTests(unittest.TestCase):
+    def test_chinese_benchmark_handles_partial_phrases_and_aliases(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = SQLiteMemoryStore(Path(tmp) / "memory.db")
+            store.initialize()
+            for node_id, title, summary in (
+                ("behavior-overreaction", "过度反应", "市场冲击后可能出现价格反转"),
+                ("behavior-anchoring", "锚定效应", "历史价格构成投资者参考点"),
+                ("behavior-attention", "注意力偏差", "显著性影响投资者关注和交易"),
+            ):
+                store.upsert_node(MemoryNode(id=node_id, type="behavior_thesis", layer="long_term", title=title, summary=summary))
+            cases = [
+                {"query": "过度反应后的反转", "relevant_ids": ["behavior-overreaction"]},
+                {"query": "历史锚定参考", "relevant_ids": ["behavior-anchoring"]},
+                {"query": "注意力显著偏差", "relevant_ids": ["behavior-attention"]},
+            ]
+            report = run_retrieval_benchmark(store, cases, top_k=2)
+            self.assertEqual(1.0, report["metrics"]["recall_at_k"])
+
+    def test_retrieval_quality_reports_recall_mrr_and_ndcg(self) -> None:
+        report = evaluate_retrieval_rankings(
+            [
+                {"relevant_ids": ["A", "B"], "retrieved_ids": ["X", "A", "B"]},
+                {"relevant_ids": ["C"], "retrieved_ids": ["C", "Y"]},
+            ]
+        )
+
+        self.assertEqual(1.0, report["recall_at_k"])
+        self.assertEqual(0.75, report["mrr"])
+        self.assertGreater(report["ndcg_at_k"], 0.8)
+
     def test_evaluate_memory_runs_reports_wqb_outcome_metrics(self) -> None:
         baseline = [
             {"simulations": 1000, "submit_ready": 1, "high_self_corr": 12, "duplicates": 9, "near_pass": 3},

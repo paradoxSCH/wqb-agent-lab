@@ -103,6 +103,32 @@ class OnboardingTests(unittest.TestCase):
         self.assertEqual("fail", mismatch["status"])
         self.assertIn("PATH", mismatch["fix_command"])
 
+    def test_full_profile_allows_canonical_build_before_dashboard_artifact_exists(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.create_checkout(root, with_node_modules=True)
+
+            def which(name: str) -> str | None:
+                return {"uv": "uv", "node": "node", "npm": "npm", "npm.cmd": "npm"}.get(name)
+
+            def command_version(executable: str, argument: str = "--version") -> str:
+                return {"uv": "uv 0.11.27", "node": "v24.18.0", "npm": "11.16.0"}[executable]
+
+            with (
+                patch.object(onboarding.sys, "version_info", (3, 12, 7)),
+                patch("scripts.onboarding.shutil.which", side_effect=which),
+                patch("scripts.onboarding._command_version", side_effect=command_version),
+                patch("scripts.onboarding._npm_runtime_version", return_value="24.18.0"),
+                patch("scripts.onboarding.importlib.metadata.version", return_value="1.0.0"),
+            ):
+                report = onboarding.build_doctor_report("full", root)
+
+        dashboard = next(item for item in report["checks"] if item["id"] == "dashboard_build")
+        self.assertEqual("attention", report["status"])
+        self.assertEqual("warn", dashboard["status"])
+        self.assertEqual("npm run build --prefix packages/wqb-agent-ui", dashboard["fix_command"])
+        self.assertIn("scripts.dev check", report["next_command"])
+
     def test_version_parser_and_supported_baselines_are_explicit(self) -> None:
         self.assertEqual((24, 18, 0), onboarding._version_tuple("v24.18.0"))
         self.assertEqual((0, 11, 27), onboarding._version_tuple("uv 0.11.27"))

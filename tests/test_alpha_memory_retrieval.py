@@ -10,6 +10,52 @@ from src.alpha_memory.store import SQLiteMemoryStore
 
 
 class AlphaMemoryRetrievalTests(unittest.TestCase):
+    def test_query_relevance_survives_action_reranking(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = SQLiteMemoryStore(Path(tmp) / "memory.db")
+            store.initialize()
+            broad = MemoryNode(
+                id="broad",
+                type="alpha_family",
+                layer="long_term",
+                title="quality",
+                summary="generic quality signal",
+                confidence=0.5,
+            )
+            exact = MemoryNode(
+                id="exact",
+                type="alpha_family",
+                layer="long_term",
+                title="quality value cashflow repair",
+                summary="quality value cashflow repair",
+                confidence=0.5,
+            )
+            store.upsert_node(broad)
+            store.upsert_node(exact)
+
+            result = retrieve_memory(store, "quality value cashflow repair", top_k=2)
+
+            self.assertEqual("exact", result.memories[0].node.id)
+            self.assertEqual("rerank", result.trace.steps[-1]["step"])
+
+    def test_chinese_query_is_retrievable(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = SQLiteMemoryStore(Path(tmp) / "memory.db")
+            store.initialize()
+            store.upsert_node(
+                MemoryNode(
+                    id="anchoring",
+                    type="behavior_thesis",
+                    layer="long_term",
+                    title="锚定反转",
+                    summary="投资者依赖近期参考点",
+                )
+            )
+
+            result = retrieve_memory(store, "锚定反转", top_k=3)
+
+            self.assertEqual(["锚定反转"], result.rewritten_query.terms)
+            self.assertEqual(["anchoring"], [item.node.id for item in result.memories])
     def test_retrieve_returns_actionable_trace_with_graph_expansion(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = SQLiteMemoryStore(Path(tmp) / "memory.db")

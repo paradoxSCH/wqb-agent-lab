@@ -297,7 +297,7 @@ def build_dashboard_model(runs: list[dict[str, Any]], *, evaluation_reports: lis
             "scope": "current run evidence",
             "retention": "hours to 3 runs",
             "policy": "promote when evidence repeats or a candidate reaches pass/corr repair lanes; decay when newer runs contradict it.",
-            "items": active_count + stalled_count,
+            "items": 0,
         },
         {
             "id": "long_term",
@@ -306,7 +306,7 @@ def build_dashboard_model(runs: list[dict[str, Any]], *, evaluation_reports: lis
             "scope": "stable alpha families and behavioral playbooks",
             "retention": "weeks to project lifetime",
             "policy": "store only reusable behavioral theses, operator-field patterns, and failure modes with reproducible evidence.",
-            "items": complete_count + len(runs),
+            "items": 0,
         },
         {
             "id": "knowledge_graph",
@@ -315,7 +315,7 @@ def build_dashboard_model(runs: list[dict[str, Any]], *, evaluation_reports: lis
             "scope": "relations among behavior theses, datasets, operators, candidates, and run outcomes",
             "retention": "versioned graph",
             "policy": "merge nodes by canonical behavior logic and keep typed edges for depends_on, contradicts, repairs, and supports.",
-            "items": len(runs) * 2,
+            "items": 0,
         },
     ]
 
@@ -339,7 +339,7 @@ def build_dashboard_model(runs: list[dict[str, Any]], *, evaluation_reports: lis
             "to": "short_term",
             "relation": "retrieves_for",
             "zh_relation": "检索增强",
-            "rule": "query rewrite, vector retrieval, rerank, and multi-granularity fusion",
+            "rule": "Chinese n-gram query normalization, FTS5/BM25 recall, graph expansion, and action-aware rerank",
         },
     ]
 

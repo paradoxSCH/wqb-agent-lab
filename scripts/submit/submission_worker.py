@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import subprocess
 import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol
 
+from src.atomic_json import atomic_write_json
+from src.process_lock import PidFileLock
 from src.side_effect_governance import evaluate_side_effect_capability
-from src.wqb_agent_lab.platform import CheckReadiness, evaluate_check_snapshot
+from wqb_agent_lab.platform import CheckReadiness, evaluate_check_snapshot
 
 
 STATE_FILE = "submission_state.json"
@@ -33,81 +33,9 @@ class SubmissionClient(Protocol):
         ...
 
 
-class WorkerLock:
+class WorkerLock(PidFileLock):
     def __init__(self, path: Path | str, *, pid_checker: Callable[[int], bool] | None = None) -> None:
-        self.path = Path(path)
-        self.pid_checker = pid_checker or _pid_running
-
-    def __enter__(self) -> "WorkerLock":
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
-        for _attempt in range(2):
-            try:
-                fd = os.open(str(self.path), flags)
-                break
-            except FileExistsError as exc:
-                if self._reclaim_stale_lock():
-                    continue
-                raise RuntimeError(f"submission worker already running: {self.path}") from exc
-        else:
-            raise RuntimeError(f"submission worker already running: {self.path}")
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(
-                {
-                    "pid": os.getpid(),
-                    "created_at": datetime.now().isoformat(timespec="seconds"),
-                },
-                handle,
-                ensure_ascii=False,
-                indent=2,
-            )
-        return self
-
-    def _reclaim_stale_lock(self) -> bool:
-        try:
-            payload = json.loads(self.path.read_text(encoding="utf-8-sig"))
-        except (OSError, json.JSONDecodeError):
-            payload = {}
-        try:
-            pid = int(payload.get("pid") or 0) if isinstance(payload, dict) else 0
-        except (TypeError, ValueError):
-            pid = 0
-        if pid > 0 and self.pid_checker(pid):
-            return False
-        try:
-            self.path.unlink()
-            return True
-        except FileNotFoundError:
-            return True
-
-    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
-        try:
-            self.path.unlink()
-        except FileNotFoundError:
-            return
-
-
-def _pid_running(pid: int) -> bool:
-    if pid <= 0:
-        return False
-    if os.name == "nt":
-        completed = subprocess.run(
-            [
-                "powershell",
-                "-NoProfile",
-                "-Command",
-                f"$p=Get-CimInstance Win32_Process -Filter \"ProcessId = {pid}\"; if ($null -eq $p) {{ exit 1 }}",
-            ],
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        return completed.returncode == 0
-    try:
-        os.kill(pid, 0)
-    except OSError:
-        return False
-    return True
+        super().__init__(path, owner="submission worker", pid_checker=pid_checker)
 
 
 def enqueue_submission_jobs(run_dir: Path | str, *, now: datetime | None = None) -> dict[str, Any]:
@@ -380,7 +308,7 @@ class SubmissionWorker:
 class BrainSubmissionClient:
     def __init__(self, *, wqb_client: Any | None = None) -> None:
         from scripts.submit.submit_alpha_v2 import _record_submission
-        from src.wqb_agent_lab.platform import WQBClient
+        from wqb_agent_lab.platform import WQBClient
 
         self.wqb_client = wqb_client or WQBClient.from_config()
         self._record_submission = _record_submission
@@ -488,8 +416,7 @@ def _read_json(path: Path, default: Any) -> Any:
 
 
 def _write_json(path: Path, payload: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+    atomic_write_json(path, payload)
 
 
 def _summarize_jobs(jobs: list[Any]) -> dict[str, int]:
