@@ -58,7 +58,11 @@ POLICY_BY_DIAGNOSIS: dict[str, dict[str, Any]] = {
 }
 
 
-def evaluate_diagnosis_policies(rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def evaluate_diagnosis_policies(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
     stats: dict[str, dict[str, Any]] = defaultdict(_empty_stats)
     total_diagnoses = 0
     for row in rows:
@@ -89,7 +93,7 @@ def evaluate_diagnosis_policies(rows: Sequence[Mapping[str, Any]]) -> dict[str, 
     policies = [_finalize_policy(item) for item in stats.values()]
     policies.sort(key=lambda item: (-int(item["observed_count"]), str(item["diagnosis_type"])))
     return {
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "generated_at": (now or datetime.now()).isoformat(timespec="seconds"),
         "total_rows": len(rows),
         "total_diagnoses": total_diagnoses,
         "policy_count": len(policies),

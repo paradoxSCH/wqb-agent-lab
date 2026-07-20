@@ -34,6 +34,9 @@ The project follows Semantic Versioning after the first public release. While th
   interrupted or ambiguous simulation creation, with positive-evidence matching,
   read-only retry scheduling, and explicit manual-review outcomes instead of blind POST
   replay.
+- Replay-safe diagnosis and triage stages with causal input digests, deterministic
+  timestamps, golden-path parity, and preservation of novel candidate fields through
+  advisory routing.
 
 ## [0.1.1-alpha] - 2026-07-14
 
