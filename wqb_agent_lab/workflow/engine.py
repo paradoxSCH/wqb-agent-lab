@@ -6,10 +6,9 @@ import os
 import platform
 import subprocess
 import sys
-import time
 import uuid
 from dataclasses import asdict
-from datetime import date, datetime, time as day_time, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -55,7 +54,6 @@ from wqb_agent_lab.workflow.artifacts import (
     write_text,
 )
 from wqb_agent_lab.workflow.candidates import (
-    budget_exhausted,
     candidate_identity,
     choose_budgeted_candidates,
     completed_candidate_count,
@@ -67,6 +65,7 @@ from wqb_agent_lab.workflow import diagnosis as workflow_diagnosis
 from wqb_agent_lab.workflow.models import StagePlan
 from wqb_agent_lab.workflow.postprocessing import WorkflowPostprocessor
 from wqb_agent_lab.workflow.reporting import WorkflowReporter
+from wqb_agent_lab.workflow.runner import WorkflowRunner
 from wqb_agent_lab.workflow.stages import StageCheckpointStore, StageOutcome, StageRunner
 from wqb_agent_lab.workflow.submitted_registry import SubmittedRegistryService
 
@@ -75,7 +74,6 @@ DEFAULT_WORKFLOW_CONFIG = Path(".local/research/workflows/production.json")
 RUNS_ROOT = Path(".local/data/runs/continuous-alpha")
 CONFIGS_ROOT = Path(".local/research/scans/continuous-alpha")
 SUBMITTED_REGISTRY_PATH = Path(".local/data/registry/submitted_alphas.json")
-DAY_START_TIME = day_time(0, 0)
 MILD_SELF_CORR_REPAIR_MAX = SELF_CORR_NEAR_REPAIR_MAX
 LLM_RETRY_BASE_SECONDS = 30
 LLM_RETRY_CAP_SECONDS = 15 * 60
@@ -2262,126 +2260,19 @@ class ResearchWorkflow:
         )
 
     def _run_once_tick(self, *, now: datetime, summary_only: bool = False) -> list[str]:
-        replayed = self.drain_workflow_outbox() if not self.dry_run else 0
-        ledger = self.load_or_create_ledger()
-        messages = [f"ledger: {relative_path(self.ledger_path, self.root)}"]
-        if replayed:
-            messages.append(f"replayed workflow outbox events={replayed}")
-        if self.reconcile_existing_stage_progress(ledger):
-            messages.append("reconciled existing stage progress")
-            if not self.dry_run:
-                self.run_diagnosis_triage(ledger, now=now)
-                self._emit_progress_callback(
-                    "stage_progress_reconciled",
-                    ledger,
-                    stage=str(ledger.get("current_stage") or "reconciled"),
-                    extra={"reason": "existing_stage_results_detected"},
-                )
-                write_json(self.ledger_path, ledger)
-                messages.append("refreshed closed-loop artifacts after reconcile")
-        if now.date() < self.run_date:
-            messages.append(f"waiting for daily start: {self.run_date.isoformat()}T{DAY_START_TIME.isoformat()}")
-            return messages
-        sync_status = self.run_registry_stage(now=now)
-        if sync_status not in {"ok", "skipped_dry_run", "skipped_disabled", "skipped_missing_credentials", "skipped_env"}:
-            messages.append(f"submitted registry sync: {sync_status}")
-        if summary_only:
-            _, summary_md = self.write_daily_report(ledger, now=now, reason="manual_summary", force=True)
-            messages.append(f"daily report: {relative_path(summary_md, self.root)}")
-            return messages
-        if budget_exhausted(ledger):
-            _, summary_md = self.write_daily_report(ledger, now=now, reason="budget_complete")
-            messages.append(f"budget complete report: {relative_path(summary_md, self.root)}")
-            return messages
-        self.run_llm_plan(ledger, now=now)
-        plan, initial_action = self.run_scan_preflight(ledger, now=now)
-        messages.append(f"stage action: {plan.stage} -> {initial_action}")
-        if initial_action == "slice_scan_config":
-            messages.append(
-                f"prepared {plan.candidate_count} candidates: {relative_path(plan.sliced_config or Path(), self.root)}"
-            )
-            spent = self.execute_scan(plan, ledger)
-            if spent:
-                messages.append(f"executed scan spend={spent}")
-                if budget_exhausted(ledger):
-                    _, summary_md = self.write_daily_report(ledger, now=now, reason="budget_complete")
-                    messages.append(f"budget complete report: {relative_path(summary_md, self.root)}")
-            elif not self.execute_scans:
-                messages.append("scan not executed; pass --execute-scans to consume budget")
-        return messages
+        return WorkflowRunner(self).run_tick(now=now, summary_only=summary_only)
 
     def run_once(self, *, now: datetime | None = None, summary_only: bool = False) -> list[str]:
-        now = now or datetime.now()
-        try:
-            messages = self._run_once_tick(now=now, summary_only=summary_only)
-        except Exception as exc:
-            if not self.dry_run:
-                try:
-                    self.write_run_manifest(now=now, status="failed", error_type=type(exc).__name__)
-                except Exception as manifest_exc:
-                    exc.add_note(f"run manifest checkpoint also failed: {type(manifest_exc).__name__}")
-            raise
-        if not self.dry_run:
-            try:
-                manifest_path = self.write_run_manifest(now=now, status="checkpointed")
-                messages.append(f"run manifest: {relative_path(manifest_path, self.root)}")
-            except Exception as exc:
-                messages.append(f"run manifest unavailable: {type(exc).__name__}")
-        return messages
+        return WorkflowRunner(self).run_once(now=now, summary_only=summary_only)
 
     def run_daemon(self, *, poll_seconds: int = 900, continue_next_day: bool = True) -> None:
-        while True:
-            try:
-                now = datetime.now()
-                if now.date() < self.run_date:
-                    time.sleep(max(60, poll_seconds))
-                    continue
-                existing_ledger = read_json(self.ledger_path, {})
-                if now.date() > self.run_date and budget_exhausted(existing_ledger):
-                    if not continue_next_day:
-                        break
-                    # Advance one day at a time; do not jump over stalled/backfill days
-                    next_date = self.run_date + timedelta(days=1)
-                    self._set_run_date(min(next_date, now.date()))
-                    existing_ledger = read_json(self.ledger_path, {})
-                if budget_exhausted(existing_ledger) and existing_ledger.get("last_budget_complete_report"):
-                    if not continue_next_day:
-                        break
-                    time.sleep(max(60, poll_seconds))
-                    continue
-                messages = self.run_once(now=now)
-                for message in messages:
-                    print(message)
-                ledger = read_json(self.ledger_path, {})
-                if budget_exhausted(ledger) and ledger.get("last_budget_complete_report"):
-                    if not continue_next_day:
-                        break
-                    time.sleep(max(60, poll_seconds))
-                    continue
-                if any(message.startswith("executed scan spend=") for message in messages):
-                    continue
-                time.sleep(max(60, poll_seconds))
-            except Exception as exc:
-                print(f"ERROR: daemon tick failed: {exc}", flush=True)
-                import traceback
-                traceback.print_exc()
-                time.sleep(max(60, poll_seconds))
+        WorkflowRunner(self).run_daemon(
+            poll_seconds=poll_seconds,
+            continue_next_day=continue_next_day,
+        )
 
     def run_until_budget_complete(self, *, poll_seconds: int = 900) -> None:
-        while True:
-            now = datetime.now()
-            existing_ledger = read_json(self.ledger_path, {})
-            if budget_exhausted(existing_ledger) and existing_ledger.get("last_budget_complete_report"):
-                break
-            messages = self.run_once(now=now)
-            for message in messages:
-                print(message)
-            ledger = read_json(self.ledger_path, {})
-            if budget_exhausted(ledger) and ledger.get("last_budget_complete_report"):
-                break
-            if any(message.startswith("executed scan spend=") for message in messages):
-                continue
-            time.sleep(max(60, poll_seconds))
+        WorkflowRunner(self).run_until_budget_complete(poll_seconds=poll_seconds)
 
 
 def main() -> int:

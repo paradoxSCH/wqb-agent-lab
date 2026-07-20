@@ -44,6 +44,9 @@ WorldQuant BRAIN transport
   adapter live in focused modules. They expose explicit functions or typed services
   instead of inheriting engine mixins; the engine retains stateful orchestration and
   stage sequencing.
+- `WorkflowRunner` owns polling and tick lifecycle only. It invokes the public workflow
+  stage surface, so lifecycle mechanics neither constrain model proposals nor bypass
+  deterministic side-effect governance.
 - Removed compatibility namespaces, launchers, and the legacy `src` package are not part
   of the 0.3 runtime or distribution.
 - Transport and MCP tools expose facts and capabilities. Governance decides budgets,

@@ -33,6 +33,8 @@
   package.
 - Moved the installed `wqb-engine` CLI and Python MCP adapter into `wqb_agent_lab`, then
   removed the legacy `src` package from both the repository and wheel discovery.
+- Extracted workflow tick, daemon, and fixed-date polling mechanics into an explicit
+  runner while leaving research decisions at the orchestrator boundary.
 
 ## [0.2.0a1] - 2026-07-14
 
