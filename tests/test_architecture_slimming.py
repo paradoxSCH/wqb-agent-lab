@@ -134,6 +134,15 @@ class ArchitectureSlimmingTests(unittest.TestCase):
         self.assertEqual([], [path for path in canonical if not (ROOT / path).is_file()])
         self.assertEqual([], [path for path in retired if (ROOT / path).exists()])
 
+    def test_legacy_src_package_is_absent(self) -> None:
+        pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+        self.assertFalse((ROOT / "src").exists())
+        self.assertTrue((ROOT / "wqb_agent_lab" / "cli.py").is_file())
+        self.assertTrue((ROOT / "wqb_agent_lab" / "mcp" / "server.py").is_file())
+        self.assertIn('wqb-engine = "wqb_agent_lab.cli:main"', pyproject)
+        self.assertNotIn('"src*"', pyproject)
+
 
 if __name__ == "__main__":
     unittest.main()

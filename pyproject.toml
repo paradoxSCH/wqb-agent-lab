@@ -58,7 +58,7 @@ dev = [
 ]
 
 [project.scripts]
-wqb-engine = "src.wqb_engine.cli:main"
+wqb-engine = "wqb_agent_lab.cli:main"
 release-audit = "scripts.checks.release_audit:main"
 
 [tool.setuptools]
@@ -66,7 +66,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["wqb_agent_lab*", "src*", "scripts*", "schemas"]
+include = ["wqb_agent_lab*", "scripts*", "schemas"]
 
 [tool.setuptools.package-data]
 "schemas" = ["*.json"]

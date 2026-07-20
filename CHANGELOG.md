@@ -31,6 +31,8 @@
   of `src` into the canonical platform/runtime packages.
 - Moved daemon completion hooks and dashboard projections into the canonical workflow
   package.
+- Moved the installed `wqb-engine` CLI and Python MCP adapter into `wqb_agent_lab`, then
+  removed the legacy `src` package from both the repository and wheel discovery.
 
 ## [0.2.0a1] - 2026-07-14
 

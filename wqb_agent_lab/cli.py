@@ -181,7 +181,10 @@ def run(
             if not isinstance(payload, dict):
                 _write_error(out_stream, operation, "invalid_payload", "Payload must be a JSON object.", [])
                 return 2
-            decision_payload = payload.get("decision") if isinstance(payload.get("decision"), dict) else payload
+            raw_decision = payload.get("decision")
+            decision_payload: dict[str, Any] = (
+                raw_decision if isinstance(raw_decision, dict) else payload
+            )
             decision = SubmitDecision.from_payload(decision_payload)
             if operation == "submission.submit_intent":
                 decision.requested_mode = "queue_only"

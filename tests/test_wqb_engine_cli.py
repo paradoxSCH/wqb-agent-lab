@@ -43,7 +43,7 @@ class WQBEngineCLITests(unittest.TestCase):
         }
 
     def invoke(self, argv: list[str], stdin_text: str = "") -> tuple[int, dict, str]:
-        from src.wqb_engine.cli import run
+        from wqb_agent_lab.cli import run
 
         stdout = io.StringIO()
         stderr = io.StringIO()
@@ -536,7 +536,7 @@ class WQBEngineCLITests(unittest.TestCase):
 import io
 import json
 import sys
-from src.wqb_engine.cli import run
+from wqb_agent_lab.cli import run
 
 operation, config_path = sys.argv[1:]
 stdout = io.StringIO()
@@ -585,7 +585,7 @@ def guarded_import(name, *args, **kwargs):
     return real_import(name, *args, **kwargs)
 builtins.__import__ = guarded_import
 
-from src.wqb_engine.cli import run
+from wqb_agent_lab.cli import run
 operation, config_path = sys.argv[1:]
 argv = [operation]
 stdin = io.StringIO("")

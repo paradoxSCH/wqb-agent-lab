@@ -253,7 +253,7 @@ class OpenSourceReadinessTests(unittest.TestCase):
             package_json = self.read(package_path)
             self.assertIn('"license": "Apache-2.0"', package_json)
             self.assertNotIn('"license": "MIT"', package_json)
-        self.assertIn('include = ["wqb_agent_lab*", "src*", "scripts*", "schemas"]', pyproject)
+        self.assertIn('include = ["wqb_agent_lab*", "scripts*", "schemas"]', pyproject)
         self.assertNotIn("py-modules", pyproject)
         self.assertIn('"schemas" = ["*.json"]', pyproject)
 
