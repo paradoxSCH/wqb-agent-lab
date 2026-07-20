@@ -10,7 +10,7 @@ from requests import Response
 
 from wqb_agent_lab.runtime import SideEffectUncertainError
 
-from .alpha_generator import build_alpha_object
+from wqb_agent_lab.research.alpha_generator import build_alpha_object
 from wqb_agent_lab.runtime.config import Config
 from .session import BrainSession
 from wqb_agent_lab.governance.side_effects import require_side_effect_capability

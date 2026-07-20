@@ -18,7 +18,11 @@ from pathlib import Path
 from typing import Any
 
 from wqb_agent_lab.runtime.config import load_config
-from src.evaluator import AlphaMetrics, FilterCriteria, compute_composite_score
+from wqb_agent_lab.evaluation.scoring import (
+    AlphaMetrics,
+    FilterCriteria,
+    compute_composite_score,
+)
 from wqb_agent_lab.platform import WQBSession
 from wqb_agent_lab.platform.session import (
     URL_ALPHAS_ALPHAID,

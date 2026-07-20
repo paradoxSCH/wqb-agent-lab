@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from src.evaluator import AlphaMetrics
+from wqb_agent_lab.evaluation.scoring import AlphaMetrics
 from src.submitter import (
     SubmissionPolicy,
     SubmissionQueue,

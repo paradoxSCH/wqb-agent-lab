@@ -2,7 +2,7 @@
 
 import unittest
 
-from src.evaluator import (
+from wqb_agent_lab.evaluation.scoring import (
     AlphaMetrics,
     IterationConfig,
     ScoreWeights,

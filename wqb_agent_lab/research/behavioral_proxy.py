@@ -180,8 +180,16 @@ def _proxy_strength(fields: Sequence[Mapping[str, Any]]) -> str:
 def _result_feedback(mechanism: str, rows: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     relevant = [row for row in rows if _row_family(row) == mechanism]
     failures = Counter(failure for row in relevant for failure in _failed_checks(row))
-    sharpes = [_metric(row, "sharpe") for row in relevant if _metric(row, "sharpe") is not None]
-    fitness = [_metric(row, "fitness") for row in relevant if _metric(row, "fitness") is not None]
+    sharpes = [
+        value
+        for row in relevant
+        if (value := _metric(row, "sharpe")) is not None
+    ]
+    fitness = [
+        value
+        for row in relevant
+        if (value := _metric(row, "fitness")) is not None
+    ]
     near_pass_count = sum(1 for row in relevant if (_metric(row, "sharpe") or -999.0) >= 1.25 and (_metric(row, "fitness") or -999.0) >= 1.0)
     all_pass_count = sum(1 for row in relevant if _all_pass(row))
     return {

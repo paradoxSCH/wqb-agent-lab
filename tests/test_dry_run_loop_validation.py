@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.loop_validation import run_dry_run_loop_validation
+from wqb_agent_lab.evaluation.loop_validation import run_dry_run_loop_validation
 
 
 class DryRunLoopValidationTests(unittest.TestCase):

@@ -81,6 +81,29 @@ class ArchitectureSlimmingTests(unittest.TestCase):
             2425,
         )
 
+    def test_research_and_evaluation_domains_are_canonical(self) -> None:
+        canonical = (
+            "wqb_agent_lab/research/alpha_generator.py",
+            "wqb_agent_lab/research/behavioral_proxy.py",
+            "wqb_agent_lab/research/refiner.py",
+            "wqb_agent_lab/research/self_corr_repair.py",
+            "wqb_agent_lab/evaluation/scoring.py",
+            "wqb_agent_lab/evaluation/loop_validation.py",
+            "wqb_agent_lab/evaluation/policy_effectiveness.py",
+        )
+        retired = (
+            "src/alpha_generator.py",
+            "src/behavioral_proxy",
+            "src/evaluator.py",
+            "src/loop_validation.py",
+            "src/policy_effectiveness",
+            "src/refiner.py",
+            "src/self_corr_repair.py",
+        )
+
+        self.assertEqual([], [path for path in canonical if not (ROOT / path).is_file()])
+        self.assertEqual([], [path for path in retired if (ROOT / path).exists()])
+
 
 if __name__ == "__main__":
     unittest.main()

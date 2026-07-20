@@ -24,6 +24,9 @@
   postprocessing behind typed workflow service boundaries.
 - Moved deterministic diagnosis, triage routing, deduplication, and family-efficiency
   calculations into stateless workflow-domain functions while preserving open fields.
+- Moved alpha generation/refinement, behavioral-proxy analysis, self-correlation repair,
+  scoring, loop validation, and policy-effectiveness analysis out of `src` and into the
+  canonical research/evaluation packages.
 
 ## [0.2.0a1] - 2026-07-14
 

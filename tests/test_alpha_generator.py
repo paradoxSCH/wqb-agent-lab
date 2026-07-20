@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import unittest
 
-from src.alpha_generator import (
+from wqb_agent_lab.research.alpha_generator import (
     GenerationConstraints,
     deduplicate_expressions,
     generate_category_alphas,

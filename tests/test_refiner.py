@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import unittest
 
-from src.refiner import generate_mutations, mutate_field_all_variants, mutate_lookback
+from wqb_agent_lab.research.refiner import (
+    generate_mutations,
+    mutate_field_all_variants,
+    mutate_lookback,
+)
 
 
 class RefinerTests(unittest.TestCase):

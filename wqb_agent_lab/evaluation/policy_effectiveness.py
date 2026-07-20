@@ -16,7 +16,10 @@ def build_policy_effectiveness_report(run_dir: Path | str) -> dict[str, Any]:
     for record in records:
         if not isinstance(record, Mapping):
             continue
-        outcome = record.get("outcome") if isinstance(record.get("outcome"), Mapping) else {}
+        raw_outcome = record.get("outcome")
+        outcome: Mapping[str, Any] = (
+            raw_outcome if isinstance(raw_outcome, Mapping) else {}
+        )
         actions = record.get("policy_actions_used") or []
         if not isinstance(actions, list):
             continue

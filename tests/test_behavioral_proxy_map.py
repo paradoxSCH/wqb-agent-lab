@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.behavioral_proxy.map import build_behavioral_proxy_map
+from wqb_agent_lab.research.behavioral_proxy import build_behavioral_proxy_map
 
 
 def _field(

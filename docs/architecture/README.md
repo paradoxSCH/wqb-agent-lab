@@ -27,6 +27,9 @@ WorldQuant BRAIN transport
 - `wqb_agent_lab.workflow.ResearchWorkflow` is the public production orchestrator.
 - Contracts, memory, evaluation, governance, research candidates, and runtime primitives
   are owned by `wqb_agent_lab`; canonical modules do not depend on the legacy `src` package.
+- Alpha generation/refinement, behavioral-proxy analysis, self-correlation repair,
+  scoring, loop validation, and policy-effectiveness analysis are canonical research or
+  evaluation modules, not parallel implementations under `src`.
 - `wqb_agent_lab.workflow.engine.ResearchWorkflow` owns production orchestration; its
   provider-neutral name replaces the historical provider-specific implementation name.
 - Workflow artifact/provenance helpers, candidate selection, configuration rotation,

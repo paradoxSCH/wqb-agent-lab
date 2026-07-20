@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.behavioral_proxy.map import build_behavioral_proxy_map
+from wqb_agent_lab.research.behavioral_proxy import build_behavioral_proxy_map
 
 
 def read_json(path: Path, default: Any) -> Any:
