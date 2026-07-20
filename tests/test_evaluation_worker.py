@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 
 from scripts.workers.evaluation import EvaluationWorker, EvaluationWorkerLock, evaluation_state_path
-from src.workflow_daemon import CompletionHookResult
+from wqb_agent_lab.workflow.daemon import CompletionHookResult
 
 
 class EvaluationWorkerTests(unittest.TestCase):

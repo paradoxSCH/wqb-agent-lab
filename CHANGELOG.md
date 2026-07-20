@@ -29,6 +29,8 @@
   canonical research/evaluation packages.
 - Moved the research-session adapter, simulation/submission helpers, and result cache out
   of `src` into the canonical platform/runtime packages.
+- Moved daemon completion hooks and dashboard projections into the canonical workflow
+  package.
 
 ## [0.2.0a1] - 2026-07-14
 

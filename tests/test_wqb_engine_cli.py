@@ -529,7 +529,7 @@ class WQBEngineCLITests(unittest.TestCase):
         forbidden_roots = (
             "wqb_agent_lab.evaluation.loop_validation",
             "wqb_agent_lab.platform.research_session",
-            "src.workflow_daemon",
+            "wqb_agent_lab.workflow.daemon",
             "src.wqb",
         )
         script = """
@@ -544,7 +544,7 @@ run([operation, "--config", config_path], stdout=stdout, stderr=io.StringIO())
 forbidden = (
     "wqb_agent_lab.evaluation.loop_validation",
     "wqb_agent_lab.platform.research_session",
-    "src.workflow_daemon",
+    "wqb_agent_lab.workflow.daemon",
     "src.wqb",
 )
 loaded = sorted(

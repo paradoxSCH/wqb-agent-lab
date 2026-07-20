@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from wqb_agent_lab.workflow.callbacks import emit_agent_callback
-from src.workflow_daemon import (
+from wqb_agent_lab.workflow.daemon import (
     LaunchResult,
     ProcessSpec,
     _notify_completion,

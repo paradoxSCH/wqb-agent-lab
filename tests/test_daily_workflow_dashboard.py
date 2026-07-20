@@ -10,7 +10,12 @@ from pathlib import Path
 import requests
 
 from scripts.run.dashboard import DashboardHandler
-from src.daily_workflow_dashboard import build_dashboard_model, build_run_snapshot, collect_evaluation_reports, collect_run_snapshots
+from wqb_agent_lab.workflow.dashboard import (
+    build_dashboard_model,
+    build_run_snapshot,
+    collect_evaluation_reports,
+    collect_run_snapshots,
+)
 
 
 def _policy() -> dict[str, object]:
