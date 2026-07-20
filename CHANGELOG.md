@@ -16,6 +16,8 @@
 - Moved the provider-neutral `ResearchWorkflow`, LLM provider stack, research policy,
   memory sync, decision attribution, and feedback governance into `wqb_agent_lab`; the
   canonical package no longer imports `src`.
+- Split workflow artifact/provenance I/O, candidate budget selection, and stage planning
+  data out of the orchestration engine.
 
 ## [0.2.0a1] - 2026-07-14
 
