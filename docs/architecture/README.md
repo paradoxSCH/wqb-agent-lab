@@ -31,9 +31,10 @@ WorldQuant BRAIN transport
   provider-neutral name replaces the historical provider-specific implementation name.
 - Workflow artifact/provenance helpers, candidate selection, configuration rotation,
   submitted-registry snapshots, replay-safe memory/evaluation postprocessing, reporting,
-  immutable planning data, and the command-line adapter live in focused modules. They
-  expose explicit functions or typed services instead of inheriting engine mixins; the
-  engine retains stateful orchestration and stage sequencing.
+  deterministic diagnosis/triage rules, immutable planning data, and the command-line
+  adapter live in focused modules. They expose explicit functions or typed services
+  instead of inheriting engine mixins; the engine retains stateful orchestration and
+  stage sequencing.
 - Removed compatibility namespaces and launchers are not part of the 0.3 runtime.
 - Transport and MCP tools expose facts and capabilities. Governance decides budgets,
   retries, pauses, promotion, and side effects.
