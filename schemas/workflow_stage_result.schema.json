@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wqb-agent-lab.local/schemas/workflow_stage_result.schema.json",
+  "title": "Workflow Stage Result",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "stage_id",
+    "attempt_id",
+    "attempt_number",
+    "status",
+    "started_at",
+    "completed_at",
+    "input_digest",
+    "artifacts",
+    "messages",
+    "output",
+    "error",
+    "extensions"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "enum": [1] },
+    "run_id": { "type": "string", "minLength": 1 },
+    "stage_id": { "type": "string", "pattern": "^[a-z][a-z0-9_.-]*$" },
+    "attempt_id": { "type": "string", "minLength": 1 },
+    "attempt_number": { "type": "integer", "minimum": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["running", "completed", "skipped", "deferred", "failed"]
+    },
+    "started_at": { "type": "string", "minLength": 1 },
+    "completed_at": { "type": ["string", "null"] },
+    "input_digest": { "type": "string" },
+    "artifacts": { "type": "array", "items": { "type": "string" } },
+    "messages": { "type": "array", "items": { "type": "string" } },
+    "output": { "type": "object", "additionalProperties": true },
+    "error": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["code", "error_type", "retryable"],
+          "additionalProperties": false,
+          "properties": {
+            "code": { "type": "string" },
+            "error_type": { "type": "string" },
+            "retryable": { "type": "boolean" }
+          }
+        }
+      ]
+    },
+    "extensions": { "type": "object", "additionalProperties": true }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "running" } } },
+      "then": {
+        "properties": {
+          "completed_at": { "type": "null" },
+          "error": { "type": "null" }
+        }
+      },
+      "else": { "properties": { "completed_at": { "type": "string", "minLength": 1 } } }
+    },
+    {
+      "if": { "properties": { "status": { "const": "failed" } } },
+      "then": { "properties": { "error": { "type": "object" } } },
+      "else": { "properties": { "error": { "type": "null" } } }
+    }
+  ]
+}

@@ -24,7 +24,7 @@ The migration must preserve all of the following:
 | Proposal boundary | Implemented | Provider-neutral schema and immutable models |
 | Structural repair and policy | Implemented | Explicit opt-in adapter; legacy output remains default |
 | Provenance | In progress | Production tick checkpoints, configuration/schema/artifact digests |
-| Recoverable stages | Planned | Extract one stage at a time after golden-run parity |
+| Recoverable stages | In progress | LLM planning uses atomic, interruption-aware stage checkpoints |
 | Side-effect reconciliation | Planned | Extend the existing operation journal with unknown-outcome recovery |
 | Evidence-gated feedback | Planned | Shadow mode before advisory or control use |
 
@@ -54,6 +54,11 @@ The migration must preserve all of the following:
   and evaluation stages behind stable interfaces.
 - Make the current workflow delegate to one extracted stage at a time.
 - Introduce explicit checkpoints only after golden-run parity is demonstrated.
+
+The stage checkpoint contract deliberately leaves `output` and `extensions` open. Only
+orchestrator-owned stage identifiers and lifecycle states are enumerated. Replay-safe
+stages may resume an interrupted attempt; side-effecting stages must use reconciliation
+and are never replayed merely because a checkpoint remained in `running` state.
 
 ### 5. Side-effect reconciliation
 

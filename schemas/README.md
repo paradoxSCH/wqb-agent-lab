@@ -16,9 +16,11 @@ versioned product interfaces, not examples or generated run output.
 | `simulation_request` | platform boundary | normalized simulation input | explicit validation |
 | `simulation_result` | platform boundary | normalized simulation outcome | explicit validation |
 | `submission_job` | submission worker | queued submission intent and state | explicit validation |
+| `workflow_stage_result` | workflow runtime | resumable stage attempts and artifact references | automatic validation at checkpoint writes |
 
-`research_policy` is currently the only contract automatically enforced when
-the production runtime loads configuration. The other contracts are published
+`research_policy` is currently the only configuration contract automatically enforced when
+the production runtime loads configuration. Stage-result checkpoints are also validated
+automatically when written. The other contracts are published
 validation boundaries: callers can validate them through the engine, but their
 presence does not imply that every producer and consumer is already wired to
 validate every artifact automatically.

@@ -17,6 +17,7 @@ SCHEMA_NAMES = (
     "simulation_request",
     "simulation_result",
     "submission_job",
+    "workflow_stage_result",
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
