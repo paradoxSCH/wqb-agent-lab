@@ -45,6 +45,7 @@ class OpenSourceReadinessTests(unittest.TestCase):
             ".github/pull_request_template.md",
             ".github/ISSUE_TEMPLATE/bug_report.yml",
             "schemas/submission_job.schema.json",
+            "schemas/README.md",
             "schemas/__init__.py",
             "packages/wqb-agent-mcp/package.json",
             "packages/wqb-agent-ui/package.json",

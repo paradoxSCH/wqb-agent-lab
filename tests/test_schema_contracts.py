@@ -16,6 +16,25 @@ EXPECTED_SCHEMA_NAMES = (
 
 
 class SchemaContractTests(unittest.TestCase):
+    def test_schema_directory_has_no_undeclared_contracts(self) -> None:
+        from src.contracts.registry import SCHEMA_DIR
+
+        discovered = tuple(sorted(path.name.removesuffix(".schema.json") for path in SCHEMA_DIR.glob("*.schema.json")))
+
+        self.assertEqual(EXPECTED_SCHEMA_NAMES, discovered)
+
+    def test_schema_readme_classifies_every_public_contract(self) -> None:
+        from src.contracts.registry import SCHEMA_DIR
+
+        readme = (SCHEMA_DIR / "README.md").read_text(encoding="utf-8")
+
+        for name in EXPECTED_SCHEMA_NAMES:
+            with self.subTest(name=name):
+                self.assertIn(f"`{name}`", readme)
+        normalized = " ".join(readme.split())
+        self.assertIn("only contract automatically enforced", normalized)
+        self.assertIn("published validation boundaries", normalized)
+
     def test_lists_exact_p0_schema_names(self) -> None:
         from src.contracts import list_schema_names
 
