@@ -8,8 +8,8 @@ The canonical production workflow command is:
 .\.venv\Scripts\python.exe -m scripts.run.workflow --workspace-root . --workflow-config .local\research\workflows\production.json --run-once --dry-run
 ```
 
-`python -m scripts.kimi_daily_workflow` was removed in `0.3.0`. Use the canonical command
-above.
+The provider-specific `scripts.kimi_daily_workflow` launcher was removed in `0.3.0`. Use
+the canonical command above.
 
 The default workflow config moved from the historical provider-specific path to
 `.local/research/workflows/production.json`. Explicit `--workflow-config` paths continue
@@ -36,5 +36,6 @@ an executable compatibility surface.
 ## LLM configuration
 
 Use the top-level `llm_provider` object. The legacy `llm_adapter`, `deepseek_v4_pro`,
-`kimi_cli`, and Kimi environment fallbacks remain readable through version `0.2.x` and
-emit compatibility diagnostics. They will be removed in version `0.3.0`.
+`kimi_cli`, and implicit Kimi environment fallbacks were removed in `0.3.0`; the resolver
+now returns `invalid_configuration` for legacy blocks. CLI-backed models remain supported
+through `llm_provider.provider = "cli"` with an explicit command array.

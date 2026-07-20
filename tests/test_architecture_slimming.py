@@ -57,6 +57,13 @@ class ArchitectureSlimmingTests(unittest.TestCase):
         self.assertNotIn("_kimi_environment_config", source)
         self.assertNotIn('provider == "kimi_cli"', source)
 
+    def test_current_docs_do_not_advertise_retired_module_commands(self) -> None:
+        migration = (ROOT / "docs" / "user" / "MIGRATING.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertNotIn("python -m scripts.kimi_daily_workflow", migration)
+
 
 if __name__ == "__main__":
     unittest.main()
