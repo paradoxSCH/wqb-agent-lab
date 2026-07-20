@@ -5,7 +5,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.evaluation_worker import EvaluationWorker, EvaluationWorkerLock, evaluation_state_path
+from scripts.workers.evaluation import EvaluationWorker, EvaluationWorkerLock, evaluation_state_path
 from src.workflow_daemon import CompletionHookResult
 
 

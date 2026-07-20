@@ -200,7 +200,7 @@ class WorkflowDaemonTests(unittest.TestCase):
 
             self.assertEqual(result, "evaluation_worker_started pid=4321")
             command = launches[0]["command"]
-            self.assertIn("scripts.evaluation_worker", command)
+            self.assertIn("scripts.workers.evaluation", command)
             self.assertIn("--once", command)
 
     def test_launch_evaluation_worker_skips_when_latest_completed_run_already_evaluated_recently(self) -> None:

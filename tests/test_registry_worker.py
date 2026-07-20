@@ -6,7 +6,7 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from scripts.registry_worker import RegistryWorker, RegistryWorkerLock, registry_state_path
+from scripts.workers.registry import RegistryWorker, RegistryWorkerLock, registry_state_path
 
 
 class RegistryWorkerTests(unittest.TestCase):
