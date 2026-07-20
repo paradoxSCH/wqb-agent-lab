@@ -5,7 +5,9 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.policy_effectiveness import write_policy_effectiveness_report
+from wqb_agent_lab.evaluation.policy_effectiveness import (
+    write_policy_effectiveness_report,
+)
 
 
 def main() -> int:

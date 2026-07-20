@@ -238,7 +238,9 @@ def run(
             return 0
 
         if operation in {"loop.dry_run_validate", "demo"}:
-            from src.loop_validation import run_dry_run_loop_validation
+            from wqb_agent_lab.evaluation.loop_validation import (
+                run_dry_run_loop_validation,
+            )
 
             parsed = _parse_loop_dry_run_args(operation, args[1:])
             report = run_dry_run_loop_validation(parsed.workspace_root, run_tag=parsed.run_tag)

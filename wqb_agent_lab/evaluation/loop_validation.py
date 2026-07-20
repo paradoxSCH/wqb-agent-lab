@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Mapping, Sequence
 
 from wqb_agent_lab.memory.sync import sync_run_memory
 from wqb_agent_lab.research.candidates import write_candidate_generation_artifacts
@@ -11,7 +11,9 @@ from wqb_agent_lab.evaluation.attribution import record_scan_decision, score_dec
 from wqb_agent_lab.evaluation.failure_diagnosis import diagnose_failure_objects
 from wqb_agent_lab.memory.governance import write_memory_governance_report
 from wqb_agent_lab.evaluation.output.evaluator import evaluate_run_outputs, write_run_output_evaluation
-from src.policy_effectiveness import write_policy_effectiveness_report
+from wqb_agent_lab.evaluation.policy_effectiveness import (
+    write_policy_effectiveness_report,
+)
 
 
 def run_dry_run_loop_validation(
@@ -182,7 +184,9 @@ def _candidate_rows_from_queue(queue: Mapping[str, Any]) -> list[dict[str, Any]]
     return []
 
 
-def _synthetic_probe_results(candidates: list[Mapping[str, Any]]) -> list[dict[str, Any]]:
+def _synthetic_probe_results(
+    candidates: Sequence[Mapping[str, Any]],
+) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for index, candidate in enumerate(candidates):
         passed = index == 0

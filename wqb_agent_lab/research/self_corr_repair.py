@@ -396,7 +396,10 @@ def _increase_single_divisor(match: re.Match[str]) -> str:
 
 
 def _review_item(row: Mapping[str, Any], self_corr: Any, bucket: str) -> dict[str, Any]:
-    metrics = row.get("metrics") if isinstance(row.get("metrics"), Mapping) else {}
+    raw_metrics = row.get("metrics")
+    metrics: Mapping[str, Any] = (
+        raw_metrics if isinstance(raw_metrics, Mapping) else {}
+    )
     return {
         "alpha_id": row.get("alpha_id"),
         "family": row.get("family") or row.get("behavior_family") or "unknown",

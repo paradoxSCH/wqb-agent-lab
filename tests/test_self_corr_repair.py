@@ -7,7 +7,12 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.self_corr_repair import build_bucket_aware_next_scan_plan, build_self_corr_repair_plan, write_bucket_aware_next_scan_artifacts, write_self_corr_repair_artifacts
+from wqb_agent_lab.research.self_corr_repair import (
+    build_bucket_aware_next_scan_plan,
+    build_self_corr_repair_plan,
+    write_bucket_aware_next_scan_artifacts,
+    write_self_corr_repair_artifacts,
+)
 
 
 class SelfCorrRepairTests(unittest.TestCase):

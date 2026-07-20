@@ -6,7 +6,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from .alpha_generator import (
+from wqb_agent_lab.research.alpha_generator import (
     GenerationConstraints,
     deduplicate_expressions,
     normalize_expression,
@@ -265,7 +265,7 @@ def run_iteration(
     返回:
         包含 rounds 详情和 best 候选的汇总字典
     """
-    from .refiner import generate_mutations
+    from wqb_agent_lab.research.refiner import generate_mutations
 
     config = config or IterationConfig()
     all_seen: set[str] = set()

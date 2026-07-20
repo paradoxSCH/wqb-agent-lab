@@ -5,7 +5,10 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.self_corr_repair import write_bucket_aware_next_scan_artifacts, write_self_corr_repair_artifacts
+from wqb_agent_lab.research.self_corr_repair import (
+    write_bucket_aware_next_scan_artifacts,
+    write_self_corr_repair_artifacts,
+)
 
 
 def main() -> None:
