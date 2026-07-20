@@ -37,10 +37,18 @@ def apply_policy_feedback(
     queue: Mapping[str, Any],
     field_map: Mapping[str, Any],
     policy_feedback: Mapping[str, Any] | None,
+    *,
+    mode: str = "shadow",
 ) -> dict[str, Any]:
+    normalized_mode = str(mode or "shadow").strip().lower()
+    if normalized_mode not in {"off", "shadow", "advisory", "control"}:
+        normalized_mode = "shadow"
     feedback = normalize_policy_feedback(policy_feedback)
+    feedback["mode"] = normalized_mode
     result = deepcopy(dict(queue))
     result["policy_feedback"] = feedback
+    if normalized_mode == "off":
+        return result
     proxy_strength_by_mechanism = {
         str(row.get("mechanism")): str(row.get("proxy_strength") or "unknown")
         for row in field_map.get("mappings", [])
@@ -61,11 +69,14 @@ def apply_policy_feedback(
             "required_experiments": [],
             "max_budget_share": None,
             "budget_actions": {},
+            "recommended_action_lane": str(hypothesis.get("wqb_action_lane") or "probe"),
         }
         _apply_weak_proxy_feedback(item_feedback, feedback)
-        _apply_overcrowded_feedback(hypothesis, item_feedback, feedback)
-        _apply_sub_universe_feedback(hypothesis, item_feedback, feedback)
-        _apply_lane_from_actions(hypothesis, item_feedback)
+        _apply_overcrowded_feedback(item_feedback, feedback)
+        _apply_sub_universe_feedback(item_feedback, feedback)
+        _apply_lane_from_actions(item_feedback)
+        if normalized_mode == "control":
+            hypothesis["wqb_action_lane"] = item_feedback["recommended_action_lane"]
         hypothesis["policy_feedback"] = item_feedback
         hypotheses.append(hypothesis)
     result["hypotheses"] = hypotheses
@@ -83,7 +94,6 @@ def _apply_weak_proxy_feedback(item_feedback: dict[str, Any], feedback: Mapping[
 
 
 def _apply_overcrowded_feedback(
-    hypothesis: dict[str, Any],
     item_feedback: dict[str, Any],
     feedback: Mapping[str, Any],
 ) -> None:
@@ -92,11 +102,10 @@ def _apply_overcrowded_feedback(
         return
     item_feedback["requires_chassis_change"] = True
     item_feedback["budget_actions"][str(action.get("policy_key") or "overcrowded_skeleton")] = action
-    hypothesis["wqb_action_lane"] = "repair_probe"
+    item_feedback["recommended_action_lane"] = "repair_probe"
 
 
 def _apply_sub_universe_feedback(
-    hypothesis: dict[str, Any],
     item_feedback: dict[str, Any],
     feedback: Mapping[str, Any],
 ) -> None:
@@ -105,13 +114,13 @@ def _apply_sub_universe_feedback(
         return
     if str(action.get("budget_action") or "") == "replace_unstable_universe_proxy":
         item_feedback["requires_chassis_change"] = True
-        hypothesis["wqb_action_lane"] = "replace_probe"
+        item_feedback["recommended_action_lane"] = "replace_probe"
     else:
         item_feedback["required_experiments"] = ["industry_neutralization", "sector_neutralization"]
     item_feedback["budget_actions"][str(action.get("policy_key") or "sub_universe_instability")] = action
 
 
-def _apply_lane_from_actions(hypothesis: dict[str, Any], item_feedback: Mapping[str, Any]) -> None:
+def _apply_lane_from_actions(item_feedback: dict[str, Any]) -> None:
     actions = item_feedback.get("budget_actions") or {}
     budget_actions = {str(action.get("budget_action") or "") for action in actions.values() if isinstance(action, Mapping)}
     replacement_actions = {
@@ -120,9 +129,9 @@ def _apply_lane_from_actions(hypothesis: dict[str, Any], item_feedback: Mapping[
         "replace_concentrated_expression_structure",
     }
     if budget_actions & replacement_actions:
-        hypothesis["wqb_action_lane"] = "replace_probe"
+        item_feedback["recommended_action_lane"] = "replace_probe"
     elif "allocate_small_parameter_repair" in budget_actions:
-        hypothesis["wqb_action_lane"] = "repair_probe"
+        item_feedback["recommended_action_lane"] = "repair_probe"
 
 
 def _first_action(feedback: Mapping[str, Any], keys: list[str]) -> Mapping[str, Any] | None:

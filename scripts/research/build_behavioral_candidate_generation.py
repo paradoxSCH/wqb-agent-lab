@@ -23,11 +23,22 @@ def main() -> int:
         type=Path,
         help="Optional previous run output_evaluation_report.json used as policy feedback.",
     )
+    parser.add_argument(
+        "--policy-feedback-mode",
+        choices=("off", "shadow", "advisory", "control"),
+        default="shadow",
+        help="Apply feedback as annotations by default; control may alter action lanes.",
+    )
     args = parser.parse_args()
 
     fields = _load_fields(Path(args.fields))
     policy_feedback = _load_policy_feedback(args.output_evaluation_report)
-    written = write_candidate_generation_artifacts(fields, Path(args.output_dir), policy_feedback=policy_feedback)
+    written = write_candidate_generation_artifacts(
+        fields,
+        Path(args.output_dir),
+        policy_feedback=policy_feedback,
+        policy_feedback_mode=args.policy_feedback_mode,
+    )
 
     for key, path in written.items():
         print(f"{key}: {path}")

@@ -198,11 +198,17 @@ def build_candidate_generation_artifacts(
     fields: Sequence[Mapping[str, Any]],
     *,
     policy_feedback: Mapping[str, Any] | None = None,
+    policy_feedback_mode: str = "shadow",
 ) -> dict[str, Any]:
     inventory = _build_inventory()
     field_map = _build_field_map(fields)
     queue = _build_hypothesis_queue(field_map)
-    queue = apply_policy_feedback(queue, field_map, policy_feedback)
+    queue = apply_policy_feedback(
+        queue,
+        field_map,
+        policy_feedback,
+        mode=policy_feedback_mode,
+    )
     return {
         "behavioral_mechanism_inventory": inventory,
         "behavioral_proxy_field_map": field_map,
@@ -215,8 +221,13 @@ def write_candidate_generation_artifacts(
     output_dir: Path | str,
     *,
     policy_feedback: Mapping[str, Any] | None = None,
+    policy_feedback_mode: str = "shadow",
 ) -> dict[str, Path]:
-    artifacts = build_candidate_generation_artifacts(fields, policy_feedback=policy_feedback)
+    artifacts = build_candidate_generation_artifacts(
+        fields,
+        policy_feedback=policy_feedback,
+        policy_feedback_mode=policy_feedback_mode,
+    )
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
     written: dict[str, Path] = {}

@@ -95,7 +95,8 @@ class BehavioralCandidateGenerationTests(unittest.TestCase):
             feedback = hypothesis["policy_feedback"]
             self.assertTrue(feedback["static_preflight_required"])
             self.assertTrue(feedback["requires_chassis_change"])
-            self.assertEqual(hypothesis["wqb_action_lane"], "repair_probe")
+            self.assertEqual(hypothesis["wqb_action_lane"], "probe")
+            self.assertEqual(feedback["recommended_action_lane"], "repair_probe")
             self.assertIn("industry_neutralization", feedback["required_experiments"])
             if feedback["proxy_strength"] == "weak":
                 self.assertEqual(feedback["max_budget_share"], 0.05)
@@ -141,10 +142,37 @@ class BehavioralCandidateGenerationTests(unittest.TestCase):
         self.assertTrue(queue["hypotheses"])
         for hypothesis in queue["hypotheses"]:
             feedback = hypothesis["policy_feedback"]
-            self.assertEqual(hypothesis["wqb_action_lane"], "replace_probe")
+            self.assertEqual(hypothesis["wqb_action_lane"], "probe")
+            self.assertEqual(feedback["recommended_action_lane"], "replace_probe")
             self.assertTrue(feedback["requires_chassis_change"])
             self.assertIn("sub_universe_instability:severe", feedback["budget_actions"])
             self.assertIn("weak_behavior_proxy:deep_fail", feedback["budget_actions"])
+
+    def test_control_mode_can_apply_recommended_candidate_lane_explicitly(self) -> None:
+        artifacts = build_candidate_generation_artifacts(
+            [
+                self._field("news_sentiment_extreme", "News sentiment and media attention score", dataset="news12"),
+                self._field("quality_cashflow_score", "Cashflow quality and accrual quality score", dataset="model77"),
+            ],
+            policy_feedback={
+                "budget_policy_actions": [
+                    {
+                        "diagnosis_type": "overcrowded_skeleton",
+                        "budget_action": "allocate_controlled_repair_budget",
+                        "max_budget_share": 0.15,
+                    }
+                ]
+            },
+            policy_feedback_mode="control",
+        )
+
+        self.assertTrue(artifacts["candidate_hypothesis_queue"]["hypotheses"])
+        self.assertTrue(
+            all(
+                row["wqb_action_lane"] == "repair_probe"
+                for row in artifacts["candidate_hypothesis_queue"]["hypotheses"]
+            )
+        )
 
     def test_cli_writes_three_named_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

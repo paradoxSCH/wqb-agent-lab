@@ -25,6 +25,13 @@ from src.failure_diagnosis import diagnose_failure_objects, primary_diagnosis_ty
 from src.llm_provider import LLMProvider
 from src.llm_planning import LLMPlanAdapter
 from src.output_evaluation.evaluator import write_run_output_evaluation
+from src.policy_feedback_governance import (
+    aggregate_shadow_evidence,
+    cap_recommended_candidates,
+    record_shadow_decision,
+    resolve_feedback_mode,
+    score_shadow_decisions,
+)
 from src.output_evaluation.types import OutputEvaluationRecord
 from src.output_evaluation.validators import validate_expression_candidates
 from src.research_policy import (
@@ -525,6 +532,7 @@ class StagePlan:
     output_path: Path | None = None
     candidate_count: int = 0
     action: str = "none"
+    policy_feedback_governance: dict[str, Any] | None = None
 
 
 class KimiDailyWorkflow:
@@ -1343,6 +1351,7 @@ class KimiDailyWorkflow:
             "preflight_evaluation_report.json",
             "scan_results_snapshot.json",
             "memory_sync_report.json",
+            "policy_feedback_shadow_evaluation.json",
             "triage_summary.md",
             "diagnosis_policy_evaluation.md",
             "wqb-agent-latest-workflow-uml.html",
@@ -2092,6 +2101,7 @@ class KimiDailyWorkflow:
         proxy_config = self.config.get("behavioral_proxy_map") or {}
         if isinstance(proxy_config, dict) and proxy_config.get("path"):
             paths.add(self.root / str(proxy_config["path"]))
+        paths.update((self.root / RUNS_ROOT).glob("*/policy_feedback_shadow_evaluation.json"))
         fingerprints = [
             {
                 "path": relative_path(path, self.root),
@@ -2138,7 +2148,7 @@ class KimiDailyWorkflow:
             plan = self.plan_next_scan(ledger)
             initial_action = plan.action
             if initial_action == "slice_scan_config":
-                plan = self.prepare_budgeted_scan(plan)
+                plan = self.prepare_budgeted_scan(plan, now=now)
             status = (
                 "deferred"
                 if initial_action == "waiting_for_scan_config"
@@ -2154,6 +2164,7 @@ class KimiDailyWorkflow:
                     self.run_dir / "preflight_evaluation_report.json",
                     self.run_dir / "research_policy_evaluation.json",
                     self.run_dir / "decision_attribution.json",
+                    self.run_dir / "policy_feedback_shadow.json",
                 )
                 if path is not None and path.is_file()
             )
@@ -2177,8 +2188,13 @@ class KimiDailyWorkflow:
                         relative_path(plan.output_path, self.root) if plan.output_path is not None else ""
                     ),
                     "candidate_count": plan.candidate_count,
+                    "policy_feedback_governance": plan.policy_feedback_governance or {},
                 },
-                extensions={"remote_side_effects": False},
+                extensions={
+                    "remote_side_effects": False,
+                    "feedback_default_is_shadow": True,
+                    "control_requires_promotion_gate": True,
+                },
             )
 
         if self.dry_run:
@@ -2354,7 +2370,13 @@ class KimiDailyWorkflow:
             write_json(self.ledger_path, ledger)
         return changed
 
-    def prepare_budgeted_scan(self, plan: StagePlan) -> StagePlan:
+    def prepare_budgeted_scan(
+        self,
+        plan: StagePlan,
+        *,
+        now: datetime | None = None,
+    ) -> StagePlan:
+        now = now or datetime.now()
         if plan.source_config is None:
             return plan
         config = read_json(plan.source_config, {})
@@ -2401,7 +2423,11 @@ class KimiDailyWorkflow:
             ),
         )
         selected, preflight_record = self._preflight_selected_candidates(plan.source_config, selected, config)
-        selected, policy_context = self._apply_policy_feedback_controls(selected, max_count)
+        baseline_selected = list(selected)
+        selected, policy_context, recommended, overflow = self._apply_policy_feedback_controls(
+            selected,
+            max_count,
+        )
         source_stem = plan.source_config.parent.name
         sliced_config = self.config_dir / f"{plan.stage}_{source_stem}_{len(selected)}.json"
         output_path = self.run_dir / f"{plan.stage}_{source_stem}_results.json"
@@ -2423,6 +2449,16 @@ class KimiDailyWorkflow:
             "required_policy_experiments": policy_context["required_policy_experiments"],
             "policy_action_lanes": policy_context["policy_action_lanes"],
             "policy_budget_caps_applied": policy_context["policy_budget_caps_applied"],
+            "policy_budget_caps_recommended": policy_context[
+                "policy_budget_caps_recommended"
+            ],
+            "policy_feedback_governance": policy_context["governance"],
+            "recommended_policy_experiments": policy_context[
+                "recommended_policy_experiments"
+            ],
+            "recommended_policy_action_lanes": policy_context[
+                "recommended_policy_action_lanes"
+            ],
             "candidate_diversity_gate": {
                 "enabled": bool(caps),
                 "available_candidates": len(available_candidates),
@@ -2442,6 +2478,19 @@ class KimiDailyWorkflow:
         plan.output_path = output_path
         plan.candidate_count = len(selected)
         plan.action = "prepared_scan_config"
+        plan.policy_feedback_governance = dict(policy_context["governance"])
+        if not self.dry_run and policy_context["governance"]["effective_mode"] != "off":
+            record_shadow_decision(
+                self.run_dir,
+                stage=plan.stage,
+                output_path=relative_path(output_path, self.root),
+                baseline_candidates=baseline_selected,
+                recommended_candidates=recommended,
+                governance=policy_context["governance"],
+                caps_applied=policy_context["policy_budget_caps_recommended"],
+                overflow_candidates=overflow,
+                now=now,
+            )
         if not self.dry_run:
             self._record_decision_attribution(plan, selected)
         return plan
@@ -2565,29 +2614,61 @@ class KimiDailyWorkflow:
         self,
         candidates: list[dict[str, Any]],
         budget: int,
-    ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
-        selected: list[dict[str, Any]] = []
-        capped_counts: dict[str, int] = {}
-        caps_applied: dict[str, dict[str, Any]] = {}
-        for candidate in candidates:
-            feedback = candidate.get("policy_feedback") if isinstance(candidate.get("policy_feedback"), dict) else {}
-            max_share = feedback.get("max_budget_share") if isinstance(feedback, dict) else None
-            cap_key = self._policy_cap_key(feedback)
-            if max_share is not None and cap_key:
-                cap_count = max(0, int(float(max_share) * max(budget, 1)))
-                caps_applied[cap_key] = {"max_budget_share": float(max_share), "max_candidate_count": cap_count}
-                if capped_counts.get(cap_key, 0) >= cap_count:
-                    continue
-                capped_counts[cap_key] = capped_counts.get(cap_key, 0) + 1
-            selected.append(candidate)
-        return selected, self._policy_feedback_context(selected, caps_applied)
-
-    def _policy_cap_key(self, feedback: Any) -> str:
-        if not isinstance(feedback, dict):
-            return ""
-        actions = feedback.get("budget_actions") if isinstance(feedback.get("budget_actions"), dict) else {}
-        diagnosis_types = sorted(str(action.get("diagnosis_type") or key) for key, action in actions.items() if isinstance(action, dict))
-        return "+".join(diagnosis_types)
+    ) -> tuple[
+        list[dict[str, Any]],
+        dict[str, Any],
+        list[dict[str, Any]],
+        list[dict[str, Any]],
+    ]:
+        feedback_config = self.config.get("policy_feedback")
+        feedback_config = feedback_config if isinstance(feedback_config, dict) else {}
+        evidence = aggregate_shadow_evidence(self.root / RUNS_ROOT)
+        governance = resolve_feedback_mode(feedback_config, evidence)
+        recommended, caps_recommended, overflow = cap_recommended_candidates(
+            candidates,
+            budget,
+        )
+        min_exploration_share = max(
+            0.1,
+            min(1.0, float(feedback_config.get("control_min_exploration_share") or 0.2)),
+        )
+        exploration_slots = min(
+            len(overflow),
+            max(1, int(max(budget, 1) * min_exploration_share + 0.999999)),
+        )
+        if exploration_slots:
+            recommended.extend(overflow[:exploration_slots])
+        recommended = recommended[:budget]
+        effective_mode = str(governance["effective_mode"])
+        selected = recommended if effective_mode == "control" else list(candidates)
+        recommended_context = self._policy_feedback_context(
+            recommended,
+            caps_recommended,
+        )
+        applied_context = (
+            recommended_context
+            if effective_mode == "control"
+            else self._policy_feedback_context([], {})
+        )
+        context = {
+            **applied_context,
+            "recommended_policy_experiments": recommended_context[
+                "required_policy_experiments"
+            ],
+            "recommended_policy_action_lanes": recommended_context[
+                "policy_action_lanes"
+            ],
+            "policy_budget_caps_recommended": caps_recommended,
+            "governance": {
+                **governance,
+                "baseline_candidate_count": len(candidates),
+                "recommended_candidate_count": len(recommended),
+                "effective_candidate_count": len(selected),
+                "exploration_overflow_admitted": exploration_slots,
+                "control_min_exploration_share": min_exploration_share,
+            },
+        }
+        return selected, context, recommended, overflow
 
     def _policy_feedback_context(
         self,
@@ -2697,14 +2778,15 @@ class KimiDailyWorkflow:
             output_path=plan.output_path,
             candidates=candidates,
             proxy_map_path=proxy_path,
+            policy_feedback_governance=plan.policy_feedback_governance,
         )
 
     def _score_decision_attribution(self) -> None:
-        if not self._decision_attribution_enabled():
-            return
-        from src.decision_attribution import score_decision_outcomes
+        score_shadow_decisions(self.root, self.run_dir)
+        if self._decision_attribution_enabled():
+            from src.decision_attribution import score_decision_outcomes
 
-        score_decision_outcomes(self.run_dir)
+            score_decision_outcomes(self.run_dir)
 
     def _simulation_reconciliation_configs(self, fingerprints: set[str]) -> list[Path]:
         matches: list[Path] = []
