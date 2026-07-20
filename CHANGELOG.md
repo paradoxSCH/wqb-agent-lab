@@ -15,6 +15,14 @@ The project follows Semantic Versioning after the first public release. While th
 
 ## [Unreleased]
 
+### Added
+
+- Open-cognition/controlled-execution architecture decision and incremental migration plan.
+- Provider-neutral plan proposal contract with extension fields, bounded structural repair,
+  and explicit hard-versus-soft planning policy decisions.
+- Immutable run provenance manifests with content-addressed artifact records and sensitive
+  metadata rejection.
+
 ## [0.1.1-alpha] - 2026-07-14
 
 ### Added

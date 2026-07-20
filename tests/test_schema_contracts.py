@@ -7,7 +7,9 @@ EXPECTED_SCHEMA_NAMES = (
     "candidate",
     "diagnosis",
     "memory_event",
+    "plan_proposal",
     "research_policy",
+    "run_manifest",
     "run_summary",
     "simulation_request",
     "simulation_result",
@@ -89,6 +91,30 @@ class SchemaContractTests(unittest.TestCase):
                 "evidence_score": 0.84,
                 "dependencies": ["diag-001"],
             },
+            "plan_proposal": {
+                "schema_version": 1,
+                "plan_id": "plan-001",
+                "objective": "Explore a novel attention-driven earnings mechanism.",
+                "hypotheses": [
+                    {
+                        "hypothesis_id": "hyp-001",
+                        "thesis": "Attention shocks delay incorporation of fundamental revisions.",
+                        "mechanism": "new_attention_revision_lag",
+                        "expressions": ["novel_operator(anl_revision, attention_proxy)"],
+                        "extensions": {"proposed_proxy_fields": ["attention_proxy"]},
+                    }
+                ],
+                "requested_actions": [
+                    {
+                        "action_id": "action-001",
+                        "kind": "novel_offline_probe",
+                        "parameters": {"candidate_ref": "hyp-001"},
+                    }
+                ],
+                "alternatives": [{"thesis": "Test the lag at a sector level."}],
+                "freeform_notes": "Preserve this idea even if the action is deferred.",
+                "extensions": {"planner_experiment": "open-cognition-v1"},
+            },
             "research_policy": {
                 "version": 1,
                 "budget": {
@@ -114,6 +140,17 @@ class SchemaContractTests(unittest.TestCase):
                         }
                     ],
                 },
+            },
+            "run_manifest": {
+                "schema_version": 1,
+                "run_id": "run-001",
+                "created_at": "2026-07-20T12:00:00Z",
+                "code": {"git_commit": "abc123", "dirty": False},
+                "runtime": {"python": "3.12", "lock_digest": "def456"},
+                "configuration": {"config_digest": "config123"},
+                "llm": {"provider": "disabled", "model": ""},
+                "research": {"operator_catalog_digest": "catalog123"},
+                "artifacts": [],
             },
             "run_summary": {
                 "run_id": "run-001",

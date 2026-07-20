@@ -1,0 +1,111 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://wqb-agent-lab.local/schemas/plan_proposal.schema.json",
+  "title": "Plan Proposal",
+  "type": "object",
+  "required": ["schema_version", "plan_id", "objective", "hypotheses", "requested_actions"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "enum": [1]
+    },
+    "plan_id": { "type": "string" },
+    "objective": { "type": "string" },
+    "hypotheses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["thesis"],
+        "additionalProperties": false,
+        "properties": {
+          "hypothesis_id": { "type": "string" },
+          "thesis": { "type": "string" },
+          "mechanism": { "type": "string" },
+          "expressions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "assumptions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "uncertainty": {
+            "anyOf": [
+              { "type": "number", "minimum": 0, "maximum": 1 },
+              { "type": "null" }
+            ]
+          },
+          "kill_conditions": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "requested_budget": { "type": "integer", "minimum": 0 },
+          "extensions": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "requested_actions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["action_id", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "action_id": { "type": "string" },
+          "kind": { "type": "string" },
+          "candidate_ref": { "type": "string" },
+          "rationale": { "type": "string" },
+          "priority": { "type": "integer" },
+          "parameters": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "extensions": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "alternatives": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    },
+    "policy_exception_requests": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["policy_id", "rationale"],
+        "additionalProperties": false,
+        "properties": {
+          "policy_id": { "type": "string" },
+          "rationale": { "type": "string" },
+          "evidence_refs": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "extensions": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      }
+    },
+    "freeform_notes": { "type": "string" },
+    "extensions": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}
