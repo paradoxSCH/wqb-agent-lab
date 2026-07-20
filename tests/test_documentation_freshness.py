@@ -12,7 +12,7 @@ from wqb_agent_lab.platform import load_operator_names
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC_KNOWLEDGE_FILES = (
     "README.md",
-    "PRODUCT.md",
+    "docs/maintainers/PRODUCT.md",
     "docs/README.md",
     "docs/architecture/README.md",
     "docs/maintainers/OPEN_SOURCE_READINESS.md",
@@ -166,13 +166,13 @@ class DocumentationFreshnessTests(unittest.TestCase):
     def test_public_docs_use_current_product_boundaries(self) -> None:
         readme = read("README.md")
         architecture = read("docs/architecture/README.md")
-        product = read("PRODUCT.md")
+        product = read("docs/maintainers/PRODUCT.md")
 
         self.assertIn("WQB_LIVE_SIMULATION_CAPABILITY", readme)
         self.assertIn("WQB_LIVE_SUBMIT_CAPABILITY", readme)
         self.assertIn("wqb_agent_lab.workflow.ResearchWorkflow", architecture)
         self.assertIn("wqb_agent_lab.platform", architecture)
-        self.assertIn("ResearchWorkflow", product)
+        self.assertIn("wqb_agent_lab.workflow.ResearchWorkflow", product)
 
     def test_readme_uses_current_versioned_architecture_diagram(self) -> None:
         readme = read("README.md")

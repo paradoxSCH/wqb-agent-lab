@@ -5,7 +5,7 @@ from tempfile import TemporaryDirectory
 
 
 def test_repository_layout_keeps_mutable_assets_under_local() -> None:
-    from src.wqb_agent_lab.layout import RepositoryLayout
+    from wqb_agent_lab.layout import RepositoryLayout
 
     with TemporaryDirectory() as temp_dir:
         root = Path(temp_dir).resolve()
@@ -20,7 +20,7 @@ def test_repository_layout_keeps_mutable_assets_under_local() -> None:
 
 
 def test_repository_layout_ensure_is_idempotent() -> None:
-    from src.wqb_agent_lab.layout import RepositoryLayout
+    from wqb_agent_lab.layout import RepositoryLayout
 
     with TemporaryDirectory() as temp_dir:
         layout = RepositoryLayout.from_root(Path(temp_dir))

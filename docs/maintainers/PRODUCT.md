@@ -14,7 +14,7 @@ The product turns WQB factor mining into a productized open-source workflow. It 
 
 ## 当前生产边界
 
-- `src.wqb_agent_lab.workflow.ResearchWorkflow` is the production orchestrator; the continuous scheduler is retained only for historical compatibility.
+- `wqb_agent_lab.workflow.ResearchWorkflow` is the production orchestrator; the continuous scheduler is retained only for historical compatibility.
 - The daemon, budget ledger, candidate preflight, simulation, diagnosis, triage, asynchronous submission, registry sync, memory sync, and completion evaluation are wired into unattended execution.
 - Memory retrieval is available, but the production planner does not yet retrieve from the memory graph automatically.
 - Structured submission governance is available through the engine/MCP path; the automatic backlog path still launches the submission worker directly.

@@ -104,7 +104,7 @@ class OpenSourceReadinessTests(unittest.TestCase):
         positioning_files = (
             "AGENTS.md",
             "CITATION.cff",
-            "PRODUCT.md",
+            "docs/maintainers/PRODUCT.md",
             "README.md",
             "pyproject.toml",
             "docs/architecture/README.md",

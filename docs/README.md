@@ -18,6 +18,7 @@ WQB Agent Lab documentation is divided by authority and audience.
 
 ## Maintainers
 
+- [Product definition](maintainers/PRODUCT.md): users, product boundaries, and design principles.
 - [Release process](maintainers/RELEASE.md): reproducible release verification.
 - [Open-source readiness](maintainers/OPEN_SOURCE_READINESS.md): public/private boundaries.
 - [Publication decisions](maintainers/PUBLICATION_DECISIONS.md): owner-approved release boundaries and remaining gate.
