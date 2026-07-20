@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.utils import (
+from wqb_agent_lab.runtime.results import (
     ResultCache,
     load_results,
     merge_result_files,

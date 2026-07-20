@@ -12,7 +12,7 @@ from wqb_agent_lab.runtime import SideEffectUncertainError
 
 from wqb_agent_lab.research.alpha_generator import build_alpha_object
 from wqb_agent_lab.runtime.config import Config
-from .session import BrainSession
+from .research_session import BrainSession
 from wqb_agent_lab.governance.side_effects import require_side_effect_capability
 from wqb_agent_lab.platform.session import (
     LOCATION,
@@ -155,7 +155,8 @@ async def simulate_single(
                 "error": resp.text,
             }
 
-        sim_data = _response_json_or_none(resp) or {}
+        raw_sim_data = _response_json_or_none(resp)
+        sim_data = raw_sim_data if isinstance(raw_sim_data, dict) else {}
         alpha_id = sim_data.get("alpha", "")
         if not alpha_id:
             return {
@@ -256,7 +257,7 @@ def simulate_batch(
         )
 
         for expr, resp in zip(chunk_exprs, resps, strict=False):
-            if isinstance(resp, Exception):
+            if isinstance(resp, BaseException):
                 all_results.append({
                     "expression": expr,
                     "settings": settings_dict,

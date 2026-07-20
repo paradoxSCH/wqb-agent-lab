@@ -27,6 +27,8 @@
 - Moved alpha generation/refinement, behavioral-proxy analysis, self-correlation repair,
   scoring, loop validation, and policy-effectiveness analysis out of `src` and into the
   canonical research/evaluation packages.
+- Moved the research-session adapter, simulation/submission helpers, and result cache out
+  of `src` into the canonical platform/runtime packages.
 
 ## [0.2.0a1] - 2026-07-14
 

@@ -104,6 +104,23 @@ class ArchitectureSlimmingTests(unittest.TestCase):
         self.assertEqual([], [path for path in canonical if not (ROOT / path).is_file()])
         self.assertEqual([], [path for path in retired if (ROOT / path).exists()])
 
+    def test_platform_runtime_domains_are_canonical(self) -> None:
+        canonical = (
+            "wqb_agent_lab/platform/research_session.py",
+            "wqb_agent_lab/platform/simulation.py",
+            "wqb_agent_lab/platform/submission.py",
+            "wqb_agent_lab/runtime/results.py",
+        )
+        retired = (
+            "src/session.py",
+            "src/simulator.py",
+            "src/submitter.py",
+            "src/utils.py",
+        )
+
+        self.assertEqual([], [path for path in canonical if not (ROOT / path).is_file()])
+        self.assertEqual([], [path for path in retired if (ROOT / path).exists()])
+
 
 if __name__ == "__main__":
     unittest.main()

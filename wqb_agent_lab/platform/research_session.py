@@ -265,7 +265,7 @@ class BrainSession:
         operation: Callable[..., Response | None],
         *args,
         **kwargs,
-    ) -> dict[str, Any] | list[Any]:
+    ) -> Any:
         """执行请求并解析 JSON。"""
         response = self._run_request(action, operation, *args, **kwargs)
         try:

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from wqb_agent_lab.runtime.config import load_config
-from src.session import create_brain_session
+from wqb_agent_lab.platform.research_session import create_brain_session
 
 
 DEFAULT_OUTPUT = Path(".local/data/registry/submitted_alphas.json")

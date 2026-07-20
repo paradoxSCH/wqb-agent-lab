@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from wqb_agent_lab.runtime.config import Config, SimulationDefaults
-from src.simulator import simulate_batch, simulate_single
+from wqb_agent_lab.platform.simulation import simulate_batch, simulate_single
 
 
 class FakeResponse:
