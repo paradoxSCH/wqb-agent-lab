@@ -9,7 +9,7 @@ from src.output_evaluation.validators import (
     validate_memory_sync_report,
     validate_report_text,
 )
-from src.wqb.operator_catalog import load_operator_names
+from wqb_agent_lab.platform import load_operator_names
 
 
 class OutputEvaluationValidatorTests(unittest.TestCase):

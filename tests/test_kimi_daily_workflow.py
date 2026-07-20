@@ -209,45 +209,6 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 payload["error"],
             )
 
-    def test_legacy_provider_metadata_is_redacted_and_records_migration_warning(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            config_path = root / "configs" / "workflow.json"
-            self._write_json(
-                config_path,
-                {
-                    "capacity_estimate": {"recommended_mode": "standard"},
-                    "daily_budget_modes": {"standard": {"daily_budget": 10, "stage_budgets": {}}},
-                    "stage_order": [],
-                    "llm_adapter": {
-                        "provider": "deepseek",
-                        "model": "deepseek-test",
-                        "api_key_env": "DEEPSEEK_API_KEY",
-                        "base_url": "https://api.deepseek.com",
-                    },
-                },
-            )
-            provider = RecordingProvider()
-            provider.provider_id = "openai_compatible"
-            provider.model = "deepseek-test"
-
-            with patch.dict(os.environ, {"DEEPSEEK_API_KEY": "do-not-serialize"}):
-                workflow = KimiDailyWorkflow(
-                    root,
-                    workflow_config=config_path,
-                    run_date=date(2026, 5, 5),
-                    llm_provider=provider,
-                )
-                ledger = workflow.load_or_create_ledger()
-
-            metadata = ledger["llm_provider"]
-            self.assertEqual("openai_compatible", metadata["provider"])
-            self.assertEqual("deepseek-test", metadata["model"])
-            self.assertRegex(metadata["config_digest"], r"^[0-9a-f]{64}$")
-            self.assertTrue(any("llm_adapter" in warning for warning in metadata["migration_warnings"]))
-            self.assertNotIn("do-not-serialize", json.dumps(metadata))
-            self.assertNotIn("do-not-serialize", repr(workflow.llm_adapter))
-
     def test_workflow_redacts_configured_secret_from_provider_error_artifact(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -1532,7 +1493,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             self.assertIn("media_sentiment_reversal", payload[0]["families_affected"])
             self.assertEqual(payload[0]["proxy_signals_used"][0]["mechanism"], "media_sentiment_reversal")
 
-    def test_deepseek_adapter_uses_deepseek_paths_when_disabled(self) -> None:
+    def test_canonical_provider_uses_configured_artifact_paths_when_disabled(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._write_json(root / ".local" / "research" / "workflows" / "continuous-alpha" / "deepseek.json", {
@@ -1540,9 +1501,13 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 "daily_run_tag_prefix": "deepseek-v4-pro-daily-budget",
                 "daily_budget_modes": {"standard": {"daily_budget": 10, "stage_budgets": {}}},
                 "stage_order": ["deepseek_v4_pro_daily_direction_plan"],
-                "deepseek_v4_pro": {
-                    "provider": "deepseek",
+                "llm_provider": {
+                    "provider": "openai_compatible",
+                    "display_name": "DeepSeek",
                     "model": "deepseek-v4-pro",
+                    "api_key_env": "DEEPSEEK_API_KEY",
+                    "base_url": "https://api.deepseek.com",
+                    "stage": "deepseek_v4_pro_daily_direction_plan",
                     "prompt_file_pattern": ".local/data/runs/continuous-alpha/{daily_run_tag}/deepseek_prompts/{stage}.md",
                     "output_file_pattern": ".local/data/runs/continuous-alpha/{daily_run_tag}/deepseek_outputs/{stage}.json",
                 },
@@ -1561,16 +1526,19 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             assert output_path is not None
             self.assertEqual(output_path.name, "deepseek_v4_pro_daily_direction_plan.json")
             payload = json.loads(output_path.read_text(encoding="utf-8"))
-            self.assertEqual(payload["provider"], "deepseek")
+            self.assertEqual(payload["provider"], "openai_compatible")
             self.assertTrue(payload["disabled"])
             prompt_path = root / ".local" / "data" / "runs" / "continuous-alpha" / "deepseek-v4-pro-daily-budget-20260505" / "deepseek_prompts" / "deepseek_v4_pro_daily_direction_plan.md"
             self.assertTrue(prompt_path.exists())
 
-    def test_kimi_cli_adapter_keeps_existing_paths(self) -> None:
+    def test_cli_provider_keeps_configured_artifact_paths(self) -> None:
         adapter = LLMPlanAdapter.from_config({
-            "kimi_cli": {
-                "executable": "kimi-cli",
-                "long_prompt_file_pattern": ".local/data/runs/continuous-alpha/{daily_run_tag}/kimi_prompts/{stage}.md",
+            "llm_provider": {
+                "provider": "cli",
+                "model": "kimi-cli",
+                "command": ["kimi-cli", "--prompt", "{prompt}"],
+                "stage": "kimi_daily_direction_plan",
+                "prompt_file_pattern": ".local/data/runs/continuous-alpha/{daily_run_tag}/kimi_prompts/{stage}.md",
                 "output_file_pattern": ".local/data/runs/continuous-alpha/{daily_run_tag}/kimi_outputs/{stage}.json",
             }
         })
@@ -1578,7 +1546,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
         root = Path("C:/workspace")
         run_dir = root / ".local" / "data" / "runs" / "continuous-alpha" / "kimi-daily-budget-20260505"
 
-        self.assertEqual(adapter.provider, "kimi_cli")
+        self.assertEqual(adapter.provider, "cli")
         self.assertEqual(adapter.executable, "kimi-cli")
         self.assertEqual(adapter.prompt_path(root, run_dir, "kimi-daily-budget-20260505").as_posix(), "C:/workspace/.local/data/runs/continuous-alpha/kimi-daily-budget-20260505/kimi_prompts/kimi_daily_direction_plan.md")
         self.assertEqual(adapter.output_path(root, run_dir, "kimi-daily-budget-20260505").as_posix(), "C:/workspace/.local/data/runs/continuous-alpha/kimi-daily-budget-20260505/kimi_outputs/kimi_daily_direction_plan.json")

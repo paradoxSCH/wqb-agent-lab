@@ -102,130 +102,14 @@ def _canonical_response_format(value: Any) -> str:
     raise _invalid("response_format must be 'text' or 'json'.")
 
 
-def _legacy_response_format(value: Any) -> str:
-    if isinstance(value, Mapping):
-        legacy_type = value.get("type")
-        if legacy_type == "json_object":
-            return "json"
-        if legacy_type == "text":
-            return "text"
-    return _canonical_response_format(value)
-
-
-def _normalize_legacy_adapter(
-    settings: Mapping[str, Any], env: Mapping[str, str]
-) -> dict[str, Any]:
-    normalized = dict(settings)
-    provider = _string(normalized, "provider", "disabled")
-    if provider in {"deepseek", "openai_compatible"}:
-        return _legacy_openai_adapter_config(settings, env)
-    if provider == "kimi_cli":
-        return _kimi_cli_config(settings)
-    provider_aliases = {
-        "none": "disabled",
-        "": "disabled",
-    }
-    normalized["provider"] = provider_aliases.get(provider, provider)
-    normalized["response_format"] = _legacy_response_format(
-        settings.get("response_format")
-    )
-    return normalized
-
-
-def _legacy_openai_adapter_config(
-    settings: Mapping[str, Any], env: Mapping[str, str]
-) -> dict[str, Any]:
-    normalized = dict(settings)
-    normalized["provider"] = "openai_compatible"
-    normalized["model"] = (
-        _string(settings, "model")
-        or _environment_string(env, "DEEPSEEK_MODEL")
-        or "deepseek-v4-pro"
-    )
-    normalized["api_key_env"] = _string(
-        settings, "api_key_env", "DEEPSEEK_API_KEY"
-    )
-    normalized["base_url_env"] = _string(
-        settings, "base_url_env"
-    )
-    normalized["base_url"] = _string(
-        settings, "base_url", "https://api.deepseek.com"
-    )
-    normalized["response_format"] = _legacy_response_format(
-        settings.get("response_format")
-    )
-    return normalized
-
-
-def _deepseek_config(settings: Mapping[str, Any], env: Mapping[str, str]) -> dict[str, Any]:
-    return {
-        "provider": "openai_compatible",
-        "display_name": _string(settings, "display_name", "DeepSeek v4 Pro"),
-        "model": _string(settings, "model")
-        or _environment_string(env, "DEEPSEEK_MODEL")
-        or "deepseek-v4-pro",
-        "api_key_env": _string(settings, "api_key_env", "DEEPSEEK_API_KEY"),
-        "base_url_env": _string(settings, "base_url_env", "DEEPSEEK_BASE_URL"),
-        "base_url": _string(settings, "base_url", "https://api.deepseek.com"),
-        "temperature": settings.get("temperature", 1.0),
-        "max_tokens": settings.get("max_tokens", 4096),
-        "timeout_seconds": settings.get("timeout_seconds", 180),
-        "response_format": _legacy_response_format(settings.get("response_format")),
-    }
-
-
-def _kimi_cli_config(settings: Mapping[str, Any]) -> dict[str, Any]:
-    executable = _string(settings, "executable", "kimi-cli")
-    return {
-        "provider": "cli",
-        "display_name": _string(settings, "display_name", "Kimi"),
-        "model": _string(settings, "model", "kimi-cli"),
-        "command": [
-            executable,
-            "--work-dir",
-            "{workspace_root}",
-            "--print",
-            "--final-message-only",
-            "--prompt",
-            "{prompt}",
-        ],
-        "prompt_transport": "argument",
-        "working_directory": _string(settings, "working_directory", "."),
-        "timeout_seconds": settings.get("timeout_seconds", 180),
-        "temperature": settings.get("temperature", 0.2),
-        "max_tokens": settings.get("max_tokens", 4096),
-        "response_format": _legacy_response_format(
-            settings.get("response_format", "json")
-        ),
-    }
-
-
-def _kimi_environment_config(env: Mapping[str, str]) -> tuple[dict[str, Any], str] | None:
-    if _environment_string(env, "KIMI_API_KEY"):
-        api_key_env = "KIMI_API_KEY"
-    elif _environment_string(env, "MOONSHOT_API_KEY"):
-        api_key_env = "MOONSHOT_API_KEY"
-    else:
-        return None
-    return (
-        {
-            "provider": "openai_compatible",
-            "display_name": "Kimi",
-            "model": _environment_string(env, "KIMI_MODEL") or "kimi-k2-6",
-            "api_key_env": api_key_env,
-            "base_url": _environment_string(env, "KIMI_BASE_URL")
-            or "https://api.moonshot.cn/v1",
-            "temperature": 0.75,
-            "max_tokens": 4000,
-            "response_format": "json",
-        },
-        f"{api_key_env} and legacy KIMI_* settings are deprecated; use llm_provider.",
-    )
-
-
 def _select_settings(
-    workflow_config: Mapping[str, Any], env: Mapping[str, str]
+    workflow_config: Mapping[str, Any], _env: Mapping[str, str]
 ) -> tuple[dict[str, Any], tuple[str, ...]]:
+    for legacy_key in ("llm_adapter", "deepseek_v4_pro", "kimi_cli"):
+        if legacy_key in workflow_config:
+            raise _invalid(
+                f"{legacy_key} was removed in 0.3; migrate it to llm_provider."
+            )
     if "llm_provider" in workflow_config:
         settings = _mapping(workflow_config["llm_provider"], "llm_provider")
         if "provider" not in settings:
@@ -233,25 +117,6 @@ def _select_settings(
         if settings.get("provider") == "":
             raise _invalid("provider must not be empty.")
         return settings, ()
-    if workflow_config.get("llm_adapter") is not None:
-        settings = _mapping(workflow_config["llm_adapter"], "llm_adapter")
-        return _normalize_legacy_adapter(settings, env), (
-            "llm_adapter is deprecated; use llm_provider.",
-        )
-    if workflow_config.get("deepseek_v4_pro") is not None:
-        settings = _mapping(workflow_config["deepseek_v4_pro"], "deepseek_v4_pro")
-        return _deepseek_config(settings, env), (
-            "deepseek_v4_pro is deprecated; use llm_provider.",
-        )
-    if workflow_config.get("kimi_cli") is not None:
-        settings = _mapping(workflow_config["kimi_cli"], "kimi_cli")
-        return _kimi_cli_config(settings), (
-            "kimi_cli is deprecated; use llm_provider with provider 'cli'.",
-        )
-    environment_config = _kimi_environment_config(env)
-    if environment_config is not None:
-        settings, warning = environment_config
-        return settings, (warning,)
     return {"provider": "disabled"}, ()
 
 

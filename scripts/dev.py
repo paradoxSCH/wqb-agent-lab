@@ -89,7 +89,6 @@ CHECK_STAGES = (
             "-q",
             "src",
             "scripts",
-            "run_scan.py",
         ),
     ),
     Stage("mcp-typecheck", _npm("run", "typecheck"), "packages/wqb-agent-mcp"),

@@ -230,7 +230,7 @@ class WQBEngineCLITests(unittest.TestCase):
             self.assertNotIn(secret, json.dumps(show_payload))
             create_provider.assert_not_called()
 
-    def test_llm_validate_resolves_legacy_config_offline_with_warnings(self) -> None:
+    def test_llm_validate_rejects_removed_legacy_config(self) -> None:
         config = {
             "llm_adapter": {
                 "provider": "deepseek",
@@ -245,10 +245,8 @@ class WQBEngineCLITests(unittest.TestCase):
                 ["llm.validate", "--config", str(config_path)]
             )
 
-            self.assertEqual(0, exit_code)
-            self.assertEqual("openai_compatible", payload["data"]["provider"])
-            self.assertEqual("legacy-model", payload["data"]["model"])
-            self.assertTrue(payload["data"]["warnings"])
+            self.assertNotEqual(0, exit_code)
+            self.assertEqual("invalid_configuration", payload["error"]["code"])
 
     def test_llm_success_payload_redacts_model_warning_and_probe_echoes(self) -> None:
         from src.llm_provider import LLMResponse, LLMUsage, ResolvedLLMProvider

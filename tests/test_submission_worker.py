@@ -8,8 +8,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from scripts.submit.submission_worker import BrainSubmissionClient, SubmissionWorker, WorkerLock, enqueue_submission_jobs
-from src.wqb.check_readiness import REQUIRED_SUBMISSION_CHECK_NAMES
-from src.wqb.models import WQBAlphaDetail, WQBSubmitResult
+from wqb_agent_lab.platform import WQBAlphaDetail, WQBSubmitResult
+from wqb_agent_lab.platform.check_readiness import REQUIRED_SUBMISSION_CHECK_NAMES
 from wqb_agent_lab.runtime import OperationJournal, SideEffectUncertainError
 
 

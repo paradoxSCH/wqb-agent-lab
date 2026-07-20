@@ -122,7 +122,7 @@ class DocumentationFreshnessTests(unittest.TestCase):
             r".\.venv\Scripts\wqb-engine.exe llm.validate --config .local\research\workflows\production.json",
             r".\.venv\Scripts\wqb-engine.exe llm.show --config .local\research\workflows\production.json",
             r".\.venv\Scripts\wqb-engine.exe llm.probe --config .local\research\workflows\production.json",
-            "llm_provider > llm_adapter > deepseek_v4_pro > kimi_cli > KIMI_* > disabled",
+            "Legacy LLM configuration was removed in 0.3.0",
             "WQB_LIVE_SIMULATION_CAPABILITY",
             "WQB_LIVE_SUBMIT_CAPABILITY",
             ".cmd",

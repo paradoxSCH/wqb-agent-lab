@@ -766,15 +766,6 @@ class CanonicalLLMProviderConfigTests(unittest.TestCase):
                 resolve_llm_provider_config({"llm_provider": provider_config}, env=env)
             self.assertEqual("invalid_configuration", raised.exception.code)
 
-    def test_legacy_kimi_executable_rejects_non_string_value(self) -> None:
-        with self.assertRaises(LLMProviderError) as raised:
-            resolve_llm_provider_config(
-                {"kimi_cli": {"executable": 123}},
-                env={},
-            )
-
-        self.assertEqual("invalid_configuration", raised.exception.code)
-
     def test_required_strings_and_credentials_reject_whitespace_only_values(self) -> None:
         invalid_cases = (
             ({"provider": "ollama", "model": "   "}, {}),
@@ -901,230 +892,34 @@ class CanonicalLLMProviderConfigTests(unittest.TestCase):
 
 
 class LLMProviderConfigMigrationTests(unittest.TestCase):
-    def test_canonical_config_wins_over_legacy(self) -> None:
-        resolved = resolve_llm_provider_config(
-            {
-                "llm_provider": {"provider": "ollama", "model": "qwen-local"},
-                "llm_adapter": {"provider": "deepseek", "model": "ignored"},
-                "deepseek_v4_pro": {"model": "ignored"},
-                "kimi_cli": {"executable": "ignored"},
-            },
-            env={"DEEPSEEK_API_KEY": "ignored"},
-        )
+    def test_removed_legacy_keys_fail_with_canonical_migration_instruction(self) -> None:
+        for legacy_key in ("llm_adapter", "deepseek_v4_pro", "kimi_cli"):
+            with self.subTest(legacy_key=legacy_key), self.assertRaises(
+                LLMProviderError
+            ) as raised:
+                resolve_llm_provider_config(
+                    {legacy_key: {}, "llm_provider": {"provider": "disabled"}},
+                    env={},
+                )
 
-        self.assertEqual("ollama", resolved.config.provider)
-        self.assertEqual((), resolved.warnings)
+            self.assertEqual("invalid_configuration", raised.exception.code)
+            self.assertIn(legacy_key, raised.exception.message)
+            self.assertIn("llm_provider", raised.exception.message)
 
-    def test_generic_llm_adapter_maps_deepseek_and_preserves_settings(self) -> None:
-        resolved = resolve_llm_provider_config(
-            {
-                "llm_adapter": {
-                    "provider": "deepseek",
-                    "display_name": "DeepSeek planner",
-                    "model": "deepseek-chat",
-                    "api_key_env": "CUSTOM_KEY",
-                    "base_url": "https://deepseek.example/v1",
-                    "base_url_env": "CUSTOM_URL",
-                    "timeout_seconds": 90,
-                    "temperature": 0.7,
-                    "max_tokens": 8192,
-                    "response_format": {"type": "json_object"},
-                }
-            },
-            env={"CUSTOM_KEY": "key", "CUSTOM_URL": "http://localhost:9000/v1"},
-        )
-
-        self.assertEqual("openai_compatible", resolved.config.provider)
-        self.assertEqual("DeepSeek planner", resolved.config.display_name)
-        self.assertEqual("deepseek-chat", resolved.config.model)
-        self.assertEqual(90, resolved.config.timeout_seconds)
-        self.assertEqual(0.7, resolved.config.temperature)
-        self.assertEqual(8192, resolved.config.max_tokens)
-        self.assertEqual("json", resolved.config.response_format)
-        self.assertEqual("http://localhost:9000/v1", resolved.base_url)
-        self.assertIn("llm_adapter", resolved.warnings[0])
-
-    def test_generic_openai_adapter_keeps_prior_deepseek_defaults(self) -> None:
-        resolved = resolve_llm_provider_config(
-            {"llm_adapter": {"provider": "openai_compatible"}},
-            env={
-                "DEEPSEEK_API_KEY": "key",
-                "DEEPSEEK_MODEL": "deepseek-env-model",
-                "DEEPSEEK_BASE_URL": "https://deepseek-env.example",
-            },
-        )
-
-        self.assertEqual("openai_compatible", resolved.config.provider)
-        self.assertEqual("deepseek-env-model", resolved.config.model)
-        self.assertEqual("DEEPSEEK_API_KEY", resolved.config.api_key_env)
-        self.assertEqual("", resolved.config.base_url_env)
-        self.assertEqual("https://api.deepseek.com", resolved.config.base_url)
-        self.assertEqual("https://api.deepseek.com", resolved.base_url)
-
-        defaulted = resolve_llm_provider_config(
-            {"llm_adapter": {"provider": "openai_compatible"}},
-            env={"DEEPSEEK_API_KEY": "key"},
-        )
-        self.assertEqual("deepseek-v4-pro", defaulted.config.model)
-        self.assertEqual("https://api.deepseek.com", defaulted.base_url)
-
-    def test_generic_openai_adapter_ignores_undeclared_deepseek_url_environment(self) -> None:
-        resolved = resolve_llm_provider_config(
-            {
-                "llm_adapter": {
-                    "provider": "openai_compatible",
-                    "base_url": "https://explicit.example/v1",
-                }
-            },
-            env={
-                "DEEPSEEK_API_KEY": "key",
-                "DEEPSEEK_BASE_URL": "https://must-not-be-used.example/v1",
-            },
-        )
-
-        self.assertEqual("", resolved.config.base_url_env)
-        self.assertEqual("https://explicit.example/v1", resolved.base_url)
-
-    def test_generic_openai_adapter_explicit_settings_override_legacy_defaults(self) -> None:
-        resolved = resolve_llm_provider_config(
-            {
-                "llm_adapter": {
-                    "provider": "openai_compatible",
-                    "model": "explicit-model",
-                    "api_key_env": "EXPLICIT_KEY",
-                    "base_url_env": "EXPLICIT_URL",
-                    "base_url": "https://explicit.example/v1",
-                }
-            },
-            env={
-                "EXPLICIT_KEY": "key",
-                "EXPLICIT_URL": "https://effective-explicit.example/v1",
-                "DEEPSEEK_API_KEY": "ignored",
-                "DEEPSEEK_MODEL": "ignored",
-                "DEEPSEEK_BASE_URL": "https://ignored.example",
-            },
-        )
-
-        self.assertEqual("explicit-model", resolved.config.model)
-        self.assertEqual("EXPLICIT_KEY", resolved.config.api_key_env)
-        self.assertEqual("EXPLICIT_URL", resolved.config.base_url_env)
-        self.assertEqual("https://explicit.example/v1", resolved.config.base_url)
-        self.assertEqual("https://effective-explicit.example/v1", resolved.base_url)
-
-    def test_generic_llm_adapter_preserves_canonical_provider_name(self) -> None:
-        resolved = resolve_llm_provider_config(
-            {
-                "llm_adapter": {
-                    "provider": "anthropic",
-                    "model": "claude-test",
-                    "api_key_env": "ANTHROPIC_API_KEY",
-                }
-            },
-            env={"ANTHROPIC_API_KEY": "key"},
-        )
-
-        self.assertEqual("anthropic", resolved.config.provider)
-
-    def test_generic_deepseek_adapter_keeps_deepseek_defaults(self) -> None:
-        resolved = resolve_llm_provider_config(
-            {"llm_adapter": {"provider": "deepseek", "model": "deepseek-chat"}},
-            env={"DEEPSEEK_API_KEY": "key"},
-        )
-
-        self.assertEqual("DEEPSEEK_API_KEY", resolved.config.api_key_env)
-        self.assertEqual("", resolved.config.base_url_env)
-        self.assertEqual("https://api.deepseek.com", resolved.config.base_url)
-
-    def test_generic_kimi_cli_adapter_maps_command_behavior(self) -> None:
-        resolved = resolve_llm_provider_config(
-            {
-                "llm_adapter": {
-                    "provider": "kimi_cli",
-                    "executable": "custom-kimi",
-                    "timeout_seconds": 45,
-                }
-            },
-            env={},
-        )
-
-        self.assertEqual("cli", resolved.config.provider)
-        self.assertEqual("custom-kimi", resolved.config.command[0])
-        self.assertEqual("{workspace_root}", resolved.config.command[2])
-        self.assertEqual("{prompt}", resolved.config.command[-1])
-        self.assertEqual(45, resolved.config.timeout_seconds)
-
-    def test_deepseek_maps_to_openai_compatible_with_legacy_defaults(self) -> None:
-        resolved = resolve_llm_provider_config(
-            {"deepseek_v4_pro": {"model": "deepseek-chat"}},
-            env={"DEEPSEEK_API_KEY": "key"},
-        )
-
-        self.assertEqual("openai_compatible", resolved.config.provider)
-        self.assertEqual("deepseek-chat", resolved.config.model)
-        self.assertEqual("DEEPSEEK_API_KEY", resolved.config.api_key_env)
-        self.assertEqual("DEEPSEEK_BASE_URL", resolved.config.base_url_env)
-        self.assertEqual("https://api.deepseek.com", resolved.config.base_url)
-        self.assertEqual(1.0, resolved.config.temperature)
-        self.assertIn("deepseek_v4_pro", resolved.warnings[0])
-
-    def test_kimi_cli_maps_to_shell_free_argument_configuration(self) -> None:
-        resolved = resolve_llm_provider_config(
-            {"kimi_cli": {"executable": "kimi-cli", "timeout_seconds": 75}}, env={}
-        )
-
-        self.assertEqual("cli", resolved.config.provider)
-        self.assertEqual("kimi-cli", resolved.config.model)
-        self.assertEqual("argument", resolved.config.prompt_transport)
-        self.assertEqual(
-            (
-                "kimi-cli",
-                "--work-dir",
-                "{workspace_root}",
-                "--print",
-                "--final-message-only",
-                "--prompt",
-                "{prompt}",
-            ),
-            resolved.config.command,
-        )
-        self.assertEqual(75, resolved.config.timeout_seconds)
-        self.assertIn("kimi_cli", resolved.warnings[0])
-
-    def test_kimi_api_environment_maps_only_when_workflow_has_no_provider(self) -> None:
+    def test_undeclared_provider_environment_does_not_enable_llm(self) -> None:
         resolved = resolve_llm_provider_config(
             {},
             env={
-                "KIMI_API_KEY": "kimi-key",
-                "KIMI_BASE_URL": "https://moonshot.example/v1",
-                "KIMI_MODEL": "kimi-test",
+                "KIMI_API_KEY": "ignored",
+                "MOONSHOT_API_KEY": "ignored",
+                "KIMI_BASE_URL": "https://ignored.example/v1",
+                "KIMI_MODEL": "ignored",
             },
         )
 
-        self.assertEqual("openai_compatible", resolved.config.provider)
-        self.assertEqual("KIMI_API_KEY", resolved.config.api_key_env)
-        self.assertEqual("kimi-key", resolved.api_key)
-        self.assertEqual("https://moonshot.example/v1", resolved.base_url)
-        self.assertEqual("kimi-test", resolved.config.model)
-        self.assertIn("KIMI_API_KEY", resolved.warnings[0])
-
-    def test_moonshot_api_key_is_the_environment_fallback(self) -> None:
-        resolved = resolve_llm_provider_config(
-            {}, env={"MOONSHOT_API_KEY": "moonshot-key"}
-        )
-
-        self.assertEqual("MOONSHOT_API_KEY", resolved.config.api_key_env)
-        self.assertEqual("moonshot-key", resolved.api_key)
-        self.assertEqual("https://api.moonshot.cn/v1", resolved.base_url)
-        self.assertEqual("kimi-k2-6", resolved.config.model)
-
-    def test_workflow_provider_prevents_kimi_environment_fallback(self) -> None:
-        resolved = resolve_llm_provider_config(
-            {"kimi_cli": {"executable": "kimi-cli"}},
-            env={"KIMI_API_KEY": "ignored"},
-        )
-
-        self.assertEqual("cli", resolved.config.provider)
+        self.assertEqual("disabled", resolved.config.provider)
         self.assertIsNone(resolved.api_key)
+        self.assertEqual((), resolved.warnings)
 
     def test_no_configuration_falls_back_to_disabled(self) -> None:
         resolved = resolve_llm_provider_config({}, env={})

@@ -8,8 +8,7 @@ from unittest.mock import patch
 
 import requests
 
-from src.wqb.client import WQBClient
-from src.wqb.models import WQBAlphaDetail, is_submitted_status
+from wqb_agent_lab.platform import WQBAlphaDetail, WQBClient, is_submitted_status
 from wqb_agent_lab.platform.session import WQBSession
 from wqb_agent_lab.runtime import OperationJournal, SideEffectUncertainError
 

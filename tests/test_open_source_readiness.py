@@ -53,7 +53,6 @@ class OpenSourceReadinessTests(unittest.TestCase):
             "scripts/release/export_public_snapshot.py",
             "tests/test_public_snapshot_export.py",
             "src/side_effect_governance/capabilities.py",
-            "run_scan.py",
             "scripts/bootstrap.ps1",
             "scripts/bootstrap.sh",
         )
@@ -113,7 +112,7 @@ class OpenSourceReadinessTests(unittest.TestCase):
             "docs/maintainers/OPEN_SOURCE_READINESS.md",
             "docs/maintainers/PUBLICATION_DECISIONS.md",
             "packages/wqb-agent-ui/src/App.tsx",
-            "src/wqb_agent_lab/__init__.py",
+            "wqb_agent_lab/__init__.py",
         )
 
         for relative_path in positioning_files:
@@ -255,7 +254,7 @@ class OpenSourceReadinessTests(unittest.TestCase):
             self.assertIn('"license": "Apache-2.0"', package_json)
             self.assertNotIn('"license": "MIT"', package_json)
         self.assertIn('include = ["wqb_agent_lab*", "src*", "scripts*", "schemas"]', pyproject)
-        self.assertIn('py-modules = ["run_scan"]', pyproject)
+        self.assertNotIn("py-modules", pyproject)
         self.assertIn('"schemas" = ["*.json"]', pyproject)
 
     def test_public_snapshot_excludes_private_recipe_and_direct_submit_sources(self) -> None:

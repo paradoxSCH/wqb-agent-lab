@@ -63,7 +63,6 @@ release-audit = "scripts.checks.release_audit:main"
 
 [tool.setuptools]
 include-package-data = true
-py-modules = ["run_scan"]
 
 [tool.setuptools.packages.find]
 where = ["."]

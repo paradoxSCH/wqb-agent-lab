@@ -133,17 +133,10 @@ POSIX 可把 command 首项改为 `/usr/local/bin/model-cli`。若使用 `"promp
 
 ## 迁移旧配置
 
-兼容期内的解析优先级固定为：
-
-`llm_provider > llm_adapter > deepseek_v4_pro > kimi_cli > KIMI_* > disabled`
-
-存在 `llm_provider` 时，所有旧 block 都会被忽略。否则 resolver 会只读转换旧配置并返回迁移警告，不会自动改写文件：
-
-- `llm_adapter` 和 `deepseek_v4_pro` 映射为 `openai_compatible`。
-- `kimi_cli` 映射为 `cli`。
-- 仅在 workflow 没有任何 Provider block 时，`KIMI_API_KEY` 或 `MOONSHOT_API_KEY` 及相关 `KIMI_*` 环境变量才会参与兼容解析。
-
-新配置应只保留一个 canonical `llm_provider` block。先运行 `llm.validate` 查看 migration warnings，再手动迁移并运行 `llm.show` 确认有效配置。
+Legacy LLM configuration was removed in 0.3.0. 工作流只读取 canonical
+`llm_provider` block；旧 block 会返回 `invalid_configuration`，未声明 Provider 时环境变量
+也不会隐式启用模型。需要迁移旧配置时，请参照 [MIGRATING.md](MIGRATING.md)，然后运行
+`llm.validate` 和 `llm.show` 确认有效配置。
 
 ## 能力边界
 
