@@ -671,26 +671,12 @@ class KimiDailyWorkflow:
                 rows.append(row)
         return rows
 
-    def _classify_scan_row(
-        self,
-        row: dict[str, Any],
-        submitted_alpha_ids: set[str],
-        submitted_expressions: set[str],
-        failed_submit_alpha_ids: set[str] | None = None,
-    ) -> dict[str, Any]:
+    def _diagnose_scan_row(self, row: dict[str, Any]) -> dict[str, Any]:
         checks = row.get("checks") or []
-        expression = normalize_expression(str(row.get("expression") or ""))
-        alpha_id = str(row.get("alpha_id") or "").strip()
-        failed_submit_alpha_ids = failed_submit_alpha_ids or set()
-        already_submitted = bool(
-            (alpha_id and alpha_id in submitted_alpha_ids)
-            or (expression and expression in submitted_expressions)
-        )
-        previous_submit_failed = bool(alpha_id and alpha_id in failed_submit_alpha_ids)
         enriched = dict(row)
         enriched.update({
-            "alpha_id": alpha_id,
-            "expression": expression,
+            "alpha_id": str(row.get("alpha_id") or "").strip(),
+            "expression": normalize_expression(str(row.get("expression") or "")),
             "family": self._row_family(row),
             "skeleton": self._row_skeleton(row),
             "failed_checks": failed_check_names(checks),
@@ -699,11 +685,32 @@ class KimiDailyWorkflow:
             "units_warning": units_warning_from_check_list(checks),
             "self_corr": check_value(checks, "SELF_CORRELATION"),
             "sub_universe_sharpe": check_value(checks, "LOW_SUB_UNIVERSE_SHARPE"),
-            "already_submitted": already_submitted,
-            "previous_submit_failed": previous_submit_failed,
             "score": round(candidate_score(row), 4),
         })
         enriched["failure_diagnoses"] = diagnose_failure_objects(enriched)
+        return enriched
+
+    def _route_diagnosed_row(
+        self,
+        diagnosed: dict[str, Any],
+        submitted_alpha_ids: set[str],
+        submitted_expressions: set[str],
+        failed_submit_alpha_ids: set[str] | None = None,
+    ) -> dict[str, Any]:
+        checks = diagnosed.get("checks") or []
+        expression = str(diagnosed.get("expression") or "")
+        alpha_id = str(diagnosed.get("alpha_id") or "").strip()
+        failed_submit_alpha_ids = failed_submit_alpha_ids or set()
+        already_submitted = bool(
+            (alpha_id and alpha_id in submitted_alpha_ids)
+            or (expression and expression in submitted_expressions)
+        )
+        previous_submit_failed = bool(alpha_id and alpha_id in failed_submit_alpha_ids)
+        enriched = dict(diagnosed)
+        enriched.update({
+            "already_submitted": already_submitted,
+            "previous_submit_failed": previous_submit_failed,
+        })
         failures = set(enriched["failed_checks"])
         self_corr_bucket = self_corr_bucket_from_checks(checks)
         if already_submitted:
@@ -712,37 +719,37 @@ class KimiDailyWorkflow:
         elif previous_submit_failed:
             bucket = "low_value"
             route = "skip_previous_submit_unconfirmed"
-        elif row_metric_pass(row) and not failed_checks_from_check_list(checks):
+        elif row_metric_pass(diagnosed) and not failed_checks_from_check_list(checks):
             bucket = "direct_submit"
             route = "live_recheck_then_submit"
         elif "SELF_CORRELATION" in failures and self_corr_bucket == "extreme":
             bucket = "low_value"
             route = "replace_overcrowded_signal"
-        elif "SELF_CORRELATION" in failures and self_corr_bucket == "mild" and row_near_pass(row):
+        elif "SELF_CORRELATION" in failures and self_corr_bucket == "mild" and row_near_pass(diagnosed):
             bucket = "optimize_next"
             route = "self_corr_light_repair"
-        elif "SELF_CORRELATION" in failures and row_near_pass(row):
+        elif "SELF_CORRELATION" in failures and row_near_pass(diagnosed):
             bucket = "low_value"
             route = "self_corr_escape"
         elif "CONCENTRATED_WEIGHT" in failures and weight_concentration_bucket_from_checks(checks) == "severe":
             bucket = "low_value"
             route = "replace_concentrated_expression_structure"
         elif "CONCENTRATED_WEIGHT" in failures:
-            bucket = "optimize_next" if row_near_pass(row) else "low_value"
+            bucket = "optimize_next" if row_near_pass(diagnosed) else "low_value"
             route = "smooth_or_truncate_weight_concentration"
         elif "LOW_SUB_UNIVERSE_SHARPE" in failures and sub_universe_bucket_from_checks(checks) == "severe":
             bucket = "low_value"
             route = "replace_unstable_universe_proxy"
         elif "LOW_SUB_UNIVERSE_SHARPE" in failures and sub_universe_bucket_from_checks(checks) == "moderate":
-            bucket = "optimize_next" if row_near_pass(row) else "low_value"
+            bucket = "optimize_next" if row_near_pass(diagnosed) else "low_value"
             route = "controlled_sub_universe_repair"
-        elif ("LOW_SHARPE" in failures or "LOW_FITNESS" in failures) and weak_signal_bucket_from_row(row) == "deep_fail":
+        elif ("LOW_SHARPE" in failures or "LOW_FITNESS" in failures) and weak_signal_bucket_from_row(diagnosed) == "deep_fail":
             bucket = "low_value"
             route = "replace_weak_behavior_proxy"
-        elif ("LOW_SHARPE" in failures or "LOW_FITNESS" in failures) and weak_signal_bucket_from_row(row) == "medium_gap":
+        elif ("LOW_SHARPE" in failures or "LOW_FITNESS" in failures) and weak_signal_bucket_from_row(diagnosed) == "medium_gap":
             bucket = "low_value"
             route = "rewrite_weak_signal_chassis"
-        elif row_near_pass(row):
+        elif row_near_pass(diagnosed):
             bucket = "optimize_next"
             route = "structural_repair_or_parameter_sweep"
         else:
@@ -752,6 +759,20 @@ class KimiDailyWorkflow:
         enriched["route_decision"] = route
         return enriched
 
+    def _classify_scan_row(
+        self,
+        row: dict[str, Any],
+        submitted_alpha_ids: set[str],
+        submitted_expressions: set[str],
+        failed_submit_alpha_ids: set[str] | None = None,
+    ) -> dict[str, Any]:
+        return self._route_diagnosed_row(
+            self._diagnose_scan_row(row),
+            submitted_alpha_ids,
+            submitted_expressions,
+            failed_submit_alpha_ids,
+        )
+
     def _classified_scan_rows(self) -> list[dict[str, Any]]:
         submitted_alpha_ids, submitted_expressions = self._submitted_registry()
         failed_submit_alpha_ids = self._failed_submit_attempt_alpha_ids()
@@ -759,6 +780,174 @@ class KimiDailyWorkflow:
             self._classify_scan_row(row, submitted_alpha_ids, submitted_expressions, failed_submit_alpha_ids)
             for row in self._current_scan_rows()
         ]
+
+    def _local_stage_input_digest(
+        self,
+        payload: dict[str, Any],
+        paths: list[Path],
+    ) -> str:
+        material = {
+            "payload": payload,
+            "files": [
+                {
+                    "path": relative_path(path, self.root),
+                    "sha256": _file_sha256(path),
+                }
+                for path in sorted({path.resolve() for path in paths}, key=lambda item: item.as_posix())
+            ],
+        }
+        encoded = json.dumps(
+            material,
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+        return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+    def run_diagnosis_stage(
+        self,
+        *,
+        now: datetime | None = None,
+    ) -> list[dict[str, Any]]:
+        now = now or datetime.now()
+        source_paths = self._current_scan_result_paths()
+        diagnosed_rows: list[dict[str, Any]] | None = None
+        output_path = self.run_dir / "diagnosis_results.json"
+
+        def execute() -> StageOutcome:
+            nonlocal diagnosed_rows
+            diagnosed_rows = [self._diagnose_scan_row(row) for row in self._current_scan_rows()]
+            if not self.dry_run:
+                write_json(output_path, diagnosed_rows)
+            return StageOutcome.create(
+                artifacts=(relative_path(output_path, self.root),) if output_path.is_file() else (),
+                output={
+                    "row_count": len(diagnosed_rows),
+                    "diagnosis_count": sum(
+                        len(row.get("failure_diagnoses") or []) for row in diagnosed_rows
+                    ),
+                },
+                extensions={
+                    "remote_side_effects": False,
+                    "preserves_open_candidate_fields": True,
+                },
+            )
+
+        if self.dry_run:
+            execute()
+        else:
+            StageRunner(self.stage_checkpoint_store).run(
+                run_id=self.run_tag,
+                stage_id="diagnosis",
+                input_digest=self._local_stage_input_digest(
+                    {"run_tag": self.run_tag, "source_count": len(source_paths)},
+                    source_paths,
+                ),
+                execute=execute,
+                replay_policy="safe",
+                started_at=now,
+            )
+        if diagnosed_rows is None:
+            raise RuntimeError("diagnosis stage completed without rows")
+        return diagnosed_rows
+
+    def run_triage_stage(
+        self,
+        ledger: dict[str, Any],
+        diagnosed_rows: list[dict[str, Any]],
+        *,
+        ready: list[dict[str, Any]] | None = None,
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        now = now or datetime.now()
+        ready_rows = ready if ready is not None else self.collect_submit_ready()
+        submitted_alpha_ids, submitted_expressions = self._submitted_registry()
+        failed_submit_alpha_ids = self._failed_submit_attempt_alpha_ids()
+        classified_rows: list[dict[str, Any]] | None = None
+        state: dict[str, Any] | None = None
+
+        def execute() -> StageOutcome:
+            nonlocal classified_rows, state
+            classified_rows = [
+                self._route_diagnosed_row(
+                    row,
+                    submitted_alpha_ids,
+                    submitted_expressions,
+                    failed_submit_alpha_ids,
+                )
+                for row in diagnosed_rows
+            ]
+            state = self.write_closed_loop_artifacts(
+                ledger,
+                ready=ready_rows,
+                now=now,
+                classified_rows=classified_rows,
+                run_postprocessors=False,
+            )
+            artifacts = tuple(
+                sorted(
+                    str(path)
+                    for path in (state.get("artifacts") or {}).values()
+                    if (self.root / str(path)).is_file()
+                )
+            )
+            return StageOutcome.create(
+                artifacts=artifacts,
+                output={
+                    "counts": state.get("counts") or {},
+                    "route_decisions": sorted(
+                        {
+                            str(row.get("route_decision") or "")
+                            for row in classified_rows
+                            if row.get("route_decision")
+                        }
+                    ),
+                },
+                extensions={
+                    "remote_side_effects": False,
+                    "research_routes_are_advisory": True,
+                },
+            )
+
+        input_payload = {
+            "run_tag": self.run_tag,
+            "diagnosed_rows": diagnosed_rows,
+            "ready_rows": ready_rows,
+            "submitted_alpha_ids": sorted(submitted_alpha_ids),
+            "submitted_expressions": sorted(submitted_expressions),
+            "failed_submit_alpha_ids": sorted(failed_submit_alpha_ids),
+        }
+        if self.dry_run:
+            execute()
+        else:
+            StageRunner(self.stage_checkpoint_store).run(
+                run_id=self.run_tag,
+                stage_id="triage",
+                input_digest=self._local_stage_input_digest(input_payload, []),
+                execute=execute,
+                replay_policy="safe",
+                started_at=now,
+            )
+        if state is None:
+            raise RuntimeError("triage stage completed without state")
+        if not self.dry_run:
+            self._run_closed_loop_postprocessors(
+                state,
+                self.run_dir / "iteration_state.json",
+            )
+            ledger["closed_loop"] = state
+        return state
+
+    def run_diagnosis_triage(
+        self,
+        ledger: dict[str, Any],
+        *,
+        ready: list[dict[str, Any]] | None = None,
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        diagnosed_rows = self.run_diagnosis_stage(now=now)
+        return self.run_triage_stage(ledger, diagnosed_rows, ready=ready, now=now)
 
     def _low_value_avoid_entries(self, low_value_rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
         grouped: dict[str, list[dict[str, Any]]] = {}
@@ -849,10 +1038,12 @@ class KimiDailyWorkflow:
         *,
         ready: list[dict[str, Any]] | None = None,
         now: datetime | None = None,
+        classified_rows: list[dict[str, Any]] | None = None,
+        run_postprocessors: bool = True,
     ) -> dict[str, Any]:
         now = now or datetime.now()
         ready_rows = ready if ready is not None else self.collect_submit_ready()
-        scan_rows = self._classified_scan_rows()
+        scan_rows = classified_rows if classified_rows is not None else self._classified_scan_rows()
         direct_submit = self._dedupe_triage_rows([row for row in scan_rows if row.get("triage_bucket") == "direct_submit"])
         optimize_next = self._dedupe_triage_rows([row for row in scan_rows if row.get("triage_bucket") == "optimize_next"])
         low_value_rows = [row for row in scan_rows if row.get("triage_bucket") == "low_value"]
@@ -891,7 +1082,7 @@ class KimiDailyWorkflow:
             for entry in low_value_avoid
         ]
         artifacts = {key: relative_path(path, self.root) for key, path in paths.items()}
-        diagnosis_policy = evaluate_diagnosis_policies(scan_rows)
+        diagnosis_policy = evaluate_diagnosis_policies(scan_rows, now=now)
         state = {
             "daily_run_tag": self.run_tag,
             "generated_at": now.isoformat(timespec="seconds"),
@@ -971,15 +1162,23 @@ class KimiDailyWorkflow:
             write_text(paths["diagnosis_policy_summary"], self._diagnosis_policy_summary(diagnosis_policy))
             write_json(paths["iteration_state"], state)
             write_text(paths["triage_summary"], "\n".join(summary_lines) + "\n")
-            memory_sync_report = self._post_stage_memory_sync()
-            if memory_sync_report:
-                state["artifacts"]["memory_sync_state"] = memory_sync_report
-            output_report_path, output_summary_path = write_run_output_evaluation(self.run_dir)
-            state["artifacts"]["output_evaluation_report"] = relative_path(output_report_path, self.root)
-            state["artifacts"]["output_evaluation_summary"] = relative_path(output_summary_path, self.root)
-            write_json(paths["iteration_state"], state)
+            if run_postprocessors:
+                self._run_closed_loop_postprocessors(state, paths["iteration_state"])
         ledger["closed_loop"] = state
         return state
+
+    def _run_closed_loop_postprocessors(
+        self,
+        state: dict[str, Any],
+        iteration_state_path: Path,
+    ) -> None:
+        memory_sync_report = self._post_stage_memory_sync()
+        if memory_sync_report:
+            state["artifacts"]["memory_sync_state"] = memory_sync_report
+        output_report_path, output_summary_path = write_run_output_evaluation(self.run_dir)
+        state["artifacts"]["output_evaluation_report"] = relative_path(output_report_path, self.root)
+        state["artifacts"]["output_evaluation_summary"] = relative_path(output_summary_path, self.root)
+        write_json(iteration_state_path, state)
 
     def _workflow_config_reference(self) -> str:
         try:
@@ -1198,7 +1397,7 @@ class KimiDailyWorkflow:
                 ledger = dict(payload["ledger"])
                 self._active_ledger = ledger
                 self._score_decision_attribution()
-                self.write_closed_loop_artifacts(ledger)
+                self.run_diagnosis_triage(ledger)
                 self._emit_progress_callback(
                     str(payload["callback_event"]),
                     ledger,
@@ -2759,11 +2958,11 @@ class KimiDailyWorkflow:
         summary_md = self.run_dir / f"{REPORT_BASENAME}.md"
         if existing_report and not force and not self.dry_run:
             ready = self.collect_submit_ready()
-            self.write_closed_loop_artifacts(ledger, ready=ready, now=now)
+            self.run_diagnosis_triage(ledger, ready=ready, now=now)
             write_json(self.ledger_path, ledger)
             return summary_json, self.root / existing_report
         ready = self.collect_submit_ready()
-        closed_loop = self.write_closed_loop_artifacts(ledger, ready=ready, now=now)
+        closed_loop = self.run_diagnosis_triage(ledger, ready=ready, now=now)
         payload = {
             "daily_run_tag": self.run_tag,
             "generated_at": now.isoformat(timespec="seconds"),
@@ -2864,7 +3063,7 @@ class KimiDailyWorkflow:
         if self.reconcile_existing_stage_progress(ledger):
             messages.append("reconciled existing stage progress")
             if not self.dry_run:
-                self.write_closed_loop_artifacts(ledger)
+                self.run_diagnosis_triage(ledger, now=now)
                 self._emit_progress_callback(
                     "stage_progress_reconciled",
                     ledger,

@@ -24,7 +24,7 @@ The migration must preserve all of the following:
 | Proposal boundary | Implemented | Provider-neutral schema and immutable models |
 | Structural repair and policy | Implemented | Explicit opt-in adapter; legacy output remains default |
 | Provenance | In progress | Production tick checkpoints, configuration/schema/artifact digests |
-| Recoverable stages | In progress | Planning, scan preflight, and simulation use atomic checkpoints |
+| Recoverable stages | In progress | Planning, preflight, simulation, diagnosis, and triage use atomic checkpoints |
 | Side-effect reconciliation | In progress | Simulation recovery implemented; submission recovery remains planned |
 | Evidence-gated feedback | Planned | Shadow mode before advisory or control use |
 
@@ -78,6 +78,13 @@ the normal scan result file before the stage may resume.
 This gate fingerprints the complete candidate payload and does not enumerate operators,
 mechanisms, fields, or expression shapes. Novel LLM output therefore follows the same
 recovery protocol without being removed or narrowed.
+
+Diagnosis and triage are separate replay-safe stages. Diagnosis preserves the complete
+simulation row and adds structured failure evidence. Triage consumes that evidence plus
+submitted-registry state, then emits advisory routes and closed-loop artifacts. Unknown
+mechanisms, settings, extension objects, and expression forms remain in both stage outputs;
+route names are observations and recommendations, not an execution allowlist. Golden tests
+compare the staged artifacts with the previous closed-loop implementation.
 
 ### 5. Side-effect reconciliation
 
