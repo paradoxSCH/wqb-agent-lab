@@ -63,7 +63,18 @@ class ArchitectureSlimmingTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertNotIn("python -m scripts.research_workflow", migration)
+        self.assertNotIn("python -m scripts.kimi_daily_workflow", migration)
+
+    def test_workflow_foundations_are_split_from_engine(self) -> None:
+        workflow = ROOT / "wqb_agent_lab" / "workflow"
+
+        self.assertTrue((workflow / "artifacts.py").is_file())
+        self.assertTrue((workflow / "candidates.py").is_file())
+        self.assertTrue((workflow / "models.py").is_file())
+        self.assertLess(
+            len((workflow / "engine.py").read_text(encoding="utf-8").splitlines()),
+            3200,
+        )
 
 
 if __name__ == "__main__":
