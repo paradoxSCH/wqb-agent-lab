@@ -14,12 +14,12 @@ ROOT = Path(__file__).resolve().parents[1]
 class ArchitectureBoundaryTests(unittest.TestCase):
     def test_product_namespaces_are_importable(self) -> None:
         for namespace in ("platform", "workflow", "research", "memory", "evaluation", "governance"):
-            module = import_module(f"src.wqb_agent_lab.{namespace}")
+            module = import_module(f"wqb_agent_lab.{namespace}")
             self.assertTrue(module.__all__, namespace)
 
     def test_workflow_boundary_exports_only_the_production_orchestrator(self) -> None:
         from src.kimi_daily_workflow import KimiDailyWorkflow
-        from src.wqb_agent_lab import workflow
+        from wqb_agent_lab import workflow
 
         self.assertIs(workflow.ResearchWorkflow, KimiDailyWorkflow)
         self.assertNotIn("ContinuousAlphaScheduler", workflow.__all__)

@@ -1,6 +1,6 @@
 """Legacy experimental scheduler retained for historical-run compatibility.
 
-Production automation is owned by ``src.wqb_agent_lab.workflow.ResearchWorkflow``.
+Production automation is owned by ``wqb_agent_lab.workflow.ResearchWorkflow``.
 New integrations must not depend on this module.
 """
 
