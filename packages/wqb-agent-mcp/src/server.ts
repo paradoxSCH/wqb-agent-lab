@@ -13,7 +13,7 @@ export interface WQBAgentMcpServerOptions {
 export function createWQBAgentMcpServer(options: WQBAgentMcpServerOptions = {}): McpServer {
   const server = new McpServer({
     name: "wqb-agent-lab",
-    version: "0.2.0-alpha.1",
+    version: "0.3.0-alpha.1",
   });
 
   const engineOptions = {

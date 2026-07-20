@@ -1,6 +1,6 @@
 {
   "name": "@wqb-agent-lab/ui",
-  "version": "0.2.0-alpha.1",
+  "version": "0.3.0-alpha.1",
   "description": "React workbench for WQB Agent Lab runtime, research policy, memory, and evaluation APIs.",
   "type": "module",
   "private": true,

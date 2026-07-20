@@ -93,7 +93,7 @@ uv run python -m scripts.run.dashboard --host 127.0.0.1 --port 8765
 
 ## 项目状态
 
-当前版本为 `v0.2.0a1`，面向单用户 WorldQuant BRAIN 研究流程。Python 负责研究语义与平台边界；TypeScript MCP 和监控 UI 提供标准接口。
+当前开发版本为 `v0.3.0a1`，面向单用户 WorldQuant BRAIN 研究流程。Python 负责研究语义与平台边界；TypeScript MCP 和监控 UI 提供标准接口。
 
 项目依赖非官方的平台互操作接口，平台变更可能导致部分能力失效。首次公开版本优先保证可安装、可诊断、可审计，所有平台副作用均需显式授权；项目不承诺研究收益。
 

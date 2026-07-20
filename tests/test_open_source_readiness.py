@@ -197,11 +197,11 @@ class OpenSourceReadinessTests(unittest.TestCase):
         ui_package = json.loads(self.read("packages/wqb-agent-ui/package.json"))
         mcp_server = self.read("packages/wqb-agent-mcp/src/server.ts")
 
-        self.assertIn('version = "0.2.0a1"', pyproject)
-        self.assertIn("version: 0.2.0a1", citation)
-        self.assertEqual("0.2.0-alpha.1", mcp_package["version"])
-        self.assertEqual("0.2.0-alpha.1", ui_package["version"])
-        self.assertIn('version: "0.2.0-alpha.1"', mcp_server)
+        self.assertIn('version = "0.3.0a1"', pyproject)
+        self.assertIn("version: 0.3.0a1", citation)
+        self.assertEqual("0.3.0-alpha.1", mcp_package["version"])
+        self.assertEqual("0.3.0-alpha.1", ui_package["version"])
+        self.assertIn('version: "0.3.0-alpha.1"', mcp_server)
 
     def test_gitignore_blocks_private_runtime_artifacts_recursively(self) -> None:
         gitignore = self.read(".gitignore")

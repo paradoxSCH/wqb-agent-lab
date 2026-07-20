@@ -90,7 +90,6 @@ CHECK_STAGES = (
             "src",
             "scripts",
             "run_scan.py",
-            "continuous_alpha_scheduler.py",
         ),
     ),
     Stage("mcp-typecheck", _npm("run", "typecheck"), "packages/wqb-agent-mcp"),

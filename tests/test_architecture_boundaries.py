@@ -51,7 +51,6 @@ class ArchitectureBoundaryTests(unittest.TestCase):
 
     def test_active_agent_layers_do_not_call_wqb_http_directly(self) -> None:
         active_paths = [
-            ROOT / "src" / "continuous_alpha_scheduler.py",
             ROOT / "src" / "kimi_daily_workflow.py",
             ROOT / "src" / "workflow_daemon.py",
             ROOT / "src" / "submission_governance",
