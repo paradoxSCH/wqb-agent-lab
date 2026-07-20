@@ -1372,7 +1372,7 @@ class KimiDailyWorkflow:
         if self.dry_run:
             return prompt_path
         write_text(prompt_path, prompt)
-        payload = self.llm_adapter.call(self.root, prompt)
+        payload = self.llm_adapter.call_configured(self.root, prompt)
         provider_metadata = self.llm_adapter.metadata()
         ledger["llm_provider"] = provider_metadata
         status = "error" if payload.get("error") or payload.get("disabled") else "success"

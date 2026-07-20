@@ -19,6 +19,16 @@ class RepairAttempt:
     structural_errors: tuple[str, ...]
 
 
+@dataclass(frozen=True, slots=True)
+class GeneratedPlanProposal:
+    proposal: PlanProposal
+    failed_attempts: tuple[RepairAttempt, ...]
+
+    @property
+    def repair_count(self) -> int:
+        return len(self.failed_attempts)
+
+
 class PlanProposalRepairExhausted(PlanProposalValidationError):
     def __init__(self, errors: list[ValidationError], attempts: tuple[RepairAttempt, ...]) -> None:
         self.attempts = attempts
@@ -31,6 +41,15 @@ def generate_plan_proposal(
     *,
     max_repairs: int = 2,
 ) -> PlanProposal:
+    return generate_plan_proposal_result(prompt, generate, max_repairs=max_repairs).proposal
+
+
+def generate_plan_proposal_result(
+    prompt: str,
+    generate: ProposalGenerator,
+    *,
+    max_repairs: int = 2,
+) -> GeneratedPlanProposal:
     """Generate and structurally repair a proposal without changing research policy.
 
     The generator remains provider-neutral. A repair attempt receives the original prompt,
@@ -48,7 +67,7 @@ def generate_plan_proposal(
     for attempt_index in range(max_repairs + 1):
         payload = generate(next_prompt)
         try:
-            return parse_plan_proposal(payload)
+            return GeneratedPlanProposal(parse_plan_proposal(payload), tuple(attempts))
         except PlanProposalValidationError as exc:
             attempts.append(
                 RepairAttempt(
