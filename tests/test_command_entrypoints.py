@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
         "scripts.run.scan",
         "scripts.run.workflow",
         "scripts.run.daemon",
+        "scripts.run.stop_daemon",
         "scripts.workers.submission",
         "scripts.workers.evaluation",
         "scripts.workers.memory",
@@ -30,9 +31,12 @@ def test_grouped_command_exposes_main(module_name: str) -> None:
     "relative_path",
     [
         "scripts/evaluation_worker.py",
+        "scripts/launch_daemon.py",
         "scripts/memory_worker.py",
         "scripts/registry_worker.py",
+        "scripts/scan.py",
+        "scripts/stop_daemon.py",
     ],
 )
-def test_worker_implementations_are_not_duplicated_at_scripts_root(relative_path: str) -> None:
+def test_grouped_implementations_are_not_duplicated_at_scripts_root(relative_path: str) -> None:
     assert not (ROOT / relative_path).is_file()

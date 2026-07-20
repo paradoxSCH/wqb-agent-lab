@@ -67,7 +67,7 @@ copy configs\examples\production-workflow.example.json .local\research\workflows
 ## 生产预检
 
 ```powershell
-.\.venv\Scripts\python.exe -m scripts.launch_daemon --workspace-root . --workflow-config .local\research\workflows\production.json --no-execute-scans --once
+.\.venv\Scripts\python.exe -m scripts.run.daemon --workspace-root . --workflow-config .local\research\workflows\production.json --no-execute-scans --once
 ```
 
 launcher 按顺序检查策略、side-effect capability 和 session。`.env.example` 的凭证默认为空，`WQB_LIVE_SIMULATION_CAPABILITY=0`、`WQB_LIVE_SUBMIT_CAPABILITY=0`；空凭证会在创建网络 session 前快速失败。
