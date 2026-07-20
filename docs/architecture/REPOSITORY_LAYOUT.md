@@ -35,13 +35,11 @@ wqb-agent-lab/
 |   |-- memory/                 记忆核心与证据治理
 |   |-- platform/               WorldQuant BRAIN 访问边界
 |   |-- llm/                    Provider 协议与本地 CLI 进程边界
+|   |-- mcp/                    Python MCP adapter
 |   |-- research/               候选生成与研究政策
 |   |-- runtime/                配置、锁、原子写入、journal 与 scan runtime
-|   `-- workflow/               ResearchWorkflow、LLM 规划与 stage runtime
-|-- src/
-|   |-- wqb_engine/             机器可读 CLI
-|   |-- wqb_mcp/                Python MCP adapter
-|   `-- */                      尚待 0.3 迁移的 research/runtime 实现
+|   |-- workflow/               ResearchWorkflow、LLM 规划与 stage runtime
+|   `-- cli.py                  安装后的 wqb-engine 命令
 |-- tests/                      默认无凭证、无真实副作用的测试
 |-- .python-version             推荐 Python 3.12
 |-- .nvmrc                      推荐 Node 24 LTS
