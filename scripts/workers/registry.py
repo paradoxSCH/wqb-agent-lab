@@ -11,8 +11,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
-from src.atomic_json import atomic_write_json
-from src.process_lock import PidFileLock
+from wqb_agent_lab.runtime.atomic_json import atomic_write_json
+from wqb_agent_lab.runtime.process_lock import PidFileLock
 
 REGISTRY_STATE = Path(".local/data/registry/registry_state.json")
 REGISTRY_LOCK = Path(".local/data/registry/registry_worker.lock")

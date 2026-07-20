@@ -5,8 +5,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.alpha_memory.schema import MemoryEdge, MemoryNode
-from src.alpha_memory.store import SQLiteMemoryStore
+from wqb_agent_lab.memory.core.schema import MemoryEdge, MemoryNode
+from wqb_agent_lab.memory.core.store import SQLiteMemoryStore
 
 
 class SQLiteMemoryStoreTests(unittest.TestCase):

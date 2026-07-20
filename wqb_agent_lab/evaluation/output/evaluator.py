@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from src.diagnosis_policy import evaluate_diagnosis_policies
+from wqb_agent_lab.evaluation.diagnosis_policy import evaluate_diagnosis_policies
 
 from .budget_policy import build_budget_policy_actions
 from .types import OutputDiagnosis, OutputEvaluationRecord
@@ -161,18 +161,23 @@ def _record_from_preflight_report(report: dict[str, Any]) -> OutputEvaluationRec
     for item in report.get("diagnoses") or []:
         if not isinstance(item, dict):
             continue
+        raw_evidence = item.get("evidence")
+        evidence: dict[str, Any] = (
+            raw_evidence if isinstance(raw_evidence, dict) else {}
+        )
         diagnoses.append(
             OutputDiagnosis(
                 diagnosis_type=str(item.get("diagnosis_type") or "unknown"),
                 severity=str(item.get("severity") or "unknown"),
-                evidence=item.get("evidence") if isinstance(item.get("evidence"), dict) else {},
+                evidence=evidence,
                 recommended_action=str(item.get("recommended_action") or "quarantine_unknown_diagnosis"),
                 policy=str(item.get("policy") or "quarantine_unknown_diagnosis"),
                 success_metric=str(item.get("success_metric") or "classification_resolution_rate"),
                 failure_metric=str(item.get("failure_metric") or "repeat_failure_rate"),
             )
         )
-    metrics = report.get("metrics") if isinstance(report.get("metrics"), dict) else {}
+    raw_metrics = report.get("metrics")
+    metrics: dict[str, Any] = raw_metrics if isinstance(raw_metrics, dict) else {}
     return OutputEvaluationRecord(
         artifact=str(report.get("artifact") or "preflight_evaluation_report.json"),
         stage=str(report.get("stage") or "scan_config_expression"),

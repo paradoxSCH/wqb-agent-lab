@@ -4,8 +4,8 @@ from dataclasses import dataclass, field
 import re
 from typing import Any, Protocol
 
-from src.alpha_memory.schema import MemoryEdge, MemoryNode
-from src.memory_governance import is_retrievable_for_mode
+from wqb_agent_lab.memory.core.schema import MemoryEdge, MemoryNode
+from wqb_agent_lab.memory.governance import is_retrievable_for_mode
 
 
 _QUERY_TOKEN_RE = re.compile(r"[\w]+", re.UNICODE)

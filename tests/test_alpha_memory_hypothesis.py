@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from src.alpha_memory.hypothesis import (
+from wqb_agent_lab.memory.core.hypothesis import (
     HypothesisDraft,
     classify_wqb_action_lane,
     validate_hypothesis,

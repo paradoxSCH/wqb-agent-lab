@@ -28,17 +28,20 @@ wqb-agent-lab/
 |   |-- submit/                 提交队列与 worker 实现
 |   |-- checks/                 制品、供应链和公开快照检查
 |   `-- maintenance/            仓库与本地状态维护任务
-|-- wqb_agent_lab/              安装后使用的标准公开命名空间与 runtime 实现
+|-- wqb_agent_lab/              唯一 canonical 产品命名空间
+|   |-- contracts/              JSON contract registry 与验证
+|   |-- evaluation/             agent、输出与诊断评估
+|   |-- governance/             副作用、提交与规划治理
+|   |-- memory/                 记忆核心与证据治理
 |   |-- platform/               WorldQuant BRAIN 访问边界
-|   `-- runtime/                operation journal 与 canonical scan runtime
+|   |-- research/               候选生成与研究域
+|   |-- runtime/                配置、锁、原子写入、journal 与 scan runtime
+|   `-- workflow/               编排公共接口与 stage runtime
 |-- src/
-|   |-- wqb_agent_lab/          仅保留到 0.3.0 的兼容导入层
 |   |-- wqb_engine/             机器可读 CLI
 |   |-- wqb_mcp/                Python MCP adapter
-|   |-- alpha_memory/           记忆存储、检索、治理和评估
 |   |-- research_policy/        预算与行为边界
-|   |-- output_evaluation/      输出诊断、策略和预算反馈
-|   `-- */                      内部实现模块
+|   `-- */                      尚待 0.3 迁移的工作流与研究实现
 |-- tests/                      默认无凭证、无真实副作用的测试
 |-- .python-version             推荐 Python 3.12
 |-- .nvmrc                      推荐 Node 24 LTS
@@ -57,7 +60,8 @@ wqb-agent-lab/
 | 仓库工程检查 | `uv run python -m scripts.dev check` |
 | 完整发布检查 | `uv run python -m scripts.dev release-check --json` |
 
-0.3 已删除根目录扫描启动器和 `src` 下的兼容命名空间。根级 `scripts/`
-只保留 bootstrap、工程诊断和按职责分类的当前命令，不再新增转发启动器。
+0.3 已删除根目录扫描启动器和 `src` 下的兼容命名空间，并把稳定域实现迁入
+`wqb_agent_lab`。根级 `scripts/` 只保留 bootstrap、工程诊断和按职责分类的当前命令，
+不再新增转发启动器。
 
 私有维护仓库可能额外出现 `.local/`、`dist/`、`logs/`、`configs/scans/` 和 `docs/archive/`。这些目录不会进入公开快照，也不构成开源用户可依赖的产品接口。

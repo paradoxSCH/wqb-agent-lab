@@ -9,7 +9,7 @@ from urllib.parse import urljoin
 
 import requests
 
-from src.config import Config, load_config
+from wqb_agent_lab.runtime.config import Config, load_config
 from wqb_agent_lab.runtime import OperationJournal, SideEffectUncertainError
 
 from .models import (

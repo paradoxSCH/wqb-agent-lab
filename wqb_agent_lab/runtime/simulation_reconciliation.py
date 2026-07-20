@@ -8,7 +8,7 @@ from pathlib import Path
 from collections.abc import Callable
 from typing import Any, Protocol
 
-from src.atomic_json import atomic_write_json
+from wqb_agent_lab.runtime.atomic_json import atomic_write_json
 
 from .operations import OperationJournal, OperationRecord, payload_fingerprint
 

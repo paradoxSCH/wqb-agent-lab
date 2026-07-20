@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from src.atomic_json import atomic_write_json
+from wqb_agent_lab.runtime.atomic_json import atomic_write_json
 
 
 VALID_MODES = {"off", "shadow", "advisory", "control"}

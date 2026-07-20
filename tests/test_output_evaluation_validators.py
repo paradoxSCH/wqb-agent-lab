@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from src.output_evaluation.validators import (
+from wqb_agent_lab.evaluation.output.validators import (
     KNOWN_OPERATORS,
     validate_candidate_hypothesis_queue,
     validate_expression_candidates,

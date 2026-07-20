@@ -7,9 +7,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol
 
-from src.atomic_json import atomic_write_json
-from src.process_lock import PidFileLock
-from src.side_effect_governance import evaluate_side_effect_capability
+from wqb_agent_lab.runtime.atomic_json import atomic_write_json
+from wqb_agent_lab.runtime.process_lock import PidFileLock
+from wqb_agent_lab.governance.side_effects import evaluate_side_effect_capability
 from wqb_agent_lab.platform import CheckReadiness, evaluate_check_snapshot
 from wqb_agent_lab.runtime import OperationJournal, OperationRecord, SideEffectUncertainError
 

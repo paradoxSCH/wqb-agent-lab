@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.behavioral_candidate_generation import write_candidate_generation_artifacts
+from wqb_agent_lab.research.candidates import write_candidate_generation_artifacts
 
 
 def main() -> int:

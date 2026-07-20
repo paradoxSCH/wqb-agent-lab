@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from src.alpha_memory.hypothesis import HypothesisDraft, validate_hypothesis
+from wqb_agent_lab.memory.core.hypothesis import HypothesisDraft, validate_hypothesis
 
 
 def main() -> int:

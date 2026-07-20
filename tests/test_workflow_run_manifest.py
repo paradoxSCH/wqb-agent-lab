@@ -7,7 +7,7 @@ from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import patch
 
-from src.contracts import assert_valid_contract
+from wqb_agent_lab.contracts import assert_valid_contract
 from src.kimi_daily_workflow import KimiDailyWorkflow
 
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.alpha_memory.schema import (
+from wqb_agent_lab.memory.core.schema import (
     EDGE_RELATIONS,
     MEMORY_LAYERS,
     NODE_TYPES,

@@ -19,12 +19,12 @@ from typing import Any
 from dotenv import load_dotenv
 
 from src.agent_callbacks import emit_agent_callback
-from src.contracts import list_schema_names, schema_digest
-from src.diagnosis_policy import evaluate_diagnosis_policies
+from wqb_agent_lab.contracts import list_schema_names, schema_digest
+from wqb_agent_lab.evaluation.diagnosis_policy import evaluate_diagnosis_policies
 from src.failure_diagnosis import diagnose_failure_objects, primary_diagnosis_type
 from src.llm_provider import LLMProvider
 from src.llm_planning import LLMPlanAdapter
-from src.output_evaluation.evaluator import write_run_output_evaluation
+from wqb_agent_lab.evaluation.output.evaluator import write_run_output_evaluation
 from src.policy_feedback_governance import (
     aggregate_shadow_evidence,
     cap_recommended_candidates,
@@ -32,8 +32,8 @@ from src.policy_feedback_governance import (
     resolve_feedback_mode,
     score_shadow_decisions,
 )
-from src.output_evaluation.types import OutputEvaluationRecord
-from src.output_evaluation.validators import validate_expression_candidates
+from wqb_agent_lab.evaluation.output.types import OutputEvaluationRecord
+from wqb_agent_lab.evaluation.output.validators import validate_expression_candidates
 from src.research_policy import (
     ResearchPolicy,
     evaluate_candidate_boundaries,
@@ -86,7 +86,7 @@ def read_json(path: Path, default: Any) -> Any:
 
 
 def write_json(path: Path, payload: Any) -> None:
-    from src.atomic_json import atomic_write_json
+    from wqb_agent_lab.runtime.atomic_json import atomic_write_json
 
     atomic_write_json(path, payload)
 
@@ -3139,7 +3139,7 @@ class KimiDailyWorkflow:
         )
         if active_count <= 0:
             return "submission worker queue has no active jobs"
-        from src.side_effect_governance import evaluate_side_effect_capability
+        from wqb_agent_lab.governance.side_effects import evaluate_side_effect_capability
 
         capability = evaluate_side_effect_capability("submission")
         if not capability.enabled:

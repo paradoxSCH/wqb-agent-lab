@@ -7,8 +7,8 @@ from pathlib import Path
 import sqlite3
 import sys
 
-from src.alpha_memory.retrieval import retrieve_memory
-from src.alpha_memory.store import SQLiteMemoryStore
+from wqb_agent_lab.memory.core.retrieval import retrieve_memory
+from wqb_agent_lab.memory.core.store import SQLiteMemoryStore
 
 
 _REQUIRED_TABLES = frozenset(

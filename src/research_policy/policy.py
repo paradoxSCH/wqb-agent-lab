@@ -6,7 +6,7 @@ import json
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from src.contracts import validate_contract
+from wqb_agent_lab.contracts import validate_contract
 
 
 class ResearchPolicyError(ValueError):

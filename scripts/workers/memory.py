@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from src.agent_memory_sync import sync_run_memory
-from src.atomic_json import atomic_write_json
-from src.process_lock import PidFileLock
+from wqb_agent_lab.runtime.atomic_json import atomic_write_json
+from wqb_agent_lab.runtime.process_lock import PidFileLock
 
 
 MEMORY_STATE = "memory_sync_state.json"

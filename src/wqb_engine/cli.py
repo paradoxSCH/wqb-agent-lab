@@ -30,7 +30,7 @@ def run(
             return 0
 
         if operation == "schemas.list":
-            from src.contracts import list_schema_names
+            from wqb_agent_lab.contracts import list_schema_names
 
             _write_json(
                 out_stream,
@@ -43,7 +43,7 @@ def run(
             return 0
 
         if operation == "schemas.digest":
-            from src.contracts import schema_digest
+            from wqb_agent_lab.contracts import schema_digest
 
             parsed = _parse_schema_args(operation, args[1:])
             _write_json(
@@ -57,7 +57,7 @@ def run(
             return 0
 
         if operation == "contracts.validate":
-            from src.contracts import validate_contract
+            from wqb_agent_lab.contracts import validate_contract
 
             parsed = _parse_validate_args(operation, args[1:])
             payload, error_code, error_message = _read_payload(parsed.payload, in_stream)
@@ -141,7 +141,7 @@ def run(
             return _run_llm_operation(operation, args[1:], out_stream)
 
         if operation == "submission.evaluate":
-            from src.submission_governance import (
+            from wqb_agent_lab.governance.submission import (
                 SubmitDecision,
                 SubmissionPolicyEvaluator,
             )
@@ -166,7 +166,7 @@ def run(
             return 0
 
         if operation in {"submission.submit_intent", "submission.execute_live"}:
-            from src.submission_governance import (
+            from wqb_agent_lab.governance.submission import (
                 PolicyEvaluation,
                 SubmitDecision,
                 SubmissionExecutor,
@@ -223,7 +223,7 @@ def run(
             return 0
 
         if operation == "submission.audit_tail":
-            from src.submission_governance import SubmissionGovernanceLedger
+            from wqb_agent_lab.governance.submission import SubmissionGovernanceLedger
 
             parsed = _parse_audit_tail_args(operation, args[1:])
             events = SubmissionGovernanceLedger(parsed.run_dir).audit_tail(limit=parsed.limit)

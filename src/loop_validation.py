@@ -6,11 +6,11 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from src.agent_memory_sync import sync_run_memory
-from src.behavioral_candidate_generation import write_candidate_generation_artifacts
+from wqb_agent_lab.research.candidates import write_candidate_generation_artifacts
 from src.decision_attribution import record_scan_decision, score_decision_outcomes
 from src.failure_diagnosis import diagnose_failure_objects
-from src.memory_governance import write_memory_governance_report
-from src.output_evaluation.evaluator import evaluate_run_outputs, write_run_output_evaluation
+from wqb_agent_lab.memory.governance import write_memory_governance_report
+from wqb_agent_lab.evaluation.output.evaluator import evaluate_run_outputs, write_run_output_evaluation
 from src.policy_effectiveness import write_policy_effectiveness_report
 
 

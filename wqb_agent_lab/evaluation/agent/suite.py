@@ -98,7 +98,12 @@ def _variant_metadata(path: Path, summaries: list[Mapping[str, Any]]) -> dict[st
 
 def _fairness(metadata: Mapping[str, Mapping[str, Any]], missing: list[str]) -> dict[str, Any]:
     dates = {meta.get("date") for meta in metadata.values() if meta.get("date")}
-    budgets = {meta.get("daily_budget") for meta in metadata.values() if meta.get("daily_budget") is not None}
+    budgets = {
+        value
+        for meta in metadata.values()
+        if isinstance((value := meta.get("daily_budget")), (int, float))
+        and not isinstance(value, bool)
+    }
     warnings: list[str] = []
     if missing:
         warnings.append(f"missing variants: {', '.join(missing)}")
@@ -164,8 +169,10 @@ def _simulations_for_sort(run_dir: Path, ledger: Any) -> int:
 
 
 def _summary_markdown(suite: Mapping[str, Any]) -> str:
-    fairness = suite.get("fairness") if isinstance(suite.get("fairness"), dict) else {}
-    report = suite.get("report") if isinstance(suite.get("report"), dict) else {}
+    raw_fairness = suite.get("fairness")
+    fairness: dict[str, Any] = raw_fairness if isinstance(raw_fairness, dict) else {}
+    raw_report = suite.get("report")
+    report: dict[str, Any] = raw_report if isinstance(raw_report, dict) else {}
     lines = [
         "# Agent Ablation Suite",
         "",
@@ -174,11 +181,13 @@ def _summary_markdown(suite: Mapping[str, Any]) -> str:
         "",
         "## Variants",
     ]
-    variants = suite.get("variants") if isinstance(suite.get("variants"), dict) else {}
+    raw_variants = suite.get("variants")
+    variants: dict[str, Any] = raw_variants if isinstance(raw_variants, dict) else {}
     for name, payload in variants.items():
         path = payload.get("path") if isinstance(payload, dict) else ""
         lines.append(f"- `{name}` {path}")
-    warnings = fairness.get("warnings") if isinstance(fairness.get("warnings"), list) else []
+    raw_warnings = fairness.get("warnings")
+    warnings = raw_warnings if isinstance(raw_warnings, list) else []
     if warnings:
         lines.extend(["", "## Warnings"])
         lines.extend(f"- {warning}" for warning in warnings)

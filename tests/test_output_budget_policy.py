@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from src.output_evaluation.budget_policy import build_budget_policy_actions
+from wqb_agent_lab.evaluation.output.budget_policy import build_budget_policy_actions
 
 
 class OutputBudgetPolicyTests(unittest.TestCase):

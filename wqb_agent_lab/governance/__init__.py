@@ -1,7 +1,7 @@
 """Side-effect and submission-policy governance boundary."""
 
-from src.side_effect_governance import require_side_effect_capability
-from src.submission_governance import SubmissionPolicyEvaluator
+from wqb_agent_lab.governance.side_effects import require_side_effect_capability
+from wqb_agent_lab.governance.submission import SubmissionPolicyEvaluator
 from .planning import (
     ActionPolicyDecision,
     PlanningPolicyContext,

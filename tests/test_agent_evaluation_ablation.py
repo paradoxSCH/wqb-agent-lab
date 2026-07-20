@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.agent_evaluation import evaluate_ablation, summarize_run_dir
+from wqb_agent_lab.evaluation.agent import evaluate_ablation, summarize_run_dir
 
 
 class AgentEvaluationAblationTests(unittest.TestCase):

@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.diagnosis_policy import evaluate_diagnosis_policies
+from wqb_agent_lab.evaluation.diagnosis_policy import evaluate_diagnosis_policies
 
 
 def main() -> int:

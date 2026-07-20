@@ -6,14 +6,14 @@ from pathlib import Path
 
 import requests
 
-from src.config import load_config
+from wqb_agent_lab.runtime.config import load_config
 from wqb_agent_lab.platform import WQBSession
 from wqb_agent_lab.platform.session import (
     URL_ALPHAS_ALPHAID,
     URL_ALPHAS_ALPHAID_CHECK,
     URL_ALPHAS_ALPHAID_SUBMIT,
 )
-from src.side_effect_governance import SideEffectCapabilityDisabled, require_side_effect_capability
+from wqb_agent_lab.governance.side_effects import SideEffectCapabilityDisabled, require_side_effect_capability
 
 
 def _json_or_none(resp: requests.Response):

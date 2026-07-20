@@ -195,7 +195,10 @@ def _budget_saved_estimate(diagnosis_type: str, item: Mapping[str, Any]) -> int:
 
 
 def _diagnosis_bucket(diagnosis: Mapping[str, Any]) -> str:
-    evidence = diagnosis.get("evidence") if isinstance(diagnosis.get("evidence"), Mapping) else {}
+    raw_evidence = diagnosis.get("evidence")
+    evidence: Mapping[str, Any] = (
+        raw_evidence if isinstance(raw_evidence, Mapping) else {}
+    )
     for key in (
         "self_corr_bucket",
         "sub_universe_bucket",

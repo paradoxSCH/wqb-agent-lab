@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from src.agent_evaluation import select_ablation_candidates, summarize_run_dir, write_ablation_suite, write_evaluation_report
+from wqb_agent_lab.evaluation.agent import select_ablation_candidates, summarize_run_dir, write_ablation_suite, write_evaluation_report
 
 
 def main() -> int:

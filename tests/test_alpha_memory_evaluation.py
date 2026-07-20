@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import unittest
 
-from src.alpha_memory.evaluation import evaluate_memory_runs, evaluate_retrieval_rankings, run_retrieval_benchmark
-from src.alpha_memory.schema import MemoryNode
-from src.alpha_memory.store import SQLiteMemoryStore
+from wqb_agent_lab.memory.core.evaluation import evaluate_memory_runs, evaluate_retrieval_rankings, run_retrieval_benchmark
+from wqb_agent_lab.memory.core.schema import MemoryNode
+from wqb_agent_lab.memory.core.store import SQLiteMemoryStore
 import tempfile
 from pathlib import Path
 

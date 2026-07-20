@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from types import MappingProxyType
 from typing import Any
 
-from src.contracts import ValidationError, validate_contract
+from wqb_agent_lab.contracts import ValidationError, validate_contract
 
 
 def _freeze_json(value: Any) -> Any:

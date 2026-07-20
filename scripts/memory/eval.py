@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from src.alpha_memory.evaluation import evaluate_memory_runs
+from wqb_agent_lab.memory.core.evaluation import evaluate_memory_runs
 
 
 def main() -> int:

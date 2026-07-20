@@ -7,7 +7,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from src.config import Config, SimulationDefaults
+from wqb_agent_lab.runtime.config import Config, SimulationDefaults
 from src.simulator import simulate_batch, simulate_single
 
 
@@ -84,7 +84,7 @@ class SimulatorTests(unittest.TestCase):
         self.capability.stop()
 
     def test_simulate_single_refuses_before_post_when_capability_disabled(self) -> None:
-        from src.side_effect_governance import SideEffectCapabilityDisabled
+        from wqb_agent_lab.governance.side_effects import SideEffectCapabilityDisabled
 
         session = FakeSingleSession(None)
 

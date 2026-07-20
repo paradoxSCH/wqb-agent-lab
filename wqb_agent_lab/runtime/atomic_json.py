@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from src.process_lock import pid_is_running
+from wqb_agent_lab.runtime.process_lock import pid_is_running
 
 
 def atomic_write_json(path: Path, payload: Any) -> None:

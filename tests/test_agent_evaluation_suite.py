@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.agent_evaluation import build_ablation_suite, select_ablation_candidates
+from wqb_agent_lab.evaluation.agent import build_ablation_suite, select_ablation_candidates
 
 
 class AgentEvaluationSuiteTests(unittest.TestCase):
