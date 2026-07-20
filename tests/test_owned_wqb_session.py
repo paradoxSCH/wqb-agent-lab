@@ -207,6 +207,44 @@ class OwnedWQBSessionTests(unittest.TestCase):
         self.assertIs(response, result)
         self.assertEqual(1, request.call_count)
 
+    def test_submission_journal_does_not_replay_read_timeout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            journal = OperationJournal(Path(tmp) / "operations.db")
+            session = WQBSession(
+                ("researcher@example.com", "secret"),
+                auto_authenticate=False,
+                operation_journal=journal,
+                run_id="submission-run",
+            )
+            session._authenticated = True
+
+            with patch.object(requests.Session, "request", side_effect=requests.ReadTimeout("read")) as request:
+                with self.assertRaises(SideEffectUncertainError) as raised:
+                    session.submit_alpha("A1", max_tries=5)
+
+            self.assertEqual(1, request.call_count)
+            self.assertEqual("submission.create", raised.exception.record.operation_type)
+            self.assertEqual({"alpha_id": "A1"}, raised.exception.record.payload)
+            self.assertEqual("read_timeout_after_send", raised.exception.record.reason)
+
+    def test_submission_server_error_is_ambiguous_and_not_replayed(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            journal = OperationJournal(Path(tmp) / "operations.db")
+            session = WQBSession(
+                ("researcher@example.com", "secret"),
+                auto_authenticate=False,
+                operation_journal=journal,
+                run_id="submission-run",
+            )
+            session._authenticated = True
+
+            with patch.object(requests.Session, "request", return_value=FakeResponse(503, {})) as request:
+                response = session.submit_alpha("A1", max_tries=5)
+
+            self.assertEqual(503, response.status_code)
+            self.assertEqual(1, request.call_count)
+            self.assertEqual("unknown_commit", journal.unresolved("submission.create")[0].outcome)
+
     def test_concurrent_simulate_enters_transport_in_parallel(self) -> None:
         barrier = threading.Barrier(3, timeout=2.0)
 

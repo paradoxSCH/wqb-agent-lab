@@ -10,12 +10,13 @@ from unittest.mock import patch
 from scripts.submit.submission_worker import BrainSubmissionClient, SubmissionWorker, WorkerLock, enqueue_submission_jobs
 from src.wqb.check_readiness import REQUIRED_SUBMISSION_CHECK_NAMES
 from src.wqb.models import WQBAlphaDetail, WQBSubmitResult
+from wqb_agent_lab.runtime import OperationJournal, SideEffectUncertainError
 
 
 class FakeClient:
     def __init__(self) -> None:
         self.checks: list[dict[str, object]] = []
-        self.submits: list[dict[str, object]] = []
+        self.submits: list[dict[str, object] | BaseException] = []
         self.details: list[dict[str, object]] = []
         self.submitted: list[str] = []
 
@@ -23,7 +24,10 @@ class FakeClient:
         return self.checks.pop(0)
 
     def submit(self, alpha_id: str) -> dict[str, object]:
-        return self.submits.pop(0)
+        result = self.submits.pop(0)
+        if isinstance(result, BaseException):
+            raise result
+        return result
 
     def detail(self, alpha_id: str) -> dict[str, object]:
         return self.details.pop(0)
@@ -386,6 +390,119 @@ class SubmissionWorkerTests(unittest.TestCase):
             state = self._read_json(run_dir / "submission_state.json")
             self.assertEqual(state["jobs"][0]["status"], "submitted_confirmed")
             self.assertEqual(client.submitted, ["A1"])
+
+    def test_worker_recovers_started_operation_after_hard_interruption_without_posting(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            self._write_json(run_dir / "submission_backlog.json", [{"alpha_id": "A1"}])
+            journal = OperationJournal(run_dir / "operations.db")
+            operation = journal.begin("submission.create", {"alpha_id": "A1"}, run_id=run_dir.name)
+            client = FakeClient()
+            client.details.append(
+                {"status_code": 200, "status": "ACTIVE", "dateSubmitted": "2026-07-20T00:00:00Z"}
+            )
+
+            result = SubmissionWorker(
+                run_dir,
+                client=client,
+                operation_journal=journal,
+                sleep=lambda _seconds: None,
+            ).run_once()
+
+            self.assertEqual(1, result["submitted_confirmed_count"])
+            self.assertEqual([], client.checks)
+            self.assertEqual([], client.submits)
+            self.assertEqual("accepted", journal.get(operation.operation_id).outcome)
+            state = self._read_json(run_dir / "submission_state.json")
+            self.assertEqual("submitted_alpha_detail", state["jobs"][0]["reconciliation_evidence"])
+
+    def test_worker_reconciles_lost_submit_response_with_positive_detail(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            self._write_json(run_dir / "submission_backlog.json", [{"alpha_id": "A1"}])
+            journal = OperationJournal(run_dir / "operations.db")
+
+            class LostResponseClient(FakeClient):
+                operation_id = ""
+
+                def submit(self, alpha_id: str) -> dict[str, object]:
+                    operation = journal.begin(
+                        "submission.create",
+                        {"alpha_id": alpha_id},
+                        run_id=run_dir.name,
+                    )
+                    self.operation_id = operation.operation_id
+                    uncertain = journal.finish(
+                        operation.operation_id,
+                        "unknown_commit",
+                        reason="read_timeout_after_send",
+                    )
+                    raise SideEffectUncertainError(uncertain)
+
+            client = LostResponseClient()
+            client.checks.extend([complete_check_response(), complete_check_response()])
+            client.details.append(
+                {"status_code": 200, "status": "SUBMITTED", "dateSubmitted": "2026-07-20T00:00:00Z"}
+            )
+
+            result = SubmissionWorker(
+                run_dir,
+                client=client,
+                operation_journal=journal,
+                sleep=lambda _seconds: None,
+            ).run_once()
+
+            self.assertEqual(1, result["submitted_confirmed_count"])
+            self.assertEqual([], client.submits)
+            self.assertEqual("accepted", journal.get(client.operation_id).outcome)
+
+    def test_worker_defers_unknown_commit_without_positive_evidence_and_never_reposts(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            self._write_json(run_dir / "submission_backlog.json", [{"alpha_id": "A1"}])
+            journal = OperationJournal(run_dir / "operations.db")
+            operation = journal.begin("submission.create", {"alpha_id": "A1"}, run_id=run_dir.name)
+            journal.finish(operation.operation_id, "unknown_commit", reason="read_timeout_after_send")
+            client = FakeClient()
+            client.details.append({"status_code": 200, "status": "UNSUBMITTED", "dateSubmitted": None})
+            worker = SubmissionWorker(
+                run_dir,
+                client=client,
+                operation_journal=journal,
+                reconciliation_retry_seconds=3600,
+                sleep=lambda _seconds: None,
+            )
+
+            first = worker.run_once()
+            second = worker.run_once()
+
+            self.assertEqual(1, first["submission_reconciliation_pending_count"])
+            self.assertEqual(1, second["submission_reconciliation_pending_count"])
+            self.assertEqual([], client.checks)
+            self.assertEqual([], client.submits)
+            self.assertEqual(1, journal.get(operation.operation_id).reconcile_attempts)
+
+    def test_worker_escalates_unknown_commit_to_manual_review_without_reposting(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            run_dir = Path(tmp)
+            self._write_json(run_dir / "submission_backlog.json", [{"alpha_id": "A1"}])
+            journal = OperationJournal(run_dir / "operations.db")
+            operation = journal.begin("submission.create", {"alpha_id": "A1"}, run_id=run_dir.name)
+            journal.finish(operation.operation_id, "unknown_commit", reason="server_error_503")
+            client = FakeClient()
+            client.details.append({"status_code": 200, "status": "UNSUBMITTED", "dateSubmitted": None})
+
+            result = SubmissionWorker(
+                run_dir,
+                client=client,
+                operation_journal=journal,
+                reconciliation_max_attempts=1,
+                sleep=lambda _seconds: None,
+            ).run_once()
+
+            self.assertEqual(1, result["manual_review_or_platform_lag_count"])
+            self.assertEqual([], client.submits)
+            self.assertEqual("manual_review", journal.get(operation.operation_id).outcome)
 
     def test_brain_submission_client_maps_normalized_submit_result(self) -> None:
         client = BrainSubmissionClient(wqb_client=FakeWQBClient())

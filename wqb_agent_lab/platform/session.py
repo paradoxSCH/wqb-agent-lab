@@ -382,6 +382,82 @@ class WQBSession(requests.Session):
         assert response is not None
         return response
 
+    def submit_alpha(
+        self,
+        alpha_id: str,
+        *args: Any,
+        max_tries: int = 3,
+        delay_throttled: float = 5.0,
+        **kwargs: Any,
+    ) -> Response:
+        """Submit one Alpha without replaying an ambiguous POST.
+
+        Authentication and throttle responses prove non-acceptance and may be retried.
+        Transport loss and server errors can occur after the platform commits the write,
+        so they are journaled for read-only reconciliation instead.
+        """
+        kwargs.pop("log", None)
+        kwargs.pop("retry_log", None)
+        attempts = max(1, int(max_tries))
+        response: Response | None = None
+        payload = {"alpha_id": str(alpha_id)}
+        self.last_operation_record = None
+        for attempt in range(1, attempts + 1):
+            journal = self.operation_journal
+            operation = (
+                journal.begin("submission.create", payload, run_id=self.run_id)
+                if journal is not None
+                else None
+            )
+            try:
+                response = self.request(
+                    "POST",
+                    URL_ALPHAS_ALPHAID_SUBMIT.format(alpha_id),
+                    *args,
+                    max_tries=1,
+                    **kwargs,
+                )
+            except requests.RequestException as exc:
+                outcome, reason = classify_transport_exception(exc)
+                if operation is not None and journal is not None:
+                    self.last_operation_record = journal.finish(
+                        operation.operation_id,
+                        outcome,
+                        reason=reason,
+                    )
+                if outcome == "not_sent_retryable" and attempt < attempts:
+                    self.sleep(max(0.0, delay_throttled))
+                    continue
+                if outcome == "unknown_commit" and self.last_operation_record is not None:
+                    raise SideEffectUncertainError(self.last_operation_record, exc) from exc
+                raise
+
+            status_code = int(response.status_code)
+            if status_code in {401, 429}:
+                outcome, reason = "not_accepted_retryable", f"http_{status_code}"
+            elif 200 <= status_code < 400:
+                outcome, reason = "accepted", f"http_{status_code}"
+            elif status_code == 408:
+                outcome, reason = "unknown_commit", "request_timeout_408"
+            elif status_code >= 500:
+                outcome, reason = "unknown_commit", f"server_error_{status_code}"
+            else:
+                outcome, reason = "rejected", f"http_{status_code}"
+            if operation is not None and journal is not None:
+                self.last_operation_record = journal.finish(
+                    operation.operation_id,
+                    outcome,
+                    reason=reason,
+                    status_code=status_code,
+                    remote_ref=f"/alphas/{alpha_id}",
+                )
+            if status_code not in {401, 429} or attempt >= attempts:
+                return response
+            delay = _retry_after_seconds(response)
+            self.sleep(delay if delay is not None else max(0.0, delay_throttled))
+        assert response is not None
+        return response
+
     def filter_alphas_limited(
         self,
         *args: Any,
@@ -544,9 +620,14 @@ class WQBSession(requests.Session):
         max_tries: int | Iterable[Any] = range(600),
         **kwargs: Any,
     ) -> Response | None:
-        kwargs.pop("log", None)
-        kwargs.pop("retry_log", None)
-        return await self._retry_after("POST", URL_ALPHAS_ALPHAID_SUBMIT.format(alpha_id), *args, max_tries=max_tries, **kwargs)
+        attempts = len(tuple(_attempts(max_tries)))
+        return await asyncio.to_thread(
+            self.submit_alpha,
+            alpha_id,
+            *args,
+            max_tries=attempts,
+            **kwargs,
+        )
 
     async def _retry_after(
         self,

@@ -188,6 +188,25 @@ class WQBClientSimulationTests(unittest.TestCase):
 
 
 class WQBClientSubmissionTests(unittest.TestCase):
+    def test_submit_read_timeout_surfaces_durable_unknown_commit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            journal = OperationJournal(Path(tmp) / "operations.db")
+            session = WQBSession(
+                ("researcher@example.com", "secret"),
+                auto_authenticate=False,
+                operation_journal=journal,
+                run_id="submission-run",
+            )
+            session._authenticated = True
+            client = WQBClient(session=session, sleep=lambda _: None)
+
+            with patch.object(requests.Session, "request", side_effect=requests.ReadTimeout("read")) as request:
+                with self.assertRaises(SideEffectUncertainError):
+                    client.submit_alpha("A1")
+
+            self.assertEqual(1, request.call_count)
+            self.assertEqual("unknown_commit", journal.unresolved("submission.create")[0].outcome)
+
     def test_submit_201_still_unsubmitted_is_not_confirmed(self) -> None:
         session = FakeSession([
             FakeResponse(201, None),

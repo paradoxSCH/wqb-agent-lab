@@ -2790,13 +2790,21 @@ class KimiDailyWorkflow:
         payload = read_json(backlog_path, [])
         if not payload:
             return None
-        from scripts.submit.submission_worker import enqueue_submission_jobs
-
-        state = enqueue_submission_jobs(self.run_dir)
-        queued = int((state.get("summary") or {}).get("queued") or 0)
-        pending = int((state.get("summary") or {}).get("pending_confirmation_count") or 0)
-        throttled = int((state.get("summary") or {}).get("throttled_count") or 0)
-        active_count = queued + pending + throttled
+        state = self.run_submission_stage()
+        summary = state.get("summary") or {}
+        active_count = sum(
+            int(summary.get(key) or 0)
+            for key in (
+                "queued",
+                "live_checking_count",
+                "waiting_for_checks_count",
+                "pending_confirmation_count",
+                "accepted_but_unconfirmed_count",
+                "throttled_count",
+                "submission_unknown_commit_count",
+                "submission_reconciliation_pending_count",
+            )
+        )
         if active_count <= 0:
             return "submission worker queue has no active jobs"
         from src.side_effect_governance import evaluate_side_effect_capability
@@ -2836,6 +2844,48 @@ class KimiDailyWorkflow:
         except Exception as exc:
             log_path.write_text(str(exc), encoding="utf-8")
             return f"submission worker launch failed: {exc}"
+
+    def run_submission_stage(
+        self,
+        *,
+        now: datetime | None = None,
+    ) -> dict[str, Any]:
+        """Checkpoint durable submission intent before delegating remote writes."""
+        from scripts.submit.submission_worker import enqueue_submission_jobs
+
+        now = now or datetime.now()
+        backlog_path = self.run_dir / "submission_backlog.json"
+        state: dict[str, Any] | None = None
+
+        def execute() -> StageOutcome:
+            nonlocal state
+            state = enqueue_submission_jobs(self.run_dir, now=now)
+            summary = dict(state.get("summary") or {})
+            return StageOutcome.create(
+                artifacts=(relative_path(self.run_dir / "submission_state.json", self.root),),
+                output={"summary": summary},
+                extensions={
+                    "remote_side_effects": False,
+                    "remote_execution_delegated_to_journaled_worker": True,
+                },
+            )
+
+        if self.dry_run:
+            return {"jobs": [], "summary": {}}
+        StageRunner(self.stage_checkpoint_store).run(
+            run_id=self.run_tag,
+            stage_id="submission",
+            input_digest=self._local_stage_input_digest(
+                {"run_tag": self.run_tag},
+                [backlog_path] if backlog_path.is_file() else [],
+            ),
+            execute=execute,
+            replay_policy="safe",
+            started_at=now,
+        )
+        if state is None:
+            raise RuntimeError("submission stage completed without queue state")
+        return state
 
     def collect_submit_ready(self) -> list[dict[str, Any]]:
         submitted_alpha_ids, submitted_expressions = self._submitted_registry()

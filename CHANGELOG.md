@@ -37,6 +37,8 @@ The project follows Semantic Versioning after the first public release. While th
 - Replay-safe diagnosis and triage stages with causal input digests, deterministic
   timestamps, golden-path parity, and preservation of novel candidate fields through
   advisory routing.
+- Durable submission-intent checkpoints and evidence-first recovery for lost responses or
+  hard worker interruptions, preventing ambiguous submission POST replay.
 
 ## [0.1.1-alpha] - 2026-07-14
 
