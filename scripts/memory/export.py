@@ -1,7 +1,8 @@
+"""Export alpha-memory data."""
+
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 import sqlite3
 import sys
@@ -52,15 +53,18 @@ def _store_or_error(value: str | None) -> SQLiteMemoryStore | None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run alpha memory integrity checks.")
+    parser = argparse.ArgumentParser(description="Export local alpha memory to JSONL.")
     parser.add_argument("--db", default=None)
+    parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
     store = _store_or_error(args.db)
     if store is None:
         return 2
 
-    print(json.dumps(store.integrity_check(), ensure_ascii=False, sort_keys=True))
+    output_path = Path(args.out).expanduser()
+    store.export_jsonl(output_path)
+    print(output_path)
     return 0
 
 

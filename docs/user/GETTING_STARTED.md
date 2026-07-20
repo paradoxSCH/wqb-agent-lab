@@ -69,7 +69,7 @@ uv run python -m scripts.dev check
 `full` bootstrap 会构建 React 工作台。启动后可以在浏览器维护预算与行为边界，并查看运行、记忆和评估状态：
 
 ```powershell
-uv run python -m scripts.daily_workflow_dashboard --host 127.0.0.1 --port 8765
+uv run python -m scripts.run.dashboard --host 127.0.0.1 --port 8765
 ```
 
 如果工作台返回 503，运行 `npm run build --prefix packages/wqb-agent-ui`，再刷新页面。

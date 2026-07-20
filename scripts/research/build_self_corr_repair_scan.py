@@ -1,3 +1,5 @@
+"""Build a self-correlation repair scan."""
+
 from __future__ import annotations
 
 import argparse

@@ -1,6 +1,9 @@
+"""Check alpha-memory integrity."""
+
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 import sqlite3
 import sys
@@ -51,7 +54,7 @@ def _store_or_error(value: str | None) -> SQLiteMemoryStore | None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Rebuild alpha memory search indexes.")
+    parser = argparse.ArgumentParser(description="Run alpha memory integrity checks.")
     parser.add_argument("--db", default=None)
     args = parser.parse_args()
 
@@ -59,8 +62,7 @@ def main() -> int:
     if store is None:
         return 2
 
-    store.rebuild_indexes()
-    print("rebuilt")
+    print(json.dumps(store.integrity_check(), ensure_ascii=False, sort_keys=True))
     return 0
 
 

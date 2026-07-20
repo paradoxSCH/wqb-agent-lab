@@ -33,7 +33,7 @@ class AlphaMemoryCliTests(unittest.TestCase):
             )
 
             ingest = self._run_module(
-                "scripts.memory_ingest",
+                "scripts.memory.ingest",
                 "--runs-root",
                 str(runs_root),
                 "--db",
@@ -43,7 +43,7 @@ class AlphaMemoryCliTests(unittest.TestCase):
             self.assertIn("edges=", ingest.stdout)
 
             query = self._run_module(
-                "scripts.memory_query",
+                "scripts.memory.query",
                 "--query",
                 "daily 20260602",
                 "--db",
@@ -51,14 +51,14 @@ class AlphaMemoryCliTests(unittest.TestCase):
             )
             self.assertIn("daily-20260602", query.stdout)
 
-            integrity = self._run_module("scripts.memory_integrity_check", "--db", str(db_path))
+            integrity = self._run_module("scripts.memory.integrity_check", "--db", str(db_path))
             self.assertIn("ok", integrity.stdout)
 
-            rebuild = self._run_module("scripts.memory_rebuild_indexes", "--db", str(db_path))
+            rebuild = self._run_module("scripts.memory.rebuild_indexes", "--db", str(db_path))
             self.assertEqual(rebuild.stdout.strip(), "rebuilt")
 
             export = self._run_module(
-                "scripts.memory_export",
+                "scripts.memory.export",
                 "--db",
                 str(db_path),
                 "--out",
@@ -69,7 +69,7 @@ class AlphaMemoryCliTests(unittest.TestCase):
 
     def test_hypothesis_ledger_cli_validates_complete_draft(self) -> None:
         result = self._run_module(
-            "scripts.hypothesis_ledger",
+            "scripts.research.hypothesis_ledger",
             "--run",
             "daily-20260602",
             "--behavior-thesis",
@@ -93,7 +93,7 @@ class AlphaMemoryCliTests(unittest.TestCase):
 
     def test_memory_eval_cli_outputs_report_json(self) -> None:
         result = self._run_module(
-            "scripts.memory_eval",
+            "scripts.memory.eval",
             "--from",
             "2026-06-01",
             "--to",
@@ -122,7 +122,7 @@ class AlphaMemoryCliTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmp:
             cwd = Path(tmp)
-            result = self._run_module("scripts.memory_integrity_check", cwd=cwd)
+            result = self._run_module("scripts.memory.integrity_check", cwd=cwd)
 
             self.assertIn("ok", result.stdout)
             self.assertFalse((cwd / ".local" / "data" / "memory" / "alpha_memory.db").exists())
@@ -132,7 +132,7 @@ class AlphaMemoryCliTests(unittest.TestCase):
             missing_db = Path(tmp) / "missing" / "alpha_memory.db"
 
             result = self._run_module(
-                "scripts.memory_query",
+                "scripts.memory.query",
                 "--query",
                 "daily 20260602",
                 "--db",
@@ -152,7 +152,7 @@ class AlphaMemoryCliTests(unittest.TestCase):
             export_path = root / "exports" / "memory.jsonl"
 
             result = self._run_module(
-                "scripts.memory_export",
+                "scripts.memory.export",
                 "--db",
                 str(missing_db),
                 "--out",
@@ -170,7 +170,7 @@ class AlphaMemoryCliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             missing_db = Path(tmp) / "missing" / "alpha_memory.db"
 
-            for module in ("scripts.memory_integrity_check", "scripts.memory_rebuild_indexes"):
+            for module in ("scripts.memory.integrity_check", "scripts.memory.rebuild_indexes"):
                 with self.subTest(module=module):
                     result = self._run_module(module, "--db", str(missing_db), check=False)
 
@@ -186,10 +186,10 @@ class AlphaMemoryCliTests(unittest.TestCase):
             empty_db.touch()
             export_path = root / "exports" / "memory.jsonl"
             cases = [
-                ("scripts.memory_query", ["--query", "daily 20260602", "--db", str(empty_db)]),
-                ("scripts.memory_integrity_check", ["--db", str(empty_db)]),
-                ("scripts.memory_export", ["--db", str(empty_db), "--out", str(export_path)]),
-                ("scripts.memory_rebuild_indexes", ["--db", str(empty_db)]),
+                ("scripts.memory.query", ["--query", "daily 20260602", "--db", str(empty_db)]),
+                ("scripts.memory.integrity_check", ["--db", str(empty_db)]),
+                ("scripts.memory.export", ["--db", str(empty_db), "--out", str(export_path)]),
+                ("scripts.memory.rebuild_indexes", ["--db", str(empty_db)]),
             ]
 
             for module, args in cases:

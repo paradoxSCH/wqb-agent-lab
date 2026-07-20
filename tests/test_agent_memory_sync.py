@@ -91,7 +91,7 @@ class AgentMemorySyncTests(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "scripts.sync_agent_memory",
+                    "scripts.memory.sync",
                     "--workspace-root",
                     str(root),
                     "--run-dir",

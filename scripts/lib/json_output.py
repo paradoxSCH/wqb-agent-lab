@@ -1,4 +1,4 @@
-"""Portable JSON output for machine-readable command interfaces."""
+"""Portable JSON-output helpers for machine-readable commands."""
 
 from __future__ import annotations
 

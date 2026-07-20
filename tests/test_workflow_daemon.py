@@ -248,10 +248,10 @@ class WorkflowDaemonTests(unittest.TestCase):
             )
             dashboard_spec = ProcessSpec(
                 name="dashboard",
-                command=["python", "-m", "scripts.daily_workflow_dashboard"],
+                command=["python", "-m", "scripts.run.dashboard"],
                 pid_file=Path(".dashboard.pid"),
                 log_file=Path(".local/logs/dashboard.log"),
-                expected_command_tokens=["scripts.daily_workflow_dashboard"],
+                expected_command_tokens=["scripts.run.dashboard"],
             )
             (root / workflow_spec.pid_file).write_text("111", encoding="utf-8")
             (root / dashboard_spec.pid_file).write_text("222", encoding="utf-8")
@@ -320,10 +320,10 @@ class WorkflowDaemonTests(unittest.TestCase):
             root = Path(tmp)
             spec = ProcessSpec(
                 name="dashboard",
-                command=["python", "-m", "scripts.daily_workflow_dashboard"],
+                command=["python", "-m", "scripts.run.dashboard"],
                 pid_file=Path(".dashboard.pid"),
                 log_file=Path(".local/logs/dashboard.log"),
-                expected_command_tokens=["scripts.daily_workflow_dashboard"],
+                expected_command_tokens=["scripts.run.dashboard"],
             )
             (root / spec.pid_file).write_text("789", encoding="utf-8")
 
@@ -430,7 +430,7 @@ class WorkflowDaemonTests(unittest.TestCase):
             updated = json.loads(ledger_path.read_text(encoding="utf-8"))
             self.assertTrue(result.evaluation_ran)
             self.assertEqual(len(calls), 3)
-            self.assertIn("scripts.evaluate_agent_ablation", calls[0])
+            self.assertIn("scripts.evaluation.agent_ablation", calls[0])
             self.assertIn("daemon_post_complete_evaluation_at", updated)
             self.assertEqual(notices[0]["run_tag"], "daily-run")
 
@@ -503,9 +503,9 @@ class WorkflowDaemonTests(unittest.TestCase):
 
             modules = [" ".join(call) for call in calls]
             self.assertTrue(result.evaluation_ran)
-            self.assertTrue(any("scripts.evaluate_agent_ablation" in item for item in modules))
-            self.assertTrue(any("scripts.evaluate_output_artifacts" in item for item in modules))
-            self.assertTrue(any("scripts.evaluate_policy_effectiveness" in item for item in modules))
+            self.assertTrue(any("scripts.evaluation.agent_ablation" in item for item in modules))
+            self.assertTrue(any("scripts.evaluation.output_artifacts" in item for item in modules))
+            self.assertTrue(any("scripts.evaluation.policy_effectiveness" in item for item in modules))
             guardrail = json.loads((run_dir / "daemon_guardrail_state.json").read_text(encoding="utf-8"))
             updated = json.loads(ledger_path.read_text(encoding="utf-8"))
             self.assertTrue(guardrail["pause_next_run"])

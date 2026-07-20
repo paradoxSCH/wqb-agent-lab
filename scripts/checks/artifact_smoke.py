@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from scripts.dev import ProcessResult, Stage
-from scripts.json_output import write_json_line
+from scripts.lib.json_output import write_json_line
 
 
 @dataclass(frozen=True)

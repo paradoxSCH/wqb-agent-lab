@@ -1,3 +1,5 @@
+"""Synchronize run artifacts into governed alpha memory."""
+
 from __future__ import annotations
 
 import argparse

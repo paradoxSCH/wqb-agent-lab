@@ -18,11 +18,16 @@ wqb-agent-lab/
 |-- scripts/
 |   |-- bootstrap.ps1|sh        全新环境入口
 |   |-- dev.py                  doctor/check/test/build/release-check
+|   |-- evaluation/            评估、ablation 与 policy feedback 命令
+|   |-- lib/                    CLI 共享帮助函数，不是运行入口
+|   |-- memory/                 记忆导入、查询、同步、完整性与评估命令
+|   |-- registry/               submitted alpha registry 同步命令
+|   |-- research/               候选、proxy、repair 与 hypothesis 命令
 |   |-- run/                    workflow、daemon、scan 与 stop 运行入口
 |   |-- workers/                evaluation、memory、registry、submission worker
 |   |-- submit/                 提交队列与 worker 实现
 |   |-- checks/                 制品、供应链和公开快照检查
-|   `-- maintenance/            显式维护任务，不属于日常入口
+|   `-- maintenance/            仓库与本地状态维护任务
 |-- src/
 |   |-- wqb_agent_lab/          稳定产品命名空间
 |-- wqb_agent_lab/              安装后使用的标准公开命名空间适配层

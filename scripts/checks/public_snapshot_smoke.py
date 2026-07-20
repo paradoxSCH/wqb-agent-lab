@@ -14,7 +14,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from scripts.checks.artifact_smoke import select_wheel, smoke_wheel
-from scripts.json_output import write_json_line
+from scripts.lib.json_output import write_json_line
 from scripts.release.export_public_snapshot import export_public_snapshot
 
 

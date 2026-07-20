@@ -117,7 +117,7 @@ class AgentEvaluationSuiteTests(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "scripts.evaluate_agent_ablation",
+                    "scripts.evaluation.agent_ablation",
                     "--auto-runs-root",
                     str(runs_root),
                     "--suite-output-dir",

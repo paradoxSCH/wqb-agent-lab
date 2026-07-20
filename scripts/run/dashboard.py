@@ -1,3 +1,5 @@
+"""Serve the read-only daily workflow dashboard."""
+
 from __future__ import annotations
 
 import argparse

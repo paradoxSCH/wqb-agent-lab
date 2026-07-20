@@ -169,7 +169,7 @@ class BehavioralCandidateGenerationTests(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "scripts.build_behavioral_candidate_generation",
+                    "scripts.research.build_behavioral_candidate_generation",
                     "--fields",
                     str(fields_path),
                     "--output-dir",
@@ -225,7 +225,7 @@ class BehavioralCandidateGenerationTests(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "scripts.build_behavioral_candidate_generation",
+                    "scripts.research.build_behavioral_candidate_generation",
                     "--fields",
                     str(fields_path),
                     "--output-dir",

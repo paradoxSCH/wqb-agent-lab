@@ -15,7 +15,7 @@ import sys
 from typing import Any, Sequence, TextIO
 
 from scripts.checks.release_audit import audit_candidates
-from scripts.json_output import write_json_line
+from scripts.lib.json_output import write_json_line
 
 
 @dataclass(frozen=True, slots=True)

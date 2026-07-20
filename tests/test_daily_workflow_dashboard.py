@@ -9,7 +9,7 @@ from pathlib import Path
 
 import requests
 
-from scripts.daily_workflow_dashboard import DashboardHandler
+from scripts.run.dashboard import DashboardHandler
 from src.daily_workflow_dashboard import build_dashboard_model, build_run_snapshot, collect_evaluation_reports, collect_run_snapshots
 
 

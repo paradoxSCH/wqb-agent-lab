@@ -90,7 +90,7 @@ class DiagnosisPolicyTests(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "scripts.evaluate_diagnosis_policies",
+                    "scripts.evaluation.diagnosis_policies",
                     "--run-dir",
                     str(run_dir),
                 ],

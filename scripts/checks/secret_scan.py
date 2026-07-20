@@ -10,7 +10,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from scripts.json_output import write_json_line
+from scripts.lib.json_output import write_json_line
 
 
 GITLEAKS_GO_MODULE = "github.com/zricethezav/gitleaks/v8@v8.30.1"

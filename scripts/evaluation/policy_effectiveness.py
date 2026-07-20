@@ -1,3 +1,5 @@
+"""Evaluate research-policy effectiveness."""
+
 from __future__ import annotations
 
 import argparse

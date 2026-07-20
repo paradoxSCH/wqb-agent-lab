@@ -13,7 +13,7 @@ from importlib.metadata import distributions
 from pathlib import Path
 from typing import Any, Mapping
 
-from scripts.json_output import write_json_line
+from scripts.lib.json_output import write_json_line
 
 
 _CLASSIFIER_LICENSES = {
