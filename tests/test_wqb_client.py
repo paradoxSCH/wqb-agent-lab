@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 import unittest
+import tempfile
+from pathlib import Path
 from typing import Any
+from unittest.mock import patch
+
+import requests
 
 from src.wqb.client import WQBClient
 from src.wqb.models import WQBAlphaDetail, is_submitted_status
+from wqb_agent_lab.platform.session import WQBSession
+from wqb_agent_lab.runtime import OperationJournal, SideEffectUncertainError
 
 
 class FakeResponse:
@@ -89,6 +96,54 @@ class WQBModelTests(unittest.TestCase):
 
 
 class WQBClientSimulationTests(unittest.TestCase):
+    def test_run_simulation_journals_read_timeout_without_replaying_post(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            journal = OperationJournal(Path(tmp) / "operations.db")
+            session = WQBSession(
+                ("researcher@example.com", "secret"),
+                auto_authenticate=False,
+                operation_journal=journal,
+                run_id="run-uncertain",
+            )
+            session._authenticated = True
+            client = WQBClient(session=session, sleep=lambda _seconds: None)
+
+            with patch.object(requests.Session, "request", side_effect=requests.ReadTimeout("read")) as request:
+                with self.assertRaises(SideEffectUncertainError):
+                    client.run_simulation(
+                        {"type": "REGULAR", "settings": {}, "regular": "rank(close)"},
+                        max_create_attempts=4,
+                    )
+
+            self.assertEqual(1, request.call_count)
+            self.assertEqual(1, len(journal.unresolved("simulation.create")))
+
+    def test_run_simulation_treats_success_without_location_as_unknown_commit(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            journal = OperationJournal(Path(tmp) / "operations.db")
+            session = WQBSession(
+                ("researcher@example.com", "secret"),
+                auto_authenticate=False,
+                operation_journal=journal,
+                run_id="run-missing-location",
+            )
+            session._authenticated = True
+            client = WQBClient(session=session, sleep=lambda _seconds: None)
+
+            with patch.object(
+                requests.Session,
+                "request",
+                return_value=FakeResponse(201, {}),
+            ) as request:
+                with self.assertRaises(SideEffectUncertainError) as raised:
+                    client.run_simulation(
+                        {"type": "REGULAR", "settings": {}, "regular": "rank(close)"},
+                        max_create_attempts=4,
+                    )
+
+            self.assertEqual(1, request.call_count)
+            self.assertEqual("success_without_location", raised.exception.record.reason)
+
     def test_run_simulation_retries_throttled_creation(self) -> None:
         session = FakeSession(
             [

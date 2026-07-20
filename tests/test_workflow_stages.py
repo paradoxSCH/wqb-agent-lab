@@ -118,6 +118,41 @@ class WorkflowStageTests(unittest.TestCase):
 
             self.assertFalse(called)
 
+    def test_non_replay_safe_stage_resumes_only_after_positive_reconciliation(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            store = StageCheckpointStore(Path(tmp))
+            store.write(
+                StageResult.create(
+                    run_id="run-side-effect",
+                    stage_id="simulation",
+                    attempt_id="unknown-commit",
+                    attempt_number=1,
+                    status="running",
+                    started_at="2026-07-20T12:00:00",
+                    completed_at=None,
+                )
+            )
+            reconciled: list[str] = []
+            runner = StageRunner(
+                store,
+                clock=lambda: datetime(2026, 7, 20, 12, 1),
+                attempt_ids=lambda: "resumed-after-reconcile",
+            )
+
+            result = runner.run(
+                run_id="run-side-effect",
+                stage_id="simulation",
+                input_digest="request-digest",
+                replay_policy="reconcile",
+                reconcile=lambda previous: reconciled.append(previous.attempt_id) or True,
+                execute=lambda: StageOutcome.create(output={"replayed_posts": 0}),
+            )
+
+            self.assertEqual(["unknown-commit"], reconciled)
+            self.assertEqual("completed", result.status)
+            self.assertEqual(2, result.attempt_number)
+            self.assertTrue(result.extensions["reconciled_interrupted_attempt"])
+
     def test_failure_checkpoint_does_not_replace_original_exception(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             store = StageCheckpointStore(Path(tmp))

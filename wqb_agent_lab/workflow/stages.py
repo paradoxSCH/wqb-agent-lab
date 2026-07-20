@@ -251,6 +251,7 @@ class StageRunner:
         execute: Callable[[], StageOutcome],
         replay_policy: ReplayPolicy,
         started_at: datetime | None = None,
+        reconcile: Callable[[StageResult], bool] | None = None,
     ) -> StageResult:
         previous = self.store.load(stage_id)
         if previous is not None and previous.run_id != run_id:
@@ -258,9 +259,10 @@ class StageRunner:
                 f"stage checkpoint run id mismatch: expected {run_id}, found {previous.run_id}"
             )
         if previous is not None and previous.status == "running" and replay_policy == "reconcile":
-            raise StageInterruptionRequiresReconciliation(
-                f"stage {stage_id} has an interrupted attempt requiring reconciliation: {previous.attempt_id}"
-            )
+            if reconcile is None or not reconcile(previous):
+                raise StageInterruptionRequiresReconciliation(
+                    f"stage {stage_id} has an interrupted attempt requiring reconciliation: {previous.attempt_id}"
+                )
         started = started_at or self.clock()
         attempt_number = (previous.attempt_number if previous is not None else 0) + 1
         attempt_id = self.attempt_ids()
@@ -268,6 +270,11 @@ class StageRunner:
             "replay_policy": replay_policy,
             "resumed_from_attempt_id": (
                 previous.attempt_id if previous is not None and previous.status == "running" else ""
+            ),
+            "reconciled_interrupted_attempt": bool(
+                previous is not None
+                and previous.status == "running"
+                and replay_policy == "reconcile"
             ),
         }
         running = StageResult.create(

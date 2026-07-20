@@ -42,6 +42,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import copy
+import hashlib
 import json
 import os
 import re
@@ -50,6 +51,12 @@ from pathlib import Path
 
 from src.side_effect_governance import require_side_effect_capability
 from wqb_agent_lab.platform import WQBClient, evaluate_check_snapshot
+from wqb_agent_lab.runtime.operations import SideEffectUncertainError
+from wqb_agent_lab.runtime.simulation_reconciliation import (
+    SimulationReconciler,
+    SimulationReconciliationReport,
+    SimulationResultBinding,
+)
 
 
 def is_pass(metrics: dict, checks: list[dict] | None = None) -> bool:
@@ -128,8 +135,15 @@ def expand_param_sweeps(param_sweeps: dict | None) -> list[dict]:
     return candidates
 
 
-async def run_scan(config_path: str, cli_continue_on_pass: bool = False, max_concurrency: int | None = None) -> None:
-    require_side_effect_capability("simulation")
+async def run_scan(
+    config_path: str,
+    cli_continue_on_pass: bool = False,
+    max_concurrency: int | None = None,
+    *,
+    reconcile_only: bool = False,
+) -> SimulationReconciliationReport | None:
+    if not reconcile_only:
+        require_side_effect_capability("simulation")
     with open(config_path, "r", encoding="utf-8") as f:
         scan_cfg = json.load(f)
 
@@ -175,11 +189,57 @@ async def run_scan(config_path: str, cli_continue_on_pass: bool = False, max_con
 
     if not candidates:
         print("No candidates defined in config.")
-        return
+        return None
 
     concurrency = max(1, int(max_concurrency or scan_cfg.get("max_concurrency") or os.getenv("WQB_SCAN_CONCURRENCY", "1")))
     concurrency = min(concurrency, 3)
-    clients = [WQBClient.from_config() for _ in range(concurrency)]
+    run_id = str(os.getenv("WQB_RUN_ID") or "")
+    if not run_id:
+        config_identity = str(Path(config_path).resolve()).encode("utf-8")
+        run_id = f"standalone-scan-{hashlib.sha256(config_identity).hexdigest()[:20]}"
+    clients = [
+        WQBClient.from_config(run_id=run_id)
+        for _ in range(1 if reconcile_only else concurrency)
+    ]
+
+    operation_journal = getattr(clients[0].session, "operation_journal", None)
+    reconciliation_report: SimulationReconciliationReport | None = None
+    if operation_journal is not None and run_id:
+        bindings = [
+            SimulationResultBinding(
+                output_path=output_path,
+                expression=str(candidate["expression"]),
+                settings=dict(candidate.get("settings") or {}),
+                note=str(candidate.get("note") or ""),
+            )
+            for candidate in candidates
+        ]
+        reconciliation_report = SimulationReconciler(
+            operation_journal,
+            clients[0],
+            run_id=run_id,
+        ).reconcile(bindings)
+        if reconciliation_report.inspected:
+            print(
+                "Simulation reconciliation: "
+                f"recovered={reconciliation_report.recovered} "
+                f"deferred={reconciliation_report.deferred} "
+                f"manual_review={reconciliation_report.manual_review}",
+                flush=True,
+            )
+        if output_path.exists():
+            try:
+                loaded_rows = json.loads(output_path.read_text(encoding="utf-8"))
+                rows = loaded_rows if isinstance(loaded_rows, list) else []
+            except json.JSONDecodeError:
+                rows = []
+            seen_keys = {
+                (str(row.get("expression") or ""), _settings_key(row.get("settings") or {}))
+                for row in rows
+                if isinstance(row, dict)
+            }
+    if reconcile_only:
+        return reconciliation_report or SimulationReconciliationReport(0, 0, 0, 0, ())
 
     print(f"Unified scan — {len(candidates)} candidates -> {output_path}", flush=True)
     if concurrency > 1:
@@ -357,6 +417,30 @@ async def run_scan(config_path: str, cli_continue_on_pass: bool = False, max_con
                     return
 
             print()
+        except SideEffectUncertainError as exc:
+            stop_event.set()
+            async with write_lock:
+                rows.append({
+                    "expression": expression,
+                    "settings": settings,
+                    "note": item.get("note", ""),
+                    "error": "Simulation outcome is unknown; the request was not replayed.",
+                    "diagnosis": {
+                        "diagnosis_type": "simulation_unknown_commit",
+                        "operation_id": exc.record.operation_id,
+                        "operation_fingerprint": exc.record.fingerprint,
+                        "reason": exc.record.reason,
+                    },
+                    "elapsed_seconds": round(time.time() - started, 1),
+                })
+                seen_keys.add(key)
+                output_path.write_text(json.dumps(rows, indent=2, ensure_ascii=False), encoding="utf-8")
+                log_file.write(
+                    f"[{idx}/{len(candidates)}] {item.get('note','')} | UNKNOWN_COMMIT: "
+                    f"{exc.record.operation_id}\n"
+                )
+                log_file.flush()
+            print(f"  UNKNOWN COMMIT: {exc.record.operation_id}; reconciliation required\n", flush=True)
         except Exception as exc:
             async with write_lock:
                 rows.append({
@@ -395,6 +479,7 @@ async def run_scan(config_path: str, cli_continue_on_pass: bool = False, max_con
     log_file.write(f"=== Scan complete at {time.strftime('%Y-%m-%d %H:%M:%S')} ===\n")
     log_file.close()
     print("Scan complete.", flush=True)
+    return reconciliation_report
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -402,8 +487,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", required=True, help="Path to scan config JSON")
     parser.add_argument("--continue-on-pass", action="store_true", help="Continue scanning after finding a PASS (overrides config)")
     parser.add_argument("--max-concurrency", type=int, default=None, help="Maximum concurrent simulations, capped at 3")
+    parser.add_argument(
+        "--reconcile-only",
+        action="store_true",
+        help="Observe and recover prior ambiguous simulations without creating a simulation",
+    )
     args = parser.parse_args(argv)
-    asyncio.run(run_scan(args.config, cli_continue_on_pass=args.continue_on_pass, max_concurrency=args.max_concurrency))
+    report = asyncio.run(
+        run_scan(
+            args.config,
+            cli_continue_on_pass=args.continue_on_pass,
+            max_concurrency=args.max_concurrency,
+            reconcile_only=args.reconcile_only,
+        )
+    )
+    if args.reconcile_only and report is not None and report.unresolved:
+        return 3
     return 0
 
 
