@@ -129,9 +129,15 @@ class RunManifest:
         return manifest
 
     def with_artifact(self, artifact: ArtifactProvenance) -> RunManifest:
-        if any(existing.path == artifact.path for existing in self.artifacts):
-            raise ValueError(f"artifact already exists in manifest: {artifact.path}")
-        updated = replace(self, artifacts=(*self.artifacts, artifact))
+        return self.with_artifacts((artifact,))
+
+    def with_artifacts(self, artifacts: tuple[ArtifactProvenance, ...]) -> RunManifest:
+        paths = {artifact.path for artifact in self.artifacts}
+        for artifact in artifacts:
+            if artifact.path in paths:
+                raise ValueError(f"artifact already exists in manifest: {artifact.path}")
+            paths.add(artifact.path)
+        updated = replace(self, artifacts=(*self.artifacts, *artifacts))
         updated.validate()
         return updated
 
@@ -187,3 +193,53 @@ def artifact_provenance(
     )
     _reject_sensitive_keys(artifact.to_dict())
     return artifact
+
+
+def collect_artifact_provenance(
+    workspace_root: Path | str,
+    artifact_root: Path | str,
+    *,
+    exclude: tuple[Path | str, ...] = (),
+    producer: str = "",
+) -> tuple[ArtifactProvenance, ...]:
+    """Snapshot every durable file below an artifact root in stable path order."""
+
+    root = Path(workspace_root).resolve()
+    artifacts_root = Path(artifact_root).resolve()
+    if not artifacts_root.is_relative_to(root):
+        raise ValueError(f"artifact root must be inside the workspace: {artifacts_root}")
+    excluded = {Path(path).resolve() for path in exclude}
+    artifacts: list[ArtifactProvenance] = []
+    if not artifacts_root.exists():
+        return ()
+    for path in sorted(artifacts_root.rglob("*"), key=lambda item: item.as_posix()):
+        resolved = path.resolve()
+        if resolved in excluded or not resolved.is_file():
+            continue
+        try:
+            artifacts.append(
+                artifact_provenance(
+                    root,
+                    resolved,
+                    kind=_artifact_kind(resolved),
+                    producer=producer,
+                )
+            )
+        except FileNotFoundError:
+            # Atomic-write scratch files can disappear after enumeration and are
+            # not durable run artifacts.
+            continue
+    return tuple(artifacts)
+
+
+def _artifact_kind(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix == ".json":
+        return "application/json"
+    if suffix == ".md":
+        return "text/markdown"
+    if suffix in {".log", ".txt"}:
+        return "text/plain"
+    if suffix in {".db", ".sqlite", ".sqlite3"}:
+        return "application/vnd.sqlite3"
+    return "application/octet-stream"
