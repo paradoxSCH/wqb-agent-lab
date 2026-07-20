@@ -24,7 +24,7 @@ The migration must preserve all of the following:
 | Proposal boundary | Implemented | Provider-neutral schema and immutable models |
 | Structural repair and policy | Implemented | Explicit opt-in adapter; legacy output remains default |
 | Provenance | In progress | Production tick checkpoints, configuration/schema/artifact digests |
-| Recoverable stages | In progress | LLM planning uses atomic, interruption-aware stage checkpoints |
+| Recoverable stages | In progress | LLM planning and deterministic scan preflight use atomic checkpoints |
 | Side-effect reconciliation | Planned | Extend the existing operation journal with unknown-outcome recovery |
 | Evidence-gated feedback | Planned | Shadow mode before advisory or control use |
 
@@ -59,6 +59,11 @@ The stage checkpoint contract deliberately leaves `output` and `extensions` open
 orchestrator-owned stage identifiers and lifecycle states are enumerated. Replay-safe
 stages may resume an interrupted attempt; side-effecting stages must use reconciliation
 and are never replayed merely because a checkpoint remained in `running` state.
+
+The scan-preflight checkpoint covers stage selection, budget slicing, research-policy
+evaluation, diversity selection, expression preflight, and local config generation. Its
+input digest includes only causally relevant state. It stops before `execute_scan`, so this
+migration cannot create a remote simulation side effect.
 
 ### 5. Side-effect reconciliation
 

@@ -1676,6 +1676,143 @@ class KimiDailyWorkflow:
     def _build_kimi_prompt(self, ledger: dict[str, Any]) -> str:
         return self._build_llm_prompt(ledger)
 
+    def _scan_preflight_input_digest(self, ledger: dict[str, Any], *, planned_stage: str) -> str:
+        paths: set[Path] = {
+            self.workflow_config_path,
+            self.root / ".local" / "data" / "all_wqb_fields.json",
+            self.run_dir / "family_efficiency.json",
+        }
+        for value in ledger.get("queued_scan_configs") or []:
+            path = Path(str(value))
+            paths.add(path if path.is_absolute() else self.root / path)
+        stage_order = [str(stage) for stage in ledger.get("stage_order") or []]
+        try:
+            planned_index = stage_order.index(planned_stage)
+        except ValueError:
+            planned_index = 0
+        earlier_stages = set(stage_order[:planned_index])
+        if self.config_dir.exists():
+            for config_path in self.config_dir.glob("*.json"):
+                payload = read_json(config_path, {})
+                context = payload.get("daily_budget_context") if isinstance(payload, dict) else None
+                config_stage = str(context.get("stage") or "") if isinstance(context, dict) else ""
+                output_value = payload.get("output") if isinstance(payload, dict) else None
+                output_exists = False
+                if output_value:
+                    output_path = Path(str(output_value))
+                    output_path = output_path if output_path.is_absolute() else self.root / output_path
+                    output_exists = output_path.is_file()
+                    if output_exists:
+                        paths.add(output_path)
+                if config_stage in earlier_stages or output_exists:
+                    paths.add(config_path)
+        proxy_config = self.config.get("behavioral_proxy_map") or {}
+        if isinstance(proxy_config, dict) and proxy_config.get("path"):
+            paths.add(self.root / str(proxy_config["path"]))
+        fingerprints = [
+            {
+                "path": relative_path(path, self.root),
+                "sha256": _file_sha256(path),
+            }
+            for path in sorted(paths, key=lambda item: item.as_posix())
+        ]
+        material = json.dumps(
+            {
+                "ledger": {
+                    key: ledger.get(key)
+                    for key in (
+                        "stage_order",
+                        "stage_budgets",
+                        "stage_spend",
+                        "remaining_simulations_after_commitments",
+                        "queued_scan_configs",
+                    )
+                },
+                "run_tag": self.run_tag,
+                "workflow_config_sha256": _file_sha256(self.workflow_config_path),
+                "files": fingerprints,
+            },
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
+            default=str,
+        )
+        return hashlib.sha256(material.encode("utf-8")).hexdigest()
+
+    def run_scan_preflight(
+        self,
+        ledger: dict[str, Any],
+        *,
+        now: datetime | None = None,
+    ) -> tuple[StagePlan, str]:
+        now = now or datetime.now()
+        preview = self.plan_next_scan(ledger)
+        plan: StagePlan | None = None
+        initial_action = ""
+
+        def execute() -> StageOutcome:
+            nonlocal plan, initial_action
+            plan = self.plan_next_scan(ledger)
+            initial_action = plan.action
+            if initial_action == "slice_scan_config":
+                plan = self.prepare_budgeted_scan(plan)
+            status = (
+                "deferred"
+                if initial_action == "waiting_for_scan_config"
+                else "skipped"
+                if initial_action == "no_budgeted_stage_ready"
+                else "completed"
+            )
+            artifacts = tuple(
+                relative_path(path, self.root)
+                for path in (
+                    plan.source_config,
+                    plan.sliced_config,
+                    self.run_dir / "preflight_evaluation_report.json",
+                    self.run_dir / "research_policy_evaluation.json",
+                    self.run_dir / "decision_attribution.json",
+                )
+                if path is not None and path.is_file()
+            )
+            return StageOutcome.create(
+                status=status,
+                artifacts=artifacts,
+                output={
+                    "stage": plan.stage,
+                    "initial_action": initial_action,
+                    "final_action": plan.action,
+                    "budget": plan.budget,
+                    "remaining_stage_budget": plan.remaining_stage_budget,
+                    "remaining_daily_budget": plan.remaining_daily_budget,
+                    "source_config": (
+                        relative_path(plan.source_config, self.root) if plan.source_config is not None else ""
+                    ),
+                    "sliced_config": (
+                        relative_path(plan.sliced_config, self.root) if plan.sliced_config is not None else ""
+                    ),
+                    "output_path": (
+                        relative_path(plan.output_path, self.root) if plan.output_path is not None else ""
+                    ),
+                    "candidate_count": plan.candidate_count,
+                },
+                extensions={"remote_side_effects": False},
+            )
+
+        if self.dry_run:
+            execute()
+        else:
+            StageRunner(self.stage_checkpoint_store).run(
+                run_id=self.run_tag,
+                stage_id="scan_preflight",
+                input_digest=self._scan_preflight_input_digest(ledger, planned_stage=preview.stage),
+                execute=execute,
+                replay_policy="safe",
+                started_at=now,
+            )
+        if plan is None:
+            raise RuntimeError("scan preflight stage completed without a plan")
+        return plan, initial_action
+
     def plan_next_scan(self, ledger: dict[str, Any]) -> StagePlan:
         stage_order = ledger.get("stage_order") or []
         stage_budgets = ledger.get("stage_budgets") or {}
@@ -2571,10 +2708,9 @@ class KimiDailyWorkflow:
             messages.append(f"budget complete report: {relative_path(summary_md, self.root)}")
             return messages
         self.run_llm_plan(ledger, now=now)
-        plan = self.plan_next_scan(ledger)
-        messages.append(f"stage action: {plan.stage} -> {plan.action}")
-        if plan.action == "slice_scan_config":
-            plan = self.prepare_budgeted_scan(plan)
+        plan, initial_action = self.run_scan_preflight(ledger, now=now)
+        messages.append(f"stage action: {plan.stage} -> {initial_action}")
+        if initial_action == "slice_scan_config":
             messages.append(
                 f"prepared {plan.candidate_count} candidates: {relative_path(plan.sliced_config or Path(), self.root)}"
             )
