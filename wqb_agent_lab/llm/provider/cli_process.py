@@ -353,7 +353,7 @@ class _WindowsJob:
         import ctypes
         from ctypes import wintypes
 
-        kernel32 = ctypes.windll.kernel32
+        kernel32 = getattr(ctypes, "windll").kernel32
         kernel32.TerminateJobObject.argtypes = (wintypes.HANDLE, wintypes.UINT)
         kernel32.TerminateJobObject.restype = wintypes.BOOL
         kernel32.TerminateJobObject(wintypes.HANDLE(self._handle), 1)
@@ -363,7 +363,7 @@ class _WindowsJob:
         from ctypes import wintypes
 
         if self._handle:
-            kernel32 = ctypes.windll.kernel32
+            kernel32 = getattr(ctypes, "windll").kernel32
             kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
             kernel32.CloseHandle.restype = wintypes.BOOL
             kernel32.CloseHandle(wintypes.HANDLE(self._handle))
@@ -376,7 +376,7 @@ def _create_windows_job(process: subprocess.Popen[bytes]) -> _WindowsJob | None:
     import ctypes
     from ctypes import wintypes
 
-    kernel32 = ctypes.windll.kernel32
+    kernel32 = getattr(ctypes, "windll").kernel32
     kernel32.CreateJobObjectW.argtypes = (wintypes.LPVOID, wintypes.LPCWSTR)
     kernel32.CreateJobObjectW.restype = wintypes.HANDLE
     kernel32.AssignProcessToJobObject.argtypes = (wintypes.HANDLE, wintypes.HANDLE)
@@ -398,7 +398,7 @@ def _resume_windows_process(process: subprocess.Popen[bytes]) -> None:
     import ctypes
     from ctypes import wintypes
 
-    ntdll = ctypes.windll.ntdll
+    ntdll = getattr(ctypes, "windll").ntdll
     ntdll.NtResumeProcess.argtypes = (wintypes.HANDLE,)
     ntdll.NtResumeProcess.restype = wintypes.LONG
     status = ntdll.NtResumeProcess(
