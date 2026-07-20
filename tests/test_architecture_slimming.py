@@ -137,12 +137,16 @@ class ArchitectureSlimmingTests(unittest.TestCase):
 
     def test_legacy_src_package_is_absent(self) -> None:
         pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        repository_layout = (
+            ROOT / "docs" / "architecture" / "REPOSITORY_LAYOUT.md"
+        ).read_text(encoding="utf-8")
 
         self.assertFalse((ROOT / "src").exists())
         self.assertTrue((ROOT / "wqb_agent_lab" / "cli.py").is_file())
         self.assertTrue((ROOT / "wqb_agent_lab" / "mcp" / "server.py").is_file())
         self.assertIn('wqb-engine = "wqb_agent_lab.cli:main"', pyproject)
         self.assertNotIn('"src*"', pyproject)
+        self.assertNotIn("|-- src/", repository_layout)
 
 
 if __name__ == "__main__":
