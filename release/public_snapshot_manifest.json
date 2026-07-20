@@ -136,6 +136,7 @@
     "release/allowed_dependency_licenses.json",
     "release/public_snapshot_manifest.json",
     "run_scan.py",
+    "schemas/README.md",
     "schemas/submission_job.schema.json",
     "scripts/checks/release_audit.py",
     "scripts/bootstrap.ps1",
