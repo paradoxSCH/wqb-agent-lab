@@ -30,6 +30,10 @@ The project follows Semantic Versioning after the first public release. While th
   reconciliation for interrupted side-effect stages, and initial LLM-planning delegation.
 - Replay-safe scan-planning and preflight checkpoints with stable causal input digests,
   golden-path parity, and an explicit boundary before remote simulation execution.
+- Reconciliation-gated simulation checkpoints and operation-journal recovery for
+  interrupted or ambiguous simulation creation, with positive-evidence matching,
+  read-only retry scheduling, and explicit manual-review outcomes instead of blind POST
+  replay.
 
 ## [0.1.1-alpha] - 2026-07-14
 

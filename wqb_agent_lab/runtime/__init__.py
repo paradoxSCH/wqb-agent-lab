@@ -12,6 +12,11 @@ from .manifest import (
     artifact_provenance,
     collect_artifact_provenance,
 )
+from .simulation_reconciliation import (
+    SimulationReconciler,
+    SimulationReconciliationReport,
+    SimulationResultBinding,
+)
 
 __all__ = [
     "OperationJournal",
@@ -24,4 +29,7 @@ __all__ = [
     "SideEffectUncertainError",
     "classify_transport_exception",
     "payload_fingerprint",
+    "SimulationReconciler",
+    "SimulationReconciliationReport",
+    "SimulationResultBinding",
 ]

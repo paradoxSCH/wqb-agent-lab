@@ -34,7 +34,12 @@ from src.research_policy import (
     policy_digest,
 )
 from src.self_corr_policy import SELF_CORR_NEAR_REPAIR_MAX, self_corr_bucket as _policy_self_corr_bucket
-from wqb_agent_lab.runtime import OperationJournal, RunManifest, collect_artifact_provenance
+from wqb_agent_lab.runtime import (
+    OperationJournal,
+    RunManifest,
+    collect_artifact_provenance,
+    payload_fingerprint,
+)
 from wqb_agent_lab.workflow.stages import StageCheckpointStore, StageOutcome, StageRunner
 
 
@@ -2323,7 +2328,182 @@ class KimiDailyWorkflow:
 
         score_decision_outcomes(self.run_dir)
 
+    def _simulation_reconciliation_configs(self, fingerprints: set[str]) -> list[Path]:
+        matches: list[Path] = []
+        if not fingerprints or not self.config_dir.is_dir():
+            return matches
+        for config_path in sorted(self.config_dir.glob("*.json")):
+            payload = read_json(config_path, {})
+            if not isinstance(payload, dict):
+                continue
+            base_settings = payload.get("settings") or {}
+            if not isinstance(base_settings, dict):
+                base_settings = {}
+            config_fingerprints: set[str] = set()
+            for candidate in payload.get("candidates") or []:
+                if not isinstance(candidate, dict) or not candidate.get("expression"):
+                    continue
+                settings = dict(base_settings)
+                candidate_settings = candidate.get("settings") or {}
+                if isinstance(candidate_settings, dict):
+                    settings.update(candidate_settings)
+                config_fingerprints.add(
+                    payload_fingerprint(
+                        {
+                            "type": "REGULAR",
+                            "settings": settings,
+                            "regular": str(candidate["expression"]),
+                        }
+                    )
+                )
+            if config_fingerprints.intersection(fingerprints):
+                matches.append(config_path)
+        return matches
+
+    def reconcile_simulation_side_effects(self) -> dict[str, Any]:
+        records = self.operation_journal.records(
+            "simulation.create",
+            run_id=self.run_tag,
+            outcomes=(
+                "started",
+                "unknown_commit",
+                "accepted",
+                "reconciliation_pending",
+                "manual_review",
+            ),
+        )
+        checkpoint = self.stage_checkpoint_store.load("simulation")
+        needs_accepted_recovery = checkpoint is not None and checkpoint.status == "running"
+        candidates = [
+            record
+            for record in records
+            if record.outcome in {
+                "started",
+                "unknown_commit",
+                "reconciliation_pending",
+                "manual_review",
+            }
+            or needs_accepted_recovery
+        ]
+        configs = self._simulation_reconciliation_configs(
+            {record.fingerprint for record in candidates}
+        )
+        return_codes: list[int] = []
+        for config_path in configs:
+            command = [
+                sys.executable,
+                "-m",
+                "scripts.run.scan",
+                "--config",
+                relative_path(config_path, self.root),
+                "--reconcile-only",
+            ]
+            scan_env = os.environ.copy()
+            scan_env["WQB_RUN_ID"] = self.run_tag
+            scan_env["WQB_OPERATION_JOURNAL"] = str(self.run_dir / "operations.db")
+            result = subprocess.run(command, cwd=self.root, check=False, env=scan_env)
+            return_codes.append(int(result.returncode))
+
+        remaining = self.operation_journal.records(
+            "simulation.create",
+            run_id=self.run_tag,
+            outcomes=("started", "unknown_commit", "reconciliation_pending", "manual_review"),
+        )
+        report = {
+            "status": "blocked" if remaining else "clear",
+            "inspected_operation_ids": [record.operation_id for record in candidates],
+            "matched_configs": [relative_path(path, self.root) for path in configs],
+            "return_codes": return_codes,
+            "remaining": [
+                {
+                    "operation_id": record.operation_id,
+                    "fingerprint": record.fingerprint,
+                    "outcome": record.outcome,
+                    "reason": record.reason,
+                    "reconciliation_reason": record.reconciliation_reason,
+                    "reconcile_attempts": record.reconcile_attempts,
+                    "next_reconcile_at": record.next_reconcile_at,
+                }
+                for record in remaining
+            ],
+        }
+        if candidates and not self.dry_run:
+            write_json(self.run_dir / "simulation_reconciliation.json", report)
+        return report
+
     def execute_scan(self, plan: StagePlan, ledger: dict[str, Any]) -> int:
+        if not self.execute_scans or plan.sliced_config is None or plan.candidate_count <= 0:
+            return self._execute_scan_uncheckpointed(plan, ledger)
+
+        reconciliation = self.reconcile_simulation_side_effects()
+        if reconciliation["status"] == "blocked":
+            print(
+                "WARNING: unresolved simulation outcome blocks new simulation POSTs; "
+                "see simulation_reconciliation.json",
+                flush=True,
+            )
+            return 0
+
+        input_material = json.dumps(
+            {
+                "run_tag": self.run_tag,
+                "stage": plan.stage,
+                "budget": plan.budget,
+                "remaining_stage_budget": plan.remaining_stage_budget,
+                "remaining_daily_budget": plan.remaining_daily_budget,
+                "candidate_count": plan.candidate_count,
+                "sliced_config_sha256": _file_sha256(plan.sliced_config),
+                "output_path": relative_path(plan.output_path or Path(), self.root),
+            },
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        input_digest = hashlib.sha256(input_material.encode("utf-8")).hexdigest()
+        newly_credited = 0
+
+        def execute() -> StageOutcome:
+            nonlocal newly_credited
+            newly_credited = self._execute_scan_uncheckpointed(plan, ledger)
+            unresolved = self.operation_journal.unresolved("simulation.create")
+            artifacts = tuple(
+                relative_path(path, self.root)
+                for path in (
+                    plan.sliced_config,
+                    plan.output_path,
+                    self.run_dir / "operations.db",
+                    self.run_dir / "simulation_reconciliation.json",
+                )
+                if path is not None and path.is_file()
+            )
+            return StageOutcome.create(
+                artifacts=artifacts,
+                output={
+                    "stage": plan.stage,
+                    "candidate_count": plan.candidate_count,
+                    "newly_credited": newly_credited,
+                    "unresolved_operation_ids": [record.operation_id for record in unresolved],
+                },
+                extensions={
+                    "remote_side_effects": True,
+                    "reconciliation_required_before_replay": True,
+                },
+            )
+
+        if self.dry_run:
+            execute()
+        else:
+            StageRunner(self.stage_checkpoint_store).run(
+                run_id=self.run_tag,
+                stage_id="simulation",
+                input_digest=input_digest,
+                execute=execute,
+                replay_policy="reconcile",
+                reconcile=lambda _previous: reconciliation["status"] == "clear",
+            )
+        return newly_credited
+
+    def _execute_scan_uncheckpointed(self, plan: StagePlan, ledger: dict[str, Any]) -> int:
         stage_spend = ledger.setdefault("stage_spend", {})
         credited_before = int(stage_spend.get(plan.stage) or 0)
 

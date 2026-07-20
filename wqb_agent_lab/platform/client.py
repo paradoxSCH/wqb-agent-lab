@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 from urllib.parse import urljoin
 
 import requests
 
 from src.config import Config, load_config
+from wqb_agent_lab.runtime import OperationJournal, SideEffectUncertainError
 
 from .models import (
     WQBAlphaDetail,
@@ -36,7 +39,12 @@ class WQBClient:
         self.request_timeout_seconds = request_timeout_seconds
 
     @classmethod
-    def from_config(cls, config: Config | None = None) -> "WQBClient":
+    def from_config(
+        cls,
+        config: Config | None = None,
+        *,
+        run_id: str | None = None,
+    ) -> "WQBClient":
         cfg = config or load_config()
         if not cfg.email or not cfg.password:
             raise ValueError("WQB_EMAIL and WQB_PASSWORD must be configured in .env")
@@ -45,6 +53,15 @@ class WQBClient:
             auth_max_tries=cfg.request_max_attempts,
             auth_delay_unexpected=cfg.request_backoff_seconds,
             request_timeout_seconds=30.0,
+            operation_journal=OperationJournal(
+                Path(
+                    os.getenv(
+                        "WQB_OPERATION_JOURNAL",
+                        str(Path.cwd() / ".local" / "data" / "runtime" / "operations.db"),
+                    )
+                )
+            ),
+            run_id=str(run_id if run_id is not None else os.getenv("WQB_RUN_ID") or ""),
         )
         return cls(session=session, request_timeout_seconds=30.0)
 
@@ -185,13 +202,24 @@ class WQBClient:
         attempts = max(1, int(max_create_attempts))
         response = None
         attempt = 0
-        for attempt in range(1, attempts + 1):
-            response = self._request("POST", "/simulations", json=payload)
-            if response.status_code != 429 or attempt >= attempts:
-                break
-            retry_after = float(_retry_after_seconds(response) or 0)
-            delay = max(retry_after, min(60.0, default_create_retry_seconds * attempt))
-            self.sleep(delay)
+        if isinstance(self.session, WQBSession):
+            response = self.session.create_simulation(
+                payload,
+                max_tries=attempts,
+                delay_throttled=default_create_retry_seconds,
+            )
+            operation = self.session.last_operation_record
+            if operation is not None and operation.outcome == "unknown_commit":
+                raise SideEffectUncertainError(operation)
+            attempt = attempts if response.status_code == 429 else 1
+        else:
+            for attempt in range(1, attempts + 1):
+                response = self._request("POST", "/simulations", json=payload)
+                if response.status_code != 429 or attempt >= attempts:
+                    break
+                retry_after = float(_retry_after_seconds(response) or 0)
+                delay = max(retry_after, min(60.0, default_create_retry_seconds * attempt))
+                self.sleep(delay)
         assert response is not None
         if not 200 <= response.status_code < 400:
             detail = _json_or_empty(response)

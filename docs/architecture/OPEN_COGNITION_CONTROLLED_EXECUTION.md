@@ -24,8 +24,8 @@ The migration must preserve all of the following:
 | Proposal boundary | Implemented | Provider-neutral schema and immutable models |
 | Structural repair and policy | Implemented | Explicit opt-in adapter; legacy output remains default |
 | Provenance | In progress | Production tick checkpoints, configuration/schema/artifact digests |
-| Recoverable stages | In progress | LLM planning and deterministic scan preflight use atomic checkpoints |
-| Side-effect reconciliation | Planned | Extend the existing operation journal with unknown-outcome recovery |
+| Recoverable stages | In progress | Planning, scan preflight, and simulation use atomic checkpoints |
+| Side-effect reconciliation | In progress | Simulation recovery implemented; submission recovery remains planned |
 | Evidence-gated feedback | Planned | Shadow mode before advisory or control use |
 
 ## Delivery sequence
@@ -65,11 +65,27 @@ evaluation, diversity selection, expression preflight, and local config generati
 input digest includes only causally relevant state. It stops before `execute_scan`, so this
 migration cannot create a remote simulation side effect.
 
+The simulation checkpoint uses `reconcile` replay policy. Every canonical simulation
+creation now passes through the operation journal before its POST. If the process loses a
+response or stops with a `started` operation, the next run does not repeat that request.
+It first polls a durable simulation location when available, then looks for a recent Alpha
+matching the complete requested settings and expression. Only positive remote evidence can
+resolve the operation as accepted. Missing evidence schedules another read-only observation;
+after the bounded observation window, the operation moves to explicit manual review and
+continues to block new simulation POSTs. Recovered results are atomically materialized into
+the normal scan result file before the stage may resume.
+
+This gate fingerprints the complete candidate payload and does not enumerate operators,
+mechanisms, fields, or expression shapes. Novel LLM output therefore follows the same
+recovery protocol without being removed or narrowed.
+
 ### 5. Side-effect reconciliation
 
-- Add a reconciler for unknown simulation and submission outcomes.
-- Add retry scheduling, dead-letter state, and explicit manual-review outcomes.
-- Prove crash recovery and idempotency with fault-injection tests.
+- Simulation outcomes: implemented with operation fingerprints, location polling, recent
+  Alpha evidence, retry scheduling, and explicit manual review.
+- Submission outcomes: extend the same evidence-first protocol at the submission worker.
+- Keep fault-injection coverage for response loss, hard process interruption, ambiguous
+  matches, and mismatched settings.
 
 ### 6. Evidence-gated feedback
 
