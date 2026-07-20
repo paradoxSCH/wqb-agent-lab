@@ -12,6 +12,10 @@ from src.kimi_daily_workflow import KimiDailyWorkflow
 
 
 class WorkflowRunManifestTests(unittest.TestCase):
+    @staticmethod
+    def _relative(path: Path, root: Path) -> str:
+        return path.resolve().relative_to(root.resolve()).as_posix()
+
     def _workflow(self, root: Path, *, dry_run: bool = False) -> KimiDailyWorkflow:
         config_path = root / "workflow.json"
         config_path.write_text(
@@ -54,8 +58,8 @@ class WorkflowRunManifestTests(unittest.TestCase):
             self.assertRegex(payload["research"]["schema_digests"]["plan_proposal"], r"^[0-9a-f]{64}$")
             self.assertNotIn("api_key", json.dumps(payload).lower())
             artifact_paths = {artifact["path"] for artifact in payload["artifacts"]}
-            self.assertIn(workflow.ledger_path.relative_to(root).as_posix(), artifact_paths)
-            self.assertNotIn(workflow.manifest_path.relative_to(root).as_posix(), artifact_paths)
+            self.assertIn(self._relative(workflow.ledger_path, root), artifact_paths)
+            self.assertNotIn(self._relative(workflow.manifest_path, root), artifact_paths)
 
     def test_checkpoint_refresh_preserves_creation_time_and_adds_new_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -78,11 +82,11 @@ class WorkflowRunManifestTests(unittest.TestCase):
             self.assertEqual(first["created_at"], second["created_at"])
             self.assertEqual("2026-07-20T10:00:00", second["extensions"]["checkpointed_at"])
             self.assertIn(
-                extra.relative_to(root).as_posix(),
+                self._relative(extra, root),
                 {artifact["path"] for artifact in second["artifacts"]},
             )
             self.assertIn(
-                sliced_config.relative_to(root).as_posix(),
+                self._relative(sliced_config, root),
                 {artifact["path"] for artifact in second["artifacts"]},
             )
 
