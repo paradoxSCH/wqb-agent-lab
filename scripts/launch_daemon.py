@@ -214,7 +214,7 @@ def launch_evaluation_worker(root: Path, *, popen=None, state_max_age_seconds: i
     command = [
         str(Path(sys.executable)),
         "-m",
-        "scripts.evaluation_worker",
+        "scripts.workers.evaluation",
         "--workspace-root",
         str(root),
         "--once",

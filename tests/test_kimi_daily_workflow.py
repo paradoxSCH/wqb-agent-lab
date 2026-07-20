@@ -1198,7 +1198,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
 
             self.assertEqual(status, "worker_started")
             command = popen.call_args.args[0]
-            self.assertIn("scripts.registry_worker", command)
+            self.assertIn("scripts.workers.registry", command)
 
     def test_prepare_budgeted_scan_blocks_preflight_invalid_expressions_before_simulation(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -2416,7 +2416,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             self.assertIn("memory_sync_state", state["artifacts"])
             self.assertEqual(state["artifacts"]["memory_sync_state"], ".local/data/runs/continuous-alpha/kimi-daily-budget-20260505/memory_sync_state.json")
             command = popen.call_args.args[0]
-            self.assertIn("scripts.memory_worker", command)
+            self.assertIn("scripts.workers.memory", command)
             self.assertIn("--once", command)
             output_evaluation = json.loads((run_dir / "output_evaluation_report.json").read_text(encoding="utf-8"))
             artifacts = {record["artifact"] for record in output_evaluation["records"]}

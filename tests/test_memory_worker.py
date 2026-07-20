@@ -6,7 +6,7 @@ import unittest
 from dataclasses import dataclass
 from pathlib import Path
 
-from scripts.memory_worker import MemoryWorker, MemoryWorkerLock, memory_state_path
+from scripts.workers.memory import MemoryWorker, MemoryWorkerLock, memory_state_path
 
 
 @dataclass(frozen=True)

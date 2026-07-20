@@ -561,7 +561,7 @@ class KimiDailyWorkflow:
         command = [
             sys.executable,
             "-m",
-            "scripts.registry_worker",
+            "scripts.workers.registry",
             "--workspace-root",
             str(self.root),
             "--once",
@@ -1011,7 +1011,7 @@ class KimiDailyWorkflow:
         command = [
             sys.executable,
             "-m",
-            "scripts.memory_worker",
+            "scripts.workers.memory",
             "--workspace-root",
             str(self.root),
             "--run-dir",
