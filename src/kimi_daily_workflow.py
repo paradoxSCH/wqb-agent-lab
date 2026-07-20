@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 import os
+import platform
 import re
 import subprocess
 import sys
@@ -18,6 +19,7 @@ from typing import Any
 from dotenv import load_dotenv
 
 from src.agent_callbacks import emit_agent_callback
+from src.contracts import list_schema_names, schema_digest
 from src.diagnosis_policy import evaluate_diagnosis_policies
 from src.failure_diagnosis import diagnose_failure_objects, primary_diagnosis_type
 from src.llm_provider import LLMProvider
@@ -32,7 +34,7 @@ from src.research_policy import (
     policy_digest,
 )
 from src.self_corr_policy import SELF_CORR_NEAR_REPAIR_MAX, self_corr_bucket as _policy_self_corr_bucket
-from wqb_agent_lab.runtime import OperationJournal
+from wqb_agent_lab.runtime import OperationJournal, RunManifest, collect_artifact_provenance
 
 
 DEFAULT_WORKFLOW_CONFIG = Path(".local/research/workflows/production.json")
@@ -78,6 +80,12 @@ def write_json(path: Path, payload: Any) -> None:
 def write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def _file_sha256(path: Path) -> str:
+    if not path.is_file():
+        return ""
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def _json_file_fresh(path: Path, max_age_seconds: int) -> bool:
@@ -1066,7 +1074,89 @@ class KimiDailyWorkflow:
         self.run_dir = self.root / RUNS_ROOT / self.run_tag
         self.config_dir = self.root / CONFIGS_ROOT / self.run_tag
         self.ledger_path = self.run_dir / "daily_budget_ledger.json"
+        self.manifest_path = self.run_dir / "run_manifest.json"
         self.operation_journal = OperationJournal(self.run_dir / "operations.db")
+
+    def _run_manifest(
+        self,
+        *,
+        now: datetime,
+        status: str,
+        error_type: str = "",
+    ) -> RunManifest:
+        existing = read_json(self.manifest_path, {})
+        if not isinstance(existing, dict):
+            existing = {}
+        created_at = str(existing.get("created_at") or now.isoformat(timespec="seconds"))
+        llm_settings = self.config.get("llm_provider") or {}
+        if not isinstance(llm_settings, dict):
+            llm_settings = {}
+        ledger = read_json(self.ledger_path, {})
+        if not isinstance(ledger, dict):
+            ledger = {}
+        try:
+            config_path = self.workflow_config_path.relative_to(self.root).as_posix()
+        except ValueError:
+            config_path = self.workflow_config_path.name
+        manifest = RunManifest.create(
+            run_id=self.run_tag,
+            created_at=created_at,
+            code={
+                "component": "src.kimi_daily_workflow.KimiDailyWorkflow",
+                "revision": str(os.getenv("GITHUB_SHA") or ""),
+            },
+            runtime={
+                "python": platform.python_version(),
+                "implementation": platform.python_implementation(),
+                "platform": platform.system().lower(),
+                "dependency_lock_sha256": _file_sha256(self.root / "uv.lock"),
+                "execute_scans": self.execute_scans,
+                "dry_run": self.dry_run,
+            },
+            configuration={
+                "path": config_path,
+                "sha256": hashlib.sha256(self.workflow_config_path.read_bytes()).hexdigest(),
+            },
+            llm={
+                "provider": self.llm_adapter.provider,
+                "model": self.llm_adapter.model,
+                "output_contract": str(llm_settings.get("output_contract") or "legacy"),
+            },
+            research={
+                "run_date": self.run_date.isoformat(),
+                "budget_mode": self.budget_mode,
+                "current_stage": str(ledger.get("current_stage") or ""),
+                "schema_digests": {name: schema_digest(name) for name in list_schema_names()},
+            },
+            extensions={
+                "checkpoint_status": status,
+                "checkpointed_at": now.isoformat(timespec="seconds"),
+                "error_type": error_type,
+            },
+        )
+        artifacts = collect_artifact_provenance(
+            self.root,
+            self.run_dir,
+            exclude=(self.manifest_path,),
+            producer="kimi_daily_workflow",
+        )
+        artifacts += collect_artifact_provenance(
+            self.root,
+            self.config_dir,
+            producer="kimi_daily_workflow",
+        )
+        return manifest.with_artifacts(artifacts)
+
+    def write_run_manifest(
+        self,
+        *,
+        now: datetime,
+        status: str,
+        error_type: str = "",
+    ) -> Path:
+        manifest = self._run_manifest(now=now, status=status, error_type=error_type)
+        write_json(self.manifest_path, manifest.to_dict())
+        return self.manifest_path
 
     def _enqueue_stage_event(
         self,
@@ -2381,8 +2471,7 @@ class KimiDailyWorkflow:
     def write_17_summary(self, ledger: dict[str, Any], *, now: datetime | None = None) -> tuple[Path, Path]:
         return self.write_daily_report(ledger, now=now, reason="manual_summary", force=True)
 
-    def run_once(self, *, now: datetime | None = None, summary_only: bool = False) -> list[str]:
-        now = now or datetime.now()
+    def _run_once_tick(self, *, now: datetime, summary_only: bool = False) -> list[str]:
         replayed = self.drain_workflow_outbox() if not self.dry_run else 0
         ledger = self.load_or_create_ledger()
         messages = [f"ledger: {relative_path(self.ledger_path, self.root)}"]
@@ -2430,6 +2519,25 @@ class KimiDailyWorkflow:
                     messages.append(f"budget complete report: {relative_path(summary_md, self.root)}")
             elif not self.execute_scans:
                 messages.append("scan not executed; pass --execute-scans to consume budget")
+        return messages
+
+    def run_once(self, *, now: datetime | None = None, summary_only: bool = False) -> list[str]:
+        now = now or datetime.now()
+        try:
+            messages = self._run_once_tick(now=now, summary_only=summary_only)
+        except Exception as exc:
+            if not self.dry_run:
+                try:
+                    self.write_run_manifest(now=now, status="failed", error_type=type(exc).__name__)
+                except Exception as manifest_exc:
+                    exc.add_note(f"run manifest checkpoint also failed: {type(manifest_exc).__name__}")
+            raise
+        if not self.dry_run:
+            try:
+                manifest_path = self.write_run_manifest(now=now, status="checkpointed")
+                messages.append(f"run manifest: {relative_path(manifest_path, self.root)}")
+            except Exception as exc:
+                messages.append(f"run manifest unavailable: {type(exc).__name__}")
         return messages
 
     def run_daemon(self, *, poll_seconds: int = 900, continue_next_day: bool = True) -> None:

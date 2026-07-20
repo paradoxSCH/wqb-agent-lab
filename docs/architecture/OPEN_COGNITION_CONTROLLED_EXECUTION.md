@@ -17,6 +17,17 @@ The migration must preserve all of the following:
 - Tests and onboarding remain credential-free and never enable live simulation or
   submission.
 
+## Implementation status
+
+| Slice | Status | Current boundary |
+| --- | --- | --- |
+| Proposal boundary | Implemented | Provider-neutral schema and immutable models |
+| Structural repair and policy | Implemented | Explicit opt-in adapter; legacy output remains default |
+| Provenance | In progress | Production tick checkpoints, configuration/schema/artifact digests |
+| Recoverable stages | Planned | Extract one stage at a time after golden-run parity |
+| Side-effect reconciliation | Planned | Extend the existing operation journal with unknown-outcome recovery |
+| Evidence-gated feedback | Planned | Shadow mode before advisory or control use |
+
 ## Delivery sequence
 
 ### 1. Proposal boundary

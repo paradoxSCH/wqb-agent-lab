@@ -9,6 +9,7 @@ from wqb_agent_lab.runtime import (
     RunManifest,
     SensitiveManifestValueError,
     artifact_provenance,
+    collect_artifact_provenance,
 )
 
 
@@ -69,6 +70,12 @@ class RunManifestTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "already exists"):
                 manifest.with_artifact(artifact)
 
+            with self.assertRaisesRegex(ValueError, "already exists"):
+                RunManifest.create(
+                    run_id="run-batch-duplicate",
+                    created_at="2026-07-20T12:00:00Z",
+                ).with_artifacts((artifact, artifact))
+
     def test_artifact_outside_workspace_is_rejected(self) -> None:
         with tempfile.TemporaryDirectory() as workspace, tempfile.TemporaryDirectory() as outside:
             path = Path(outside) / "artifact.json"
@@ -84,6 +91,31 @@ class RunManifestTests(unittest.TestCase):
                 created_at="2026-07-20T12:00:00Z",
                 llm={"provider": "example", "nested": {"api_key": "must-not-persist"}},
             )
+
+    def test_collect_artifacts_is_stable_and_can_exclude_the_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            run_dir = root / "runs" / "run-001"
+            run_dir.mkdir(parents=True)
+            manifest_path = run_dir / "run_manifest.json"
+            manifest_path.write_text("{}", encoding="utf-8")
+            (run_dir / "z.log").write_text("last", encoding="utf-8")
+            (run_dir / "a.json").write_text("{}", encoding="utf-8")
+
+            artifacts = collect_artifact_provenance(
+                root,
+                run_dir,
+                exclude=(manifest_path,),
+                producer="test-workflow",
+            )
+
+            self.assertEqual(
+                ["runs/run-001/a.json", "runs/run-001/z.log"],
+                [artifact.path for artifact in artifacts],
+            )
+            self.assertEqual("application/json", artifacts[0].kind)
+            self.assertEqual("text/plain", artifacts[1].kind)
+            self.assertTrue(all(artifact.producer == "test-workflow" for artifact in artifacts))
 
 
 if __name__ == "__main__":

@@ -24,6 +24,8 @@ The project follows Semantic Versioning after the first public release. While th
   metadata rejection.
 - Explicit opt-in `plan_proposal` output for the production LLM adapter; legacy planner
   output remains the default and structural repair does not consume WQB budget.
+- Credential-safe, content-addressed `run_manifest.json` checkpoints for production daily
+  workflow ticks, including failure provenance without replacing the original exception.
 
 ## [0.1.1-alpha] - 2026-07-14
 
