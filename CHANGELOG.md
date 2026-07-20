@@ -28,6 +28,8 @@ The project follows Semantic Versioning after the first public release. While th
   workflow ticks, including failure provenance without replacing the original exception.
 - Atomic workflow stage checkpoints with replay-safe interruption recovery, mandatory
   reconciliation for interrupted side-effect stages, and initial LLM-planning delegation.
+- Replay-safe scan-planning and preflight checkpoints with stable causal input digests,
+  golden-path parity, and an explicit boundary before remote simulation execution.
 
 ## [0.1.1-alpha] - 2026-07-14
 

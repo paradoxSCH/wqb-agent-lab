@@ -67,6 +67,10 @@ class WorkflowRunManifestTests(unittest.TestCase):
                 self._relative(workflow.stage_checkpoint_store.path_for("llm_planning"), root),
                 artifact_paths,
             )
+            self.assertIn(
+                self._relative(workflow.stage_checkpoint_store.path_for("scan_preflight"), root),
+                artifact_paths,
+            )
             self.assertNotIn(self._relative(workflow.manifest_path, root), artifact_paths)
 
     def test_checkpoint_refresh_preserves_creation_time_and_adds_new_artifacts(self) -> None:
