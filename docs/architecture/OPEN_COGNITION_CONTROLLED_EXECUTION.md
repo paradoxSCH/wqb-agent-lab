@@ -26,7 +26,7 @@ The migration must preserve all of the following:
 | Provenance | In progress | Production tick checkpoints, configuration/schema/artifact digests |
 | Recoverable stages | Implemented | Planning through registry, memory, and evaluation use atomic checkpoints |
 | Side-effect reconciliation | Implemented | Simulation and submission use evidence-first recovery |
-| Evidence-gated feedback | Planned | Shadow mode before advisory or control use |
+| Evidence-gated feedback | Implemented | Shadow default; control requires measured promotion gates |
 
 ## Delivery sequence
 
@@ -113,9 +113,16 @@ actions remain recorded observations rather than automatic restrictions on later
 
 ### 6. Evidence-gated feedback
 
-- Run memory retrieval and evaluation-based allocation in shadow mode.
-- Compare candidate diversity, duplicate rate, and submit-ready candidates per simulation
-  budget before promoting feedback to advisory or control modes.
+- Policy feedback supports `off`, `shadow`, `advisory`, and `control` modes and defaults to
+  `shadow`. Shadow mode runs the unmodified baseline candidate set while persisting the full
+  counterfactual recommendation, including arbitrary candidate fields and overflow ideas.
+- Each completed scan scores baseline and recommended subsets on submit-ready rate, low-value
+  rate, simulation count, and distinct-family retention. Evidence is aggregated across runs.
+- A request for `control` falls back to shadow unless the configured multi-run sample size,
+  submit-ready non-regression, low-value improvement, and family-diversity retention gates all
+  pass. Configuration may make those gates stricter but cannot weaken their conservative floors.
+  Even promoted control retains an explicit exploration share and keeps overflow payloads for
+  audit and later reuse. Shadow observations are not mislabeled as policy actions used.
 
 ### 7. Compatibility removal
 
@@ -129,4 +136,5 @@ actions remain recorded observations rather than automatic restrictions on later
 - Every persisted public artifact validates against its declared schema version.
 - A representative offline prompt set retains arbitrary expressions and unknown mechanisms.
 - Structural repair improves parse success without reducing proposal diversity.
-- Shadow feedback demonstrates measured benefit before controlling later runs.
+- Shadow feedback must demonstrate measured benefit before controlling later runs; the runtime
+  enforces this gate and otherwise continues the baseline selection unchanged.

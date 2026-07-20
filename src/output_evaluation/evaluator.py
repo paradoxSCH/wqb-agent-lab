@@ -58,6 +58,16 @@ def evaluate_run_outputs(
     if isinstance(memory_sync, dict):
         records.append(validate_memory_sync_report("memory_sync_report.json", memory_sync))
 
+    shadow_feedback = _read_json(
+        run_path / "policy_feedback_shadow_evaluation.json",
+        None,
+    )
+    shadow_aggregate = (
+        dict(shadow_feedback.get("aggregate") or {})
+        if isinstance(shadow_feedback, dict)
+        else {}
+    )
+
     for report_name in ("triage_summary.md", "diagnosis_policy_evaluation.md", "wqb-agent-latest-workflow-uml.html"):
         report_path = run_path / report_name
         if report_path.exists():
@@ -76,6 +86,7 @@ def evaluate_run_outputs(
         "diagnosis_policy": diagnosis_policy,
         "budget_policy_actions": policy_actions,
         "budget_saved_estimate": budget_saved_estimate,
+        "policy_feedback_shadow": shadow_aggregate,
     }
 
 

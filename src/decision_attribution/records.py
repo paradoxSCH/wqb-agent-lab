@@ -25,11 +25,17 @@ def record_scan_decision(
     memory_nodes_used: Sequence[str] | None = None,
     graph_edges_used: Sequence[str] | None = None,
     llm_output_ref: str | None = None,
+    policy_feedback_governance: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     workspace_root = Path(root)
     target_run_dir = Path(run_dir)
     families = sorted({_candidate_family(candidate) for candidate in candidates if _candidate_family(candidate)})
     decision_id = _decision_id(stage, sliced_config, output_path)
+    observed_policy_actions = _policy_actions_from_candidates(candidates)
+    feedback_governance = dict(policy_feedback_governance or {})
+    effective_feedback_mode = str(
+        feedback_governance.get("effective_mode") or "control"
+    )
     record = {
         "decision_id": decision_id,
         "stage": stage,
@@ -41,9 +47,21 @@ def record_scan_decision(
         "remaining_daily_budget": int(remaining_daily_budget),
         "families_affected": families,
         "proxy_signals_used": _proxy_signals_for_families(Path(proxy_map_path) if proxy_map_path else None, families),
-        "policy_actions_used": _policy_actions_from_candidates(candidates),
-        "required_experiments_used": _required_experiments_from_candidates(candidates),
-        "policy_action_lanes": _policy_lanes_from_candidates(candidates),
+        "policy_actions_used": (
+            observed_policy_actions if effective_feedback_mode == "control" else []
+        ),
+        "policy_actions_observed": observed_policy_actions,
+        "required_experiments_used": (
+            _required_experiments_from_candidates(candidates)
+            if effective_feedback_mode == "control"
+            else []
+        ),
+        "policy_action_lanes": (
+            _policy_lanes_from_candidates(candidates)
+            if effective_feedback_mode == "control"
+            else []
+        ),
+        "policy_feedback_governance": feedback_governance,
         "memory_nodes_used": list(memory_nodes_used or []),
         "graph_edges_used": list(graph_edges_used or []),
         "llm_output_ref": llm_output_ref or "",
