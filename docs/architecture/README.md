@@ -7,6 +7,8 @@ consumer.
 
 Workflow operations, including daemon completion hooks and dashboard projections, live
 with the canonical workflow package rather than in a parallel application namespace.
+The installed `wqb-engine` command and the small Python MCP adapter are also owned by
+`wqb_agent_lab`; there is no second installable `src` application package.
 
 ![Current WQB Agent Lab architecture](../assets/wqb-agent-architecture-current-zh.svg)
 
@@ -42,7 +44,8 @@ WorldQuant BRAIN transport
   adapter live in focused modules. They expose explicit functions or typed services
   instead of inheriting engine mixins; the engine retains stateful orchestration and
   stage sequencing.
-- Removed compatibility namespaces and launchers are not part of the 0.3 runtime.
+- Removed compatibility namespaces, launchers, and the legacy `src` package are not part
+  of the 0.3 runtime or distribution.
 - Transport and MCP tools expose facts and capabilities. Governance decides budgets,
   retries, pauses, promotion, and side effects.
 - Mutable runs, memory, credentials, scans, registries, logs, and PID files live under

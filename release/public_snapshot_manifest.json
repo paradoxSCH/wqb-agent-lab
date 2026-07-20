@@ -139,7 +139,7 @@
     "scripts/checks/release_audit.py",
     "scripts/bootstrap.ps1",
     "scripts/bootstrap.sh",
-    "src/wqb_engine/cli.py",
+    "wqb_agent_lab/cli.py",
     "wqb_agent_lab/__init__.py",
     "tests/test_open_source_readiness.py"
   ],

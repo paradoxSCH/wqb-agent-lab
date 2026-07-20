@@ -3,7 +3,7 @@ from __future__ import annotations
 import unittest
 from typing import Any
 
-from src.wqb_mcp.server import build_tool_handlers, tool_names
+from wqb_agent_lab.mcp.server import build_tool_handlers, tool_names
 
 
 class FakeClient:
