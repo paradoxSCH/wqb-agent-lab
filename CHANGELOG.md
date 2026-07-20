@@ -22,6 +22,8 @@
   services with typed orchestration boundaries.
 - Isolated submitted-alpha registry snapshots and replay-safe memory/evaluation
   postprocessing behind typed workflow service boundaries.
+- Moved deterministic diagnosis, triage routing, deduplication, and family-efficiency
+  calculations into stateless workflow-domain functions while preserving open fields.
 
 ## [0.2.0a1] - 2026-07-14
 
