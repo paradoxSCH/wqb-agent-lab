@@ -6,7 +6,7 @@ import re
 import sqlite3
 import tempfile
 
-from src.alpha_memory.schema import MemoryEdge, MemoryNode
+from wqb_agent_lab.memory.core.schema import MemoryEdge, MemoryNode
 
 
 _FTS_TOKEN_RE = re.compile(r"[\w]+", re.UNICODE)

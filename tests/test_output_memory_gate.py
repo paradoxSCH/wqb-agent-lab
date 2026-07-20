@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from src.output_evaluation.memory_gate import resolve_memory_promotion_permission
+from wqb_agent_lab.evaluation.output.memory_gate import resolve_memory_promotion_permission
 
 
 class OutputMemoryGateTests(unittest.TestCase):

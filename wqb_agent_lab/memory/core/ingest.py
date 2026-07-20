@@ -6,9 +6,9 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
-from src.alpha_memory.hypothesis import classify_wqb_action_lane
-from src.alpha_memory.schema import MemoryEdge, MemoryNode
-from src.alpha_memory.store import SQLiteMemoryStore
+from wqb_agent_lab.memory.core.hypothesis import classify_wqb_action_lane
+from wqb_agent_lab.memory.core.schema import MemoryEdge, MemoryNode
+from wqb_agent_lab.memory.core.store import SQLiteMemoryStore
 
 
 @dataclass(frozen=True)

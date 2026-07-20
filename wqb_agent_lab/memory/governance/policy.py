@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Mapping
 
-from src.alpha_memory.schema import MemoryNode
+from wqb_agent_lab.memory.core.schema import MemoryNode
 
 
 EVIDENCE_LEVELS = ("L0", "L1", "L2", "L3", "L4")

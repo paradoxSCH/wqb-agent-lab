@@ -13,7 +13,7 @@ from typing import Any
 
 from requests import Response
 
-from .config import Config
+from wqb_agent_lab.runtime.config import Config
 from wqb_agent_lab.platform import WQBSession
 from wqb_agent_lab.runtime import OperationJournal
 

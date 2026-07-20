@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from src.output_evaluation.registry import built_in_registry, registry_by_artifact
+from wqb_agent_lab.evaluation.output.registry import built_in_registry, registry_by_artifact
 
 
 class OutputEvaluationRegistryTests(unittest.TestCase):

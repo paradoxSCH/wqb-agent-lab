@@ -26,7 +26,7 @@ class SideEffectGovernanceTests(unittest.TestCase):
         self.assertNotEqual(scan._normalized_expression("rank(open)"), "rank(close)")
 
     def test_capabilities_are_disabled_unless_exactly_enabled(self) -> None:
-        from src.side_effect_governance import evaluate_side_effect_capability
+        from wqb_agent_lab.governance.side_effects import evaluate_side_effect_capability
 
         missing = evaluate_side_effect_capability("simulation", env={})
         truthy_but_invalid = evaluate_side_effect_capability(
@@ -40,7 +40,7 @@ class SideEffectGovernanceTests(unittest.TestCase):
         self.assertFalse(truthy_but_invalid.enabled)
 
     def test_capabilities_are_independent(self) -> None:
-        from src.side_effect_governance import evaluate_side_effect_capability
+        from wqb_agent_lab.governance.side_effects import evaluate_side_effect_capability
 
         env = {"WQB_LIVE_SIMULATION_CAPABILITY": "1"}
 
@@ -48,7 +48,7 @@ class SideEffectGovernanceTests(unittest.TestCase):
         self.assertFalse(evaluate_side_effect_capability("submission", env=env).enabled)
 
     def test_enforcement_error_contains_structured_non_secret_decision(self) -> None:
-        from src.side_effect_governance import SideEffectCapabilityDisabled, require_side_effect_capability
+        from wqb_agent_lab.governance.side_effects import SideEffectCapabilityDisabled, require_side_effect_capability
 
         with self.assertRaises(SideEffectCapabilityDisabled) as raised:
             require_side_effect_capability(

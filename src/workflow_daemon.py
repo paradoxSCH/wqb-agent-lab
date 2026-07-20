@@ -211,7 +211,7 @@ def precheck_wqb_session(
 ) -> SessionPrecheckResult:
     try:
         if config_loader is None:
-            from src.config import load_config
+            from wqb_agent_lab.runtime.config import load_config
 
             config_loader = load_config
         if session_factory is None:
@@ -308,7 +308,7 @@ def run_completion_hooks(
                 message=f"evaluation failed exit={chained_exit}",
             )
 
-    from src.memory_governance import write_memory_governance_report
+    from wqb_agent_lab.memory.governance import write_memory_governance_report
 
     memory_report_path = write_memory_governance_report(run_dir)
     guardrail_path = _write_guardrail_state(run_dir)
@@ -471,7 +471,7 @@ def _read_json(path: Path, default: Any) -> Any:
 
 
 def _write_json(path: Path, payload: Any) -> None:
-    from src.atomic_json import atomic_write_json
+    from wqb_agent_lab.runtime.atomic_json import atomic_write_json
 
     atomic_write_json(path, payload)
 

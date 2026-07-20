@@ -20,14 +20,14 @@ EXPECTED_SCHEMA_NAMES = (
 
 class SchemaContractTests(unittest.TestCase):
     def test_schema_directory_has_no_undeclared_contracts(self) -> None:
-        from src.contracts.registry import SCHEMA_DIR
+        from wqb_agent_lab.contracts.registry import SCHEMA_DIR
 
         discovered = tuple(sorted(path.name.removesuffix(".schema.json") for path in SCHEMA_DIR.glob("*.schema.json")))
 
         self.assertEqual(EXPECTED_SCHEMA_NAMES, discovered)
 
     def test_schema_readme_classifies_every_public_contract(self) -> None:
-        from src.contracts.registry import SCHEMA_DIR
+        from wqb_agent_lab.contracts.registry import SCHEMA_DIR
 
         readme = (SCHEMA_DIR / "README.md").read_text(encoding="utf-8")
 
@@ -39,12 +39,12 @@ class SchemaContractTests(unittest.TestCase):
         self.assertIn("published validation boundaries", normalized)
 
     def test_lists_exact_p0_schema_names(self) -> None:
-        from src.contracts import list_schema_names
+        from wqb_agent_lab.contracts import list_schema_names
 
         self.assertEqual(EXPECTED_SCHEMA_NAMES, list_schema_names())
 
     def test_loads_every_schema_with_required_metadata(self) -> None:
-        from src.contracts import load_schema, schema_digest, schema_path
+        from wqb_agent_lab.contracts import load_schema, schema_digest, schema_path
 
         for name in EXPECTED_SCHEMA_NAMES:
             with self.subTest(name=name):
@@ -62,7 +62,7 @@ class SchemaContractTests(unittest.TestCase):
                 self.assertRegex(digest, r"^[0-9a-f]{64}$")
 
     def test_stage_result_schema_enforces_lifecycle_conditionals(self) -> None:
-        from src.contracts import validate_contract
+        from wqb_agent_lab.contracts import validate_contract
 
         payload = {
             "schema_version": 1,
@@ -86,7 +86,7 @@ class SchemaContractTests(unittest.TestCase):
         self.assertTrue(any(error.path == "$.completed_at" for error in errors))
 
     def test_valid_examples_pass_contract_validation(self) -> None:
-        from src.contracts import validate_contract
+        from wqb_agent_lab.contracts import validate_contract
 
         examples = {
             "candidate": {
@@ -218,7 +218,7 @@ class SchemaContractTests(unittest.TestCase):
                 self.assertEqual([], validate_contract(name, payload))
 
     def test_invalid_payload_reports_stable_paths_and_messages(self) -> None:
-        from src.contracts import validate_contract
+        from wqb_agent_lab.contracts import validate_contract
 
         errors = validate_contract("submission_job", {"job_id": "job-001", "auto_submit": "yes"})
         rendered = [str(error) for error in errors]
@@ -228,7 +228,7 @@ class SchemaContractTests(unittest.TestCase):
         self.assertIn("$.auto_submit: expected boolean, got string", rendered)
 
     def test_assert_valid_contract_raises_value_error(self) -> None:
-        from src.contracts import assert_valid_contract
+        from wqb_agent_lab.contracts import assert_valid_contract
 
         with self.assertRaisesRegex(ValueError, "candidate contract validation failed"):
             assert_valid_contract("candidate", {"candidate_id": "cand-001"})

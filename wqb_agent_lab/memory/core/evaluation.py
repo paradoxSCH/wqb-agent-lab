@@ -4,7 +4,7 @@ import math
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from src.alpha_memory.retrieval import retrieve_memory
+from wqb_agent_lab.memory.core.retrieval import retrieve_memory
 
 
 OUTCOME_METRICS = (

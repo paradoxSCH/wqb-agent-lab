@@ -76,9 +76,6 @@ CHECK_STAGES = (
             "-m",
             "pyright",
             "wqb_agent_lab",
-            "src/alpha_memory",
-            "src/process_lock.py",
-            "src/atomic_json.py",
         ),
     ),
     Stage(

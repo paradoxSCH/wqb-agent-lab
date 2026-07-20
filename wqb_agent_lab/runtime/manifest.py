@@ -8,7 +8,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Callable
 
-from src.contracts import assert_valid_contract, schema_digest
+from wqb_agent_lab.contracts import assert_valid_contract, schema_digest
 
 
 _SENSITIVE_KEY_PARTS = (

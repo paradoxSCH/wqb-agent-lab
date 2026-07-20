@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.output_evaluation.validators import validate_expression_candidates
+from wqb_agent_lab.evaluation.output.validators import validate_expression_candidates
 
 
 def _read_json(path: Path) -> Any:

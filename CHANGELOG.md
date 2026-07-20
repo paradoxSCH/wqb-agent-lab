@@ -11,6 +11,8 @@
   and unused `src.wq` compatibility namespaces.
 - Removed legacy LLM configuration fallbacks. `llm_provider` is now the only runtime LLM
   configuration surface, including for CLI-backed models.
+- Moved contracts, memory, evaluation, governance, candidate-generation, configuration,
+  locking, and atomic-write implementations into the canonical `wqb_agent_lab` package.
 
 ## [0.2.0a1] - 2026-07-14
 

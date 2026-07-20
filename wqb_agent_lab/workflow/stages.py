@@ -11,7 +11,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Literal
 
-from src.contracts import assert_valid_contract
+from wqb_agent_lab.contracts import assert_valid_contract
 
 
 StageStatus = Literal["running", "completed", "skipped", "deferred", "failed"]

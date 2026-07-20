@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.behavioral_candidate_generation import build_candidate_generation_artifacts
+from wqb_agent_lab.research.candidates import build_candidate_generation_artifacts
 
 
 class BehavioralCandidateGenerationTests(unittest.TestCase):

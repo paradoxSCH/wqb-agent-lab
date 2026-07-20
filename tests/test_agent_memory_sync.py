@@ -146,7 +146,7 @@ class AgentMemorySyncTests(unittest.TestCase):
 
             sync_run_memory(root, target)
 
-            from src.alpha_memory.store import SQLiteMemoryStore
+            from wqb_agent_lab.memory.core.store import SQLiteMemoryStore
 
             store = SQLiteMemoryStore(root / ".local" / "data" / "memory" / "alpha_memory.db")
             titles = {node.title for node in store.list_nodes()}

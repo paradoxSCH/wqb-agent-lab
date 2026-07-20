@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from itertools import product
 from typing import Any, Iterable, Iterator, Sequence
 
-from .config import SimulationDefaults
+from wqb_agent_lab.runtime.config import SimulationDefaults
 
 
 PRICE_FIELDS = ["close", "open", "high", "low", "vwap"]

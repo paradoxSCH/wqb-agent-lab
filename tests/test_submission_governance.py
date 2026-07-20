@@ -8,7 +8,7 @@ from pathlib import Path
 
 class SubmissionGovernanceTests(unittest.TestCase):
     def test_policy_evaluation_accepts_complete_submit_decision_without_quality_thresholds(self) -> None:
-        from src.submission_governance import SubmitDecision, SubmissionPolicyEvaluator
+        from wqb_agent_lab.governance.submission import SubmitDecision, SubmissionPolicyEvaluator
 
         decision = SubmitDecision(
             decision_id="dec-001",
@@ -26,7 +26,7 @@ class SubmissionGovernanceTests(unittest.TestCase):
         self.assertNotIn("sharpe", json.dumps(evaluation.to_dict()).lower())
 
     def test_policy_evaluation_blocks_incomplete_decision(self) -> None:
-        from src.submission_governance import SubmitDecision, SubmissionPolicyEvaluator
+        from wqb_agent_lab.governance.submission import SubmitDecision, SubmissionPolicyEvaluator
 
         decision = SubmitDecision(
             decision_id="dec-002",
@@ -44,7 +44,7 @@ class SubmissionGovernanceTests(unittest.TestCase):
         self.assertIn("rationale_required", evaluation.reasons)
 
     def test_executor_records_audit_and_refuses_live_when_capability_disabled(self) -> None:
-        from src.submission_governance import SubmitDecision, SubmissionExecutor, SubmissionPolicyEvaluator
+        from wqb_agent_lab.governance.submission import SubmitDecision, SubmissionExecutor, SubmissionPolicyEvaluator
 
         with tempfile.TemporaryDirectory() as tmp:
             run_dir = Path(tmp)
@@ -66,7 +66,7 @@ class SubmissionGovernanceTests(unittest.TestCase):
             self.assertEqual("capability_disabled", json.loads(audit_lines[0])["event_type"])
 
     def test_queue_only_execution_writes_decision_and_backlog(self) -> None:
-        from src.submission_governance import SubmitDecision, SubmissionExecutor, SubmissionPolicyEvaluator
+        from wqb_agent_lab.governance.submission import SubmitDecision, SubmissionExecutor, SubmissionPolicyEvaluator
 
         with tempfile.TemporaryDirectory() as tmp:
             run_dir = Path(tmp)
@@ -91,7 +91,7 @@ class SubmissionGovernanceTests(unittest.TestCase):
             self.assertEqual("dec-004", json.loads(decisions[0])["decision_id"])
 
     def test_executor_is_idempotent_by_decision_id(self) -> None:
-        from src.submission_governance import SubmitDecision, SubmissionExecutor, SubmissionPolicyEvaluator
+        from wqb_agent_lab.governance.submission import SubmitDecision, SubmissionExecutor, SubmissionPolicyEvaluator
 
         with tempfile.TemporaryDirectory() as tmp:
             run_dir = Path(tmp)
@@ -114,7 +114,7 @@ class SubmissionGovernanceTests(unittest.TestCase):
             self.assertEqual(1, len(backlog))
 
     def test_audit_tail_returns_recent_events(self) -> None:
-        from src.submission_governance import SubmissionGovernanceLedger
+        from wqb_agent_lab.governance.submission import SubmissionGovernanceLedger
 
         with tempfile.TemporaryDirectory() as tmp:
             ledger = SubmissionGovernanceLedger(Path(tmp))

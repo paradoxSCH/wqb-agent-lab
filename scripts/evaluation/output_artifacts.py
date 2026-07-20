@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.output_evaluation.evaluator import write_run_output_evaluation
+from wqb_agent_lab.evaluation.output.evaluator import write_run_output_evaluation
 
 
 def main() -> int:

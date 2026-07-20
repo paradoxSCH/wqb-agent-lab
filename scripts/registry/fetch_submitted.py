@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.config import load_config
+from wqb_agent_lab.runtime.config import load_config
 from src.session import create_brain_session
 
 

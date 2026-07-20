@@ -37,17 +37,25 @@ def evaluate_ablation(variants: Mapping[str, Sequence[Mapping[str, Any]]]) -> di
 def summarize_run_dir(run_dir: Path | str) -> dict[str, Any]:
     path = Path(run_dir)
     ledger = _read_json(path / "daily_budget_ledger.json", {})
-    closed_counts = {}
+    closed_counts: dict[str, Any] = {}
     if isinstance(ledger, dict):
         closed_loop = ledger.get("closed_loop") or {}
         if isinstance(closed_loop, dict):
-            closed_counts = closed_loop.get("counts") or {}
+            raw_counts = closed_loop.get("counts")
+            if isinstance(raw_counts, dict):
+                closed_counts = raw_counts
     decisions = _read_json(path / "decision_attribution.json", [])
     if not isinstance(decisions, list):
         decisions = []
     result_rows = _read_result_rows(path)
     simulations = _int(ledger.get("spent_simulations")) if isinstance(ledger, dict) else 0
-    decision_outcomes = [item.get("outcome") for item in decisions if isinstance(item, dict) and isinstance(item.get("outcome"), dict)]
+    decision_outcomes: list[dict[str, Any]] = []
+    for item in decisions:
+        if not isinstance(item, dict):
+            continue
+        outcome = item.get("outcome")
+        if isinstance(outcome, dict):
+            decision_outcomes.append(outcome)
     if not simulations:
         simulations = sum(_int(outcome.get("simulations_spent")) for outcome in decision_outcomes)
     if not simulations:

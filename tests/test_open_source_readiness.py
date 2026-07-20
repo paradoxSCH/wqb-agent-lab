@@ -52,7 +52,7 @@ class OpenSourceReadinessTests(unittest.TestCase):
             "release/public_snapshot_manifest.json",
             "scripts/release/export_public_snapshot.py",
             "tests/test_public_snapshot_export.py",
-            "src/side_effect_governance/capabilities.py",
+            "wqb_agent_lab/governance/side_effects/capabilities.py",
             "scripts/bootstrap.ps1",
             "scripts/bootstrap.sh",
         )

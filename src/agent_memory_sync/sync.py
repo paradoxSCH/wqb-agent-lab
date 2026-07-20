@@ -5,8 +5,8 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.alpha_memory.ingest import ingest_runs
-from src.alpha_memory.store import SQLiteMemoryStore
+from wqb_agent_lab.memory.core.ingest import ingest_runs
+from wqb_agent_lab.memory.core.store import SQLiteMemoryStore
 
 
 TRIAGE_ARTIFACTS = (

@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.diagnosis_policy import evaluate_diagnosis_policies
+from wqb_agent_lab.evaluation.diagnosis_policy import evaluate_diagnosis_policies
 
 
 class DiagnosisPolicyTests(unittest.TestCase):

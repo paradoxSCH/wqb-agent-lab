@@ -11,9 +11,9 @@ from requests import Response
 from wqb_agent_lab.runtime import SideEffectUncertainError
 
 from .alpha_generator import build_alpha_object
-from .config import Config
+from wqb_agent_lab.runtime.config import Config
 from .session import BrainSession
-from .side_effect_governance import require_side_effect_capability
+from wqb_agent_lab.governance.side_effects import require_side_effect_capability
 from wqb_agent_lab.platform.session import (
     LOCATION,
     RETRY_AFTER,

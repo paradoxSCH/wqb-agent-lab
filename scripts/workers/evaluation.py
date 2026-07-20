@@ -9,8 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable
 
-from src.atomic_json import atomic_write_json
-from src.process_lock import PidFileLock
+from wqb_agent_lab.runtime.atomic_json import atomic_write_json
+from wqb_agent_lab.runtime.process_lock import PidFileLock
 from src.workflow_daemon import CompletionHookResult, run_completion_hooks
 
 

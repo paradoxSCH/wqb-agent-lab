@@ -5,7 +5,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
-from src.contracts import ValidationError
+from wqb_agent_lab.contracts import ValidationError
 
 from .models import PlanProposal, PlanProposalValidationError, parse_plan_proposal
 

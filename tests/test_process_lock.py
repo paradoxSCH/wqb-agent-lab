@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.process_lock import PidFileLock
+from wqb_agent_lab.runtime.process_lock import PidFileLock
 
 
 class PidFileLockTests(unittest.TestCase):

@@ -5,9 +5,9 @@ import json
 import tempfile
 from pathlib import Path
 
-from src.alpha_memory.schema import MemoryNode
-from src.memory_governance import build_memory_governance_report, write_memory_governance_report
-from src.memory_governance.policy import (
+from wqb_agent_lab.memory.core.schema import MemoryNode
+from wqb_agent_lab.memory.governance import build_memory_governance_report, write_memory_governance_report
+from wqb_agent_lab.memory.governance.policy import (
     assess_evidence,
     evaluate_forgetting,
     is_retrievable_for_mode,

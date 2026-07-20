@@ -34,7 +34,7 @@ from scripts.run.daemon import (
 
 class WorkflowDaemonTests(unittest.TestCase):
     def test_live_scan_launch_requires_simulation_capability(self) -> None:
-        from src.side_effect_governance import SideEffectCapabilityDisabled
+        from wqb_agent_lab.governance.side_effects import SideEffectCapabilityDisabled
 
         with self.assertRaises(SideEffectCapabilityDisabled) as raised:
             require_launch_capabilities(execute_scans=True, auto_submit=False, env={})
@@ -42,7 +42,7 @@ class WorkflowDaemonTests(unittest.TestCase):
         self.assertEqual(raised.exception.decision.operation, "simulation")
 
     def test_auto_submit_launch_requires_both_capabilities_when_scans_are_live(self) -> None:
-        from src.side_effect_governance import SideEffectCapabilityDisabled
+        from wqb_agent_lab.governance.side_effects import SideEffectCapabilityDisabled
 
         with self.assertRaises(SideEffectCapabilityDisabled) as raised:
             require_launch_capabilities(

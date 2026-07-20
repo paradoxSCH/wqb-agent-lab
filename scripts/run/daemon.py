@@ -14,7 +14,7 @@ from typing import Mapping
 
 from src.research_policy import ResearchPolicyError, load_research_policy
 
-from src.side_effect_governance import (
+from wqb_agent_lab.governance.side_effects import (
     CapabilityDecision,
     SideEffectCapabilityDisabled,
     require_side_effect_capability,

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from src.alpha_memory.governance import (
+from wqb_agent_lab.memory.core.governance import (
     GovernanceDecision,
     decide_memory_governance,
     suggest_merge_key,

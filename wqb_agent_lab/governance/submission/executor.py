@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
-from src.side_effect_governance import evaluate_side_effect_capability
+from wqb_agent_lab.governance.side_effects import evaluate_side_effect_capability
 
 from .ledger import SubmissionGovernanceLedger
 from .models import PolicyEvaluation, SubmitDecision, SubmissionAuditEvent

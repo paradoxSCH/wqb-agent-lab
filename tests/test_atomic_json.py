@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.atomic_json import atomic_write_json, locked_atomic_json_merge
+from wqb_agent_lab.runtime.atomic_json import atomic_write_json, locked_atomic_json_merge
 
 
 class AtomicJsonTests(unittest.TestCase):
@@ -22,7 +22,7 @@ class AtomicJsonTests(unittest.TestCase):
             lock_path = path.with_name(f".{path.name}.lock")
             lock_path.write_text("999999\n", encoding="ascii")
 
-            with patch("src.atomic_json.pid_is_running", return_value=False):
+            with patch("wqb_agent_lab.runtime.atomic_json.pid_is_running", return_value=False):
                 result = locked_atomic_json_merge(path, {"status": "ok"}, timeout_seconds=0.1)
 
             self.assertEqual({"status": "ok"}, result)

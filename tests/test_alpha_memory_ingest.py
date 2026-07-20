@@ -6,8 +6,8 @@ import time
 import unittest
 from pathlib import Path
 
-from src.alpha_memory.ingest import ingest_runs
-from src.alpha_memory.store import SQLiteMemoryStore
+from wqb_agent_lab.memory.core.ingest import ingest_runs
+from wqb_agent_lab.memory.core.store import SQLiteMemoryStore
 
 
 class AlphaMemoryIngestTests(unittest.TestCase):

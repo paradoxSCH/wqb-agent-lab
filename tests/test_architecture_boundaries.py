@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import re
+import ast
 import unittest
 from importlib import import_module
 from pathlib import Path
 
-from src.memory_governance.policy import EvidenceAssessment, resolve_action_permission
+from wqb_agent_lab.memory.governance.policy import EvidenceAssessment, resolve_action_permission
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,13 +25,26 @@ class ArchitectureBoundaryTests(unittest.TestCase):
         self.assertIs(workflow.ResearchWorkflow, KimiDailyWorkflow)
         self.assertNotIn("ContinuousAlphaScheduler", workflow.__all__)
 
-    def test_canonical_namespace_does_not_import_removed_product_namespace(self) -> None:
-        violations = []
+    def test_canonical_namespace_does_not_depend_on_legacy_src_package(self) -> None:
+        violations: list[str] = []
         for path in (ROOT / "wqb_agent_lab").rglob("*.py"):
-            if "src.wqb_agent_lab" in path.read_text(encoding="utf-8"):
-                violations.append(str(path.relative_to(ROOT)))
+            tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and (node.module or "").startswith(
+                    "src"
+                ):
+                    violations.append(str(path.relative_to(ROOT)))
+                if isinstance(node, ast.Import) and any(
+                    alias.name == "src" or alias.name.startswith("src.")
+                    for alias in node.names
+                ):
+                    violations.append(str(path.relative_to(ROOT)))
 
-        self.assertEqual([], violations)
+        self.assertEqual(
+            [str(Path("wqb_agent_lab/workflow/__init__.py"))],
+            sorted(set(violations)),
+            "Only the workflow facade may depend on the pre-split orchestrator.",
+        )
 
     def test_active_agent_layers_do_not_call_wqb_http_directly(self) -> None:
         active_paths = [
