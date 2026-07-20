@@ -301,7 +301,7 @@ class OpenSourceReadinessTests(unittest.TestCase):
         self.assertIn("python -m scripts.dev build --json", ci)
         self.assertIn("python -m scripts.dev release-check --json", ci)
         self.assertIn("uv sync --extra dev --extra mcp --frozen", ci)
-        self.assertIn("gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7", ci)
+        self.assertIn("gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e", ci)
         self.assertIn("GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}", ci)
         self.assertIn("pull-requests: read", ci)
         self.assertIn("fetch-depth: 0", ci)
