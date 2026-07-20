@@ -24,6 +24,31 @@ class ArchitectureBoundaryTests(unittest.TestCase):
         self.assertIs(workflow.ResearchWorkflow, KimiDailyWorkflow)
         self.assertNotIn("ContinuousAlphaScheduler", workflow.__all__)
 
+    def test_legacy_product_namespace_only_forwards_canonical_exports(self) -> None:
+        for namespace in ("evaluation", "governance", "memory", "platform", "research", "workflow"):
+            canonical = import_module(f"wqb_agent_lab.{namespace}")
+            compatibility = import_module(f"src.wqb_agent_lab.{namespace}")
+            for exported_name in canonical.__all__:
+                self.assertIs(
+                    getattr(compatibility, exported_name),
+                    getattr(canonical, exported_name),
+                    f"{namespace}.{exported_name}",
+                )
+
+    def test_canonical_namespace_does_not_import_legacy_product_namespace(self) -> None:
+        violations = []
+        for path in (ROOT / "wqb_agent_lab").rglob("*.py"):
+            if "src.wqb_agent_lab" in path.read_text(encoding="utf-8"):
+                violations.append(str(path.relative_to(ROOT)))
+
+        self.assertEqual([], violations)
+
+    def test_root_scan_module_forwards_to_canonical_runtime(self) -> None:
+        compatibility = import_module("run_scan")
+        canonical = import_module("wqb_agent_lab.runtime.scan")
+
+        self.assertIs(compatibility, canonical)
+
     def test_active_agent_layers_do_not_call_wqb_http_directly(self) -> None:
         active_paths = [
             ROOT / "src" / "continuous_alpha_scheduler.py",
@@ -47,7 +72,7 @@ class ArchitectureBoundaryTests(unittest.TestCase):
         )
 
     def test_production_scan_uses_canonical_wqb_client(self) -> None:
-        source = (ROOT / "run_scan.py").read_text(encoding="utf-8")
+        source = (ROOT / "wqb_agent_lab" / "runtime" / "scan.py").read_text(encoding="utf-8")
 
         self.assertIn("from wqb_agent_lab.platform import WQBClient", source)
         self.assertNotIn("from src.session import", source)

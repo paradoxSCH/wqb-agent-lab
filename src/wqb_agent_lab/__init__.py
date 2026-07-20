@@ -1,9 +1,9 @@
-"""Public package for the WQB agent research product."""
+"""Compatibility namespace forwarding to :mod:`wqb_agent_lab`."""
 
 from importlib import import_module
 from types import ModuleType
 
-from .layout import RepositoryLayout
+from wqb_agent_lab import RepositoryLayout
 
 
 _SUBMODULES = frozenset({"evaluation", "governance", "memory", "platform", "research", "workflow"})

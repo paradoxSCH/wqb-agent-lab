@@ -1,5 +1,5 @@
-"""Canonical production workflow boundary."""
+"""Compatibility import for the canonical installed namespace."""
 
-from src.kimi_daily_workflow import KimiDailyWorkflow as ResearchWorkflow
+from wqb_agent_lab.workflow import ResearchWorkflow
 
 __all__ = ["ResearchWorkflow"]

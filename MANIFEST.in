@@ -4,7 +4,7 @@ include NOTICE
 include CITATION.cff
 recursive-include LICENSES *.txt
 recursive-include schemas *.json
-recursive-include src/wqb_agent_lab/platform/resources *.json
+recursive-include wqb_agent_lab/platform/resources *.json
 include docs/README.md
 recursive-include docs/user *.md
 recursive-include docs/architecture *.md

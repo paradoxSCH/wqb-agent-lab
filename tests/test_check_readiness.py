@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from run_scan import is_pass
+from wqb_agent_lab.runtime.scan import is_pass
 from src.wqb.check_readiness import REQUIRED_SUBMISSION_CHECK_NAMES, evaluate_check_snapshot
 
 

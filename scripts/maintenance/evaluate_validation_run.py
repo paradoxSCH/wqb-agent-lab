@@ -9,7 +9,7 @@ from pathlib import Path
 from statistics import mean, median
 from typing import Any
 
-from run_scan import is_pass
+from wqb_agent_lab.runtime.scan import is_pass
 
 
 def summarize_rows(rows: list[dict[str, Any]], *, target: int) -> dict[str, Any]:
