@@ -20,7 +20,6 @@ class TSUISkeletonTests(unittest.TestCase):
             "index.html",
             "src/App.tsx",
             "src/main.tsx",
-            "src/sampleRunSummary.ts",
             "src/styles.css",
             "src/runSummaryView.ts",
             "src/index.ts",
