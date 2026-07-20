@@ -43,6 +43,8 @@ The project follows Semantic Versioning after the first public release. While th
   and strict memory-before-evaluation ordering, removing an asynchronous artifact race.
 - Counterfactual policy-feedback shadow mode by default, multi-run promotion gates for control,
   explicit exploration retention, and full preservation of overflow LLM candidate payloads.
+- Complete production provenance for local/CI Git state, prompts, provider configuration,
+  operator catalogs, schemas, and schema-declared artifacts with producer/consumer validation.
 
 ## [0.1.1-alpha] - 2026-07-14
 

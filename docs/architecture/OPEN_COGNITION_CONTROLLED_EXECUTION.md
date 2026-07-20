@@ -23,7 +23,7 @@ The migration must preserve all of the following:
 | --- | --- | --- |
 | Proposal boundary | Implemented | Provider-neutral schema and immutable models |
 | Structural repair and policy | Implemented | Explicit opt-in adapter; legacy output remains default |
-| Provenance | In progress | Production tick checkpoints, configuration/schema/artifact digests |
+| Provenance | Implemented | Git/dependency/config/provider/prompt/catalog/schema/artifact identities |
 | Recoverable stages | Implemented | Planning through registry, memory, and evaluation use atomic checkpoints |
 | Side-effect reconciliation | Implemented | Simulation and submission use evidence-first recovery |
 | Evidence-gated feedback | Implemented | Shadow default; control requires measured promotion gates |
@@ -47,6 +47,14 @@ The migration must preserve all of the following:
 - Add an immutable run manifest containing code, dependency, configuration, schema,
   provider, prompt, catalog, and artifact digests.
 - Validate public artifacts at producer and consumer boundaries.
+
+The production manifest resolves the Git revision outside CI as well as inside it and records
+whether tracked files were dirty. It fingerprints the dependency lock, workflow configuration,
+provider configuration, exact persisted prompt, operator catalog, every published schema, and
+every durable run artifact. Artifacts explicitly declared against a public schema are validated
+before they enter the manifest; manifest consumers revalidate the schema identity and can verify
+the current artifact bytes and contract. Internal diagnostic and open LLM artifacts remain
+content-addressed without being forced into a closed public schema.
 
 ### 4. Recoverable workflow
 
@@ -133,7 +141,8 @@ actions remain recorded observations rather than automatic restrictions on later
 
 - Budget never becomes negative under generated event sequences.
 - Replaying a completed stage cannot create a second effective side effect.
-- Every persisted public artifact validates against its declared schema version.
+- Every persisted artifact declared against a public contract validates at producer and
+  consumer boundaries; open internal artifacts remain losslessly content-addressed.
 - A representative offline prompt set retains arbitrary expressions and unknown mechanisms.
 - Structural repair improves parse success without reducing proposal diversity.
 - Shadow feedback must demonstrate measured benefit before controlling later runs; the runtime

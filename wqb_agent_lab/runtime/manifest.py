@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any
+from typing import Any, Callable
 
 from src.contracts import assert_valid_contract, schema_digest
 
@@ -75,6 +75,25 @@ class ArtifactProvenance:
     producer: str = ""
     extensions: Mapping[str, Any] = field(default_factory=_metadata)
 
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> ArtifactProvenance:
+        artifact = cls(
+            path=str(payload.get("path") or ""),
+            kind=str(payload.get("kind") or ""),
+            sha256=str(payload.get("sha256") or ""),
+            size_bytes=int(payload.get("size_bytes") or 0),
+            schema_name=str(payload.get("schema_name") or ""),
+            schema_digest=str(payload.get("schema_digest") or ""),
+            producer=str(payload.get("producer") or ""),
+            extensions=_metadata(
+                payload.get("extensions")
+                if isinstance(payload.get("extensions"), Mapping)
+                else {}
+            ),
+        )
+        artifact.validate()
+        return artifact
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "path": self.path,
@@ -86,6 +105,22 @@ class ArtifactProvenance:
             "producer": self.producer,
             "extensions": _thaw(self.extensions),
         }
+
+    def validate(self) -> None:
+        if not self.path or Path(self.path).is_absolute():
+            raise ValueError("artifact path must be workspace-relative")
+        if len(self.sha256) != 64 or any(char not in "0123456789abcdef" for char in self.sha256):
+            raise ValueError(f"artifact sha256 is invalid: {self.path}")
+        if self.size_bytes < 0:
+            raise ValueError(f"artifact size is invalid: {self.path}")
+        if self.schema_name:
+            if len(self.schema_digest) != 64 or any(
+                char not in "0123456789abcdef" for char in self.schema_digest
+            ):
+                raise ValueError(f"artifact schema digest is invalid: {self.path}")
+        elif self.schema_digest:
+            raise ValueError(f"artifact schema digest requires a schema name: {self.path}")
+        _reject_sensitive_keys(self.to_dict())
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,6 +163,41 @@ class RunManifest:
         manifest.validate()
         return manifest
 
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> RunManifest:
+        assert_valid_contract("run_manifest", dict(payload))
+        artifacts = tuple(
+            ArtifactProvenance.from_dict(item)
+            for item in payload.get("artifacts") or ()
+            if isinstance(item, Mapping)
+        )
+        manifest = cls(
+            schema_version=int(payload.get("schema_version") or 0),
+            run_id=str(payload.get("run_id") or ""),
+            created_at=str(payload.get("created_at") or ""),
+            code=_metadata(payload.get("code") if isinstance(payload.get("code"), Mapping) else {}),
+            runtime=_metadata(
+                payload.get("runtime") if isinstance(payload.get("runtime"), Mapping) else {}
+            ),
+            configuration=_metadata(
+                payload.get("configuration")
+                if isinstance(payload.get("configuration"), Mapping)
+                else {}
+            ),
+            llm=_metadata(payload.get("llm") if isinstance(payload.get("llm"), Mapping) else {}),
+            research=_metadata(
+                payload.get("research") if isinstance(payload.get("research"), Mapping) else {}
+            ),
+            artifacts=artifacts,
+            extensions=_metadata(
+                payload.get("extensions")
+                if isinstance(payload.get("extensions"), Mapping)
+                else {}
+            ),
+        )
+        manifest.validate()
+        return manifest
+
     def with_artifact(self, artifact: ArtifactProvenance) -> RunManifest:
         return self.with_artifacts((artifact,))
 
@@ -158,7 +228,28 @@ class RunManifest:
     def validate(self) -> None:
         payload = self.to_dict()
         _reject_sensitive_keys(payload)
+        for artifact in self.artifacts:
+            artifact.validate()
         assert_valid_contract("run_manifest", payload)
+
+    def verify_artifacts(self, workspace_root: Path | str) -> None:
+        root = Path(workspace_root).resolve()
+        for artifact in self.artifacts:
+            path = (root / artifact.path).resolve()
+            if not path.is_relative_to(root) or not path.is_file():
+                raise FileNotFoundError(f"manifest artifact is missing: {artifact.path}")
+            content = path.read_bytes()
+            if len(content) != artifact.size_bytes:
+                raise ValueError(f"manifest artifact size changed: {artifact.path}")
+            digest = hashlib.sha256(content).hexdigest()
+            if digest != artifact.sha256:
+                raise ValueError(f"manifest artifact digest changed: {artifact.path}")
+            if artifact.schema_name:
+                if artifact.schema_digest != schema_digest(artifact.schema_name):
+                    raise ValueError(
+                        f"manifest artifact schema version is unavailable: {artifact.path}"
+                    )
+                _validate_json_artifact(path, artifact.schema_name, content=content)
 
     def digest(self) -> str:
         encoded = json.dumps(self.to_dict(), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -181,6 +272,8 @@ def artifact_provenance(
     if not resolved.is_file():
         raise FileNotFoundError(resolved)
     content = resolved.read_bytes()
+    if schema_name:
+        _validate_json_artifact(resolved, schema_name, content=content)
     artifact = ArtifactProvenance(
         path=resolved.relative_to(root).as_posix(),
         kind=kind,
@@ -191,7 +284,7 @@ def artifact_provenance(
         producer=producer,
         extensions=_metadata(extensions),
     )
-    _reject_sensitive_keys(artifact.to_dict())
+    artifact.validate()
     return artifact
 
 
@@ -201,6 +294,7 @@ def collect_artifact_provenance(
     *,
     exclude: tuple[Path | str, ...] = (),
     producer: str = "",
+    schema_resolver: Callable[[Path], str] | None = None,
 ) -> tuple[ArtifactProvenance, ...]:
     """Snapshot every durable file below an artifact root in stable path order."""
 
@@ -222,6 +316,7 @@ def collect_artifact_provenance(
                     root,
                     resolved,
                     kind=_artifact_kind(resolved),
+                    schema_name=schema_resolver(resolved) if schema_resolver else "",
                     producer=producer,
                 )
             )
@@ -230,6 +325,22 @@ def collect_artifact_provenance(
             # not durable run artifacts.
             continue
     return tuple(artifacts)
+
+
+def _validate_json_artifact(
+    path: Path,
+    schema_name: str,
+    *,
+    content: bytes | None = None,
+) -> None:
+    try:
+        text = content.decode("utf-8") if content is not None else path.read_text(encoding="utf-8")
+        payload = json.loads(text)
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise ValueError(f"{schema_name} artifact is not valid UTF-8 JSON: {path}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"{schema_name} artifact must contain an object: {path}")
+    assert_valid_contract(schema_name, payload)
 
 
 def _artifact_kind(path: Path) -> str:

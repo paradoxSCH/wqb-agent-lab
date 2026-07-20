@@ -47,6 +47,7 @@ from wqb_agent_lab.runtime import (
     collect_artifact_provenance,
     payload_fingerprint,
 )
+from wqb_agent_lab.platform import load_operator_names
 from wqb_agent_lab.workflow.stages import StageCheckpointStore, StageOutcome, StageRunner
 
 
@@ -99,6 +100,51 @@ def _file_sha256(path: Path) -> str:
     if not path.is_file():
         return ""
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _git_provenance(root: Path) -> dict[str, Any]:
+    revision = str(os.getenv("GITHUB_SHA") or "").strip()
+    revision_source = "environment" if revision else "unavailable"
+    try:
+        if not revision:
+            completed = subprocess.run(
+                ["git", "rev-parse", "HEAD"],
+                cwd=root,
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                shell=False,
+            )
+            if completed.returncode == 0:
+                revision = completed.stdout.strip()
+                revision_source = "git"
+        status = subprocess.run(
+            ["git", "status", "--porcelain", "--untracked-files=no"],
+            cwd=root,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            shell=False,
+        )
+        dirty: bool | None = bool(status.stdout.strip()) if status.returncode == 0 else None
+    except OSError:
+        dirty = None
+    return {
+        "component": "src.kimi_daily_workflow.KimiDailyWorkflow",
+        "revision": revision,
+        "revision_source": revision_source,
+        "tracked_files_dirty": dirty,
+    }
+
+
+def _workflow_artifact_schema(path: Path) -> str:
+    if path.parent.name == "stage_checkpoints" and path.suffix.lower() == ".json":
+        return "workflow_stage_result"
+    return ""
 
 
 def _json_file_fresh(path: Path, max_age_seconds: int) -> bool:
@@ -1481,7 +1527,12 @@ class KimiDailyWorkflow:
         existing = read_json(self.manifest_path, {})
         if not isinstance(existing, dict):
             existing = {}
-        created_at = str(existing.get("created_at") or now.isoformat(timespec="seconds"))
+        existing_manifest = RunManifest.from_dict(existing) if existing else None
+        created_at = (
+            existing_manifest.created_at
+            if existing_manifest is not None
+            else now.isoformat(timespec="seconds")
+        )
         llm_settings = self.config.get("llm_provider") or {}
         if not isinstance(llm_settings, dict):
             llm_settings = {}
@@ -1492,13 +1543,26 @@ class KimiDailyWorkflow:
             config_path = self.workflow_config_path.relative_to(self.root).as_posix()
         except ValueError:
             config_path = self.workflow_config_path.name
+        prompt_path = self.llm_adapter.prompt_path(self.root, self.run_dir, self.run_tag)
+        prompt_sha256 = (
+            _file_sha256(prompt_path)
+            if prompt_path.is_file()
+            else hashlib.sha256(b"planner-disabled").hexdigest()
+            if not self.llm_adapter.is_configured()
+            else ""
+        )
+        operator_names = sorted(load_operator_names())
+        operator_catalog_sha256 = hashlib.sha256(
+            json.dumps(
+                operator_names,
+                ensure_ascii=True,
+                separators=(",", ":"),
+            ).encode("utf-8")
+        ).hexdigest()
         manifest = RunManifest.create(
             run_id=self.run_tag,
             created_at=created_at,
-            code={
-                "component": "src.kimi_daily_workflow.KimiDailyWorkflow",
-                "revision": str(os.getenv("GITHUB_SHA") or ""),
-            },
+            code=_git_provenance(self.root),
             runtime={
                 "python": platform.python_version(),
                 "implementation": platform.python_implementation(),
@@ -1515,11 +1579,17 @@ class KimiDailyWorkflow:
                 "provider": self.llm_adapter.provider,
                 "model": self.llm_adapter.model,
                 "output_contract": str(llm_settings.get("output_contract") or "legacy"),
+                "provider_config_sha256": str(
+                    self.llm_adapter.metadata().get("config_digest") or ""
+                ),
+                "prompt_sha256": prompt_sha256,
             },
             research={
                 "run_date": self.run_date.isoformat(),
                 "budget_mode": self.budget_mode,
                 "current_stage": str(ledger.get("current_stage") or ""),
+                "operator_catalog_sha256": operator_catalog_sha256,
+                "operator_count": len(operator_names),
                 "schema_digests": {name: schema_digest(name) for name in list_schema_names()},
             },
             extensions={
@@ -1533,6 +1603,7 @@ class KimiDailyWorkflow:
             self.run_dir,
             exclude=(self.manifest_path,),
             producer="kimi_daily_workflow",
+            schema_resolver=_workflow_artifact_schema,
         )
         artifacts += collect_artifact_provenance(
             self.root,
