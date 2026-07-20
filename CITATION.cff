@@ -4,7 +4,7 @@ title: "WQB Agent Lab"
 type: software
 authors:
   - name: "paradoxSCH"
-version: 0.2.0a1
+version: 0.3.0a1
 license: Apache-2.0
 abstract: "An auditable agent research workflow for WorldQuant BRAIN."
 repository-code: "https://github.com/paradoxSCH/wqb-agent-lab"

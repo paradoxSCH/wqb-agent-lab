@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0a1] - 2026-07-21
+
+### Removed
+
+- Removed the experimental continuous scheduler, its separate LLM template generator,
+  compatibility command, and implementation-coupled test suite. `ResearchWorkflow` is now
+  the only production orchestrator.
+
 ## [0.2.0a1] - 2026-07-14
 
 - Added durable side-effect operation journal and replayable workflow outbox.

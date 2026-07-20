@@ -86,12 +86,6 @@ class DocumentationFreshnessTests(unittest.TestCase):
         self.assertIn("recursive-include wqb_agent_lab/platform/resources *.json", package_manifest)
         self.assertNotIn("src/wqb_agent_lab/platform/resources", package_manifest)
 
-    def test_llm_generator_prompt_uses_current_operator_names(self) -> None:
-        source = read("src/llm_template_generator.py")
-        self.assertIn("ts_std_dev(field, days)", source)
-        self.assertNotIn("ts_std(field, days)", source)
-        self.assertIn('"ts_std_dev"', source)
-
     def test_public_example_is_local_first_and_submission_disabled(self) -> None:
         config = json.loads(read("configs/examples/production-workflow.example.json"))
 

@@ -32,9 +32,9 @@ forwarding compatibility import through version `0.2.x` and will be removed in v
 
 ## Legacy scheduler
 
-New automation must use `scripts.run.workflow`. `scripts.run.scheduler` and
-`src.continuous_alpha_scheduler` remain historical-run compatibility surfaces through
-version `0.2.x`; they are scheduled for removal in version `0.3.0`.
+The experimental continuous scheduler was removed in `0.3.0`. Use
+`scripts.run.workflow`; historical scheduler state is retained as run evidence but is not
+an executable compatibility surface.
 
 ## LLM configuration
 
