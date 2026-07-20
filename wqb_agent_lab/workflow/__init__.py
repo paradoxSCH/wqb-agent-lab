@@ -1,3 +1,5 @@
-from src.wqb_agent_lab.workflow import ResearchWorkflow
+"""Canonical production workflow boundary."""
+
+from src.kimi_daily_workflow import KimiDailyWorkflow as ResearchWorkflow
 
 __all__ = ["ResearchWorkflow"]

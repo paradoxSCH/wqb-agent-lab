@@ -1,6 +1,5 @@
-"""Side-effect and submission-policy governance boundary."""
+"""Compatibility import for the canonical installed namespace."""
 
-from src.side_effect_governance import require_side_effect_capability
-from src.submission_governance import SubmissionPolicyEvaluator
+from wqb_agent_lab.governance import SubmissionPolicyEvaluator, require_side_effect_capability
 
 __all__ = ["SubmissionPolicyEvaluator", "require_side_effect_capability"]

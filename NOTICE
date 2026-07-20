@@ -16,6 +16,6 @@ Third-party software and content remain under their respective licenses.
 The wqb Python package is a third-party community dependency and is not an
 official WorldQuant client.
 
-The packaged operator catalog under src/wqb_agent_lab/platform/resources/ is
+The packaged operator catalog under wqb_agent_lab/platform/resources/ is
 maintainer-reviewed factual interoperability metadata. It does not reproduce
 WorldQuant documentation prose and does not imply platform endorsement.

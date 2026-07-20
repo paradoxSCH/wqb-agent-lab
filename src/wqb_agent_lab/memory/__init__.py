@@ -1,7 +1,6 @@
-"""Layered memory storage and evidence-governance boundary."""
+"""Compatibility import for the canonical installed namespace."""
 
-from src.alpha_memory import MemoryEdge, MemoryNode
-from src.memory_governance import assess_evidence, evaluate_forgetting, resolve_action_permission
+from wqb_agent_lab.memory import MemoryEdge, MemoryNode, assess_evidence, evaluate_forgetting, resolve_action_permission
 
 __all__ = [
     "MemoryEdge",

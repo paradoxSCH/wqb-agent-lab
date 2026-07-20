@@ -23,6 +23,19 @@ checks, and operator catalog. Imports from `src.wqb_agent_lab` and `src.wqb` rem
 forwarding compatibility imports through version `0.2.x` and will be removed in version
 `0.3.0`.
 
+## Scan imports
+
+Use `python -m scripts.run.scan` as the command entrypoint and
+`wqb_agent_lab.runtime.scan` for Python imports. The root `run_scan` module remains a
+forwarding compatibility import through version `0.2.x` and will be removed in version
+`0.3.0`.
+
+## Legacy scheduler
+
+New automation must use `scripts.run.workflow`. `scripts.run.scheduler` and
+`src.continuous_alpha_scheduler` remain historical-run compatibility surfaces through
+version `0.2.x`; they are scheduled for removal in version `0.3.0`.
+
 ## LLM configuration
 
 Use the top-level `llm_provider` object. The legacy `llm_adapter`, `deepseek_v4_pro`,

@@ -76,12 +76,15 @@ class DocumentationFreshnessTests(unittest.TestCase):
 
     def test_operator_catalog_is_packaged_below_wqb_boundary(self) -> None:
         catalog = ROOT / "wqb_agent_lab" / "platform" / "resources" / "operators.json"
+        package_manifest = read("MANIFEST.in")
         payload = json.loads(catalog.read_text(encoding="utf-8"))
         rows = payload.get("operators", []) if isinstance(payload, dict) else payload
 
         self.assertGreater(len(rows), 50)
         self.assertIn("ts_std_dev", load_operator_names())
         self.assertNotIn("ts_std", load_operator_names())
+        self.assertIn("recursive-include wqb_agent_lab/platform/resources *.json", package_manifest)
+        self.assertNotIn("src/wqb_agent_lab/platform/resources", package_manifest)
 
     def test_llm_generator_prompt_uses_current_operator_names(self) -> None:
         source = read("src/llm_template_generator.py")
