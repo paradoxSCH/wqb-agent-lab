@@ -24,7 +24,7 @@ The migration must preserve all of the following:
 | Proposal boundary | Implemented | Provider-neutral schema and immutable models |
 | Structural repair and policy | Implemented | Explicit opt-in adapter; legacy output remains default |
 | Provenance | In progress | Production tick checkpoints, configuration/schema/artifact digests |
-| Recoverable stages | In progress | Planning through submission intent use atomic checkpoints |
+| Recoverable stages | Implemented | Planning through registry, memory, and evaluation use atomic checkpoints |
 | Side-effect reconciliation | Implemented | Simulation and submission use evidence-first recovery |
 | Evidence-gated feedback | Planned | Shadow mode before advisory or control use |
 
@@ -93,6 +93,14 @@ is lost or the worker stops after the POST, the next worker tick looks up the ex
 and accepts only `ACTIVE`, `SUBMITTED`, or `dateSubmitted` detail as positive evidence. A
 missing match schedules another read-only observation and eventually moves to manual review;
 it never causes an ambiguous POST to be repeated.
+
+Registry refresh, memory ingestion, and output evaluation now have explicit stage boundaries.
+Registry refresh remains a non-blocking, lock-guarded, read-only cache update; the checkpoint
+records the exact local snapshot used by the current tick. Memory ingestion runs locally with
+idempotent SQLite upserts and unique events, and must complete before evaluation starts. This
+removes the previous race where evaluation could nondeterministically miss the current run's
+memory report. Evaluation timestamps are injected by the workflow clock, and budget-policy
+actions remain recorded observations rather than automatic restrictions on later LLM output.
 
 ### 5. Side-effect reconciliation
 
