@@ -20,7 +20,7 @@ from wqb_agent_lab.governance.side_effects import (
     require_side_effect_capability,
 )
 
-from src.workflow_daemon import (
+from wqb_agent_lab.workflow.daemon import (
     build_dashboard_spec,
     build_workflow_spec,
     check_process_status,

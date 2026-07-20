@@ -5,6 +5,9 @@ workflow state, policy, memory, evaluation, the WQB platform boundary, and the d
 workbench. TypeScript owns the MCP protocol shell and an optional `run_summary` contract
 consumer.
 
+Workflow operations, including daemon completion hooks and dashboard projections, live
+with the canonical workflow package rather than in a parallel application namespace.
+
 ![Current WQB Agent Lab architecture](../assets/wqb-agent-architecture-current-zh.svg)
 
 ## Dependency direction

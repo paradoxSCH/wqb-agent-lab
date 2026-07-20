@@ -121,6 +121,19 @@ class ArchitectureSlimmingTests(unittest.TestCase):
         self.assertEqual([], [path for path in canonical if not (ROOT / path).is_file()])
         self.assertEqual([], [path for path in retired if (ROOT / path).exists()])
 
+    def test_workflow_operations_are_canonical(self) -> None:
+        canonical = (
+            "wqb_agent_lab/workflow/dashboard.py",
+            "wqb_agent_lab/workflow/daemon.py",
+        )
+        retired = (
+            "src/daily_workflow_dashboard.py",
+            "src/workflow_daemon.py",
+        )
+
+        self.assertEqual([], [path for path in canonical if not (ROOT / path).is_file()])
+        self.assertEqual([], [path for path in retired if (ROOT / path).exists()])
+
 
 if __name__ == "__main__":
     unittest.main()

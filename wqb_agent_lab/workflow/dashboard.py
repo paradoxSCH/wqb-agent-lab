@@ -231,7 +231,10 @@ def collect_evaluation_reports(evaluations_root: Path = EVALUATIONS_ROOT, *, lim
         payload = _read_json(report_path, {})
         if not isinstance(payload, dict):
             continue
-        fairness = payload.get("fairness") if isinstance(payload.get("fairness"), dict) else {}
+        raw_fairness = payload.get("fairness")
+        fairness: dict[str, Any] = (
+            raw_fairness if isinstance(raw_fairness, dict) else {}
+        )
         reports.append({
             "run_tag": report_path.parent.name,
             "verdict": payload.get("verdict", "unknown"),
