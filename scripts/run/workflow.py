@@ -1,6 +1,6 @@
 """Run one production daily research workflow."""
 
-from wqb_agent_lab.workflow.engine import main
+from wqb_agent_lab.workflow.cli import main
 
 __all__ = ["main"]
 

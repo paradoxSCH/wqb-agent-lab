@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import argparse
 import hashlib
 import json
 import os
@@ -69,11 +68,9 @@ from wqb_agent_lab.workflow.candidates import (
     failed_check_names,
     failed_checks_from_check_list,
     failed_submit_attempt_alpha_ids,
-    live_checks_from_result,
     metric_value,
     normalize_expression,
     pending_check_names,
-    pending_checks_from_check_list,
     row_metric_pass,
     row_near_pass,
     self_corr_bucket_from_checks,
@@ -84,7 +81,9 @@ from wqb_agent_lab.workflow.candidates import (
     weak_signal_bucket_from_row,
     weight_concentration_bucket_from_checks,
 )
+from wqb_agent_lab.workflow.config_selection import pick_scan_config
 from wqb_agent_lab.workflow.models import StagePlan
+from wqb_agent_lab.workflow.reporting import WorkflowReporter
 from wqb_agent_lab.workflow.stages import StageCheckpointStore, StageOutcome, StageRunner
 
 
@@ -93,7 +92,6 @@ RUNS_ROOT = Path(".local/data/runs/continuous-alpha")
 CONFIGS_ROOT = Path(".local/research/scans/continuous-alpha")
 SUBMITTED_REGISTRY_PATH = Path(".local/data/registry/submitted_alphas.json")
 DAY_START_TIME = day_time(0, 0)
-REPORT_BASENAME = "submit_summary_budget_complete"
 MILD_SELF_CORR_REPAIR_MAX = SELF_CORR_NEAR_REPAIR_MAX
 LLM_RETRY_BASE_SECONDS = 30
 LLM_RETRY_CAP_SECONDS = 15 * 60
@@ -1206,62 +1204,12 @@ class ResearchWorkflow:
         self._set_run_date(self.run_date + timedelta(days=1))
 
     def _pick_scan_config(self) -> str | None:
-        """自动选择最佳 scan config：优先从未使用或久未使用、且历史产出高的 config。"""
-        configs = sorted((self.root / CONFIGS_ROOT).glob("*/scan_config_round*.json"))
-        if not configs:
-            return None
-
-        config_scores: dict[str, tuple[float, int]] = {}
-        for config_path in configs:
-            rel_path = relative_path(config_path, self.root)
-            last_used: date | None = None
-            total_yield = 0
-            run_count = 0
-
-            for ledger_path in (self.root / RUNS_ROOT).glob("*/daily_budget_ledger.json"):
-                ledger_data = read_json(ledger_path, {})
-                queued = ledger_data.get("queued_scan_configs") or []
-                if rel_path in queued:
-                    closed_loop = ledger_data.get("closed_loop", {})
-                    run_date_str = ledger_data.get("date", "")
-                    try:
-                        run_date = datetime.strptime(run_date_str, "%Y-%m-%d").date()
-                    except (ValueError, TypeError):
-                        continue
-                    if last_used is None or run_date > last_used:
-                        last_used = run_date
-                    run_count += 1
-                    if isinstance(closed_loop, dict):
-                        counts = closed_loop.get("counts", {})
-                        if isinstance(counts, dict):
-                            total_yield += int(counts.get("submit_ready") or 0)
-
-            if last_used is None:
-                score = 1000.0
-            else:
-                days_since = (self.run_date - last_used).days
-                # 越久未用分数越高；历史产出也会加分；但最近 2 天内用过大幅降权
-                if days_since <= 1:
-                    score = -500.0
-                else:
-                    score = days_since * 50.0 + total_yield * 20.0
-
-            # 用 config 文件大小（候选数代理）做 tie-breaker
-            try:
-                file_size = config_path.stat().st_size
-            except OSError:
-                file_size = 0
-            config_scores[rel_path] = (score, file_size)
-
-        if not config_scores:
-            return None
-
-        best = max(config_scores, key=lambda k: config_scores[k])
-        best_score = config_scores[best][0]
-        if best_score < 0:
-            # 所有 config 都最近用过，回退到 default
-            return None
-        return best
+        return pick_scan_config(
+            self.root,
+            configs_root=CONFIGS_ROOT,
+            runs_root=RUNS_ROOT,
+            run_date=self.run_date,
+        )
 
     def load_or_create_ledger(self) -> dict[str, Any]:
         modes = self.config.get("daily_budget_modes") or {}
@@ -2750,111 +2698,7 @@ class ResearchWorkflow:
         return state
 
     def collect_submit_ready(self) -> list[dict[str, Any]]:
-        submitted_alpha_ids, submitted_expressions = self._submitted_registry()
-        failed_submit_alpha_ids = self._failed_submit_attempt_alpha_ids()
-        candidate_rows = self._load_candidate_rows_by_alpha()
-        ready: dict[str, dict[str, Any]] = {}
-        for live_path in self._preferred_live_check_paths():
-            payload = read_json(live_path, [])
-            results = payload if isinstance(payload, list) else [payload]
-            for result in results:
-                alpha_id = str(result.get("alpha_id") or "")
-                if not alpha_id:
-                    continue
-                if alpha_id in submitted_alpha_ids or alpha_id in failed_submit_alpha_ids:
-                    continue
-                checks = live_checks_from_result(result)
-                if not checks or failed_checks_from_check_list(checks):
-                    continue
-                row = dict(candidate_rows.get(alpha_id) or {})
-                expression = normalize_expression(str(row.get("expression") or result.get("expression") or ""))
-                if expression and expression in submitted_expressions:
-                    continue
-                row.update({
-                    "alpha_id": alpha_id,
-                    "live_check_path": relative_path(live_path, self.root),
-                    "live_checks": checks,
-                    "validation_source": "live_check",
-                    "requires_live_recheck": False,
-                    "pending_checks": [check.get("name") for check in pending_checks_from_check_list(checks)],
-                    "self_corr": check_value(checks, "SELF_CORRELATION"),
-                    "sub_universe_sharpe": check_value(checks, "LOW_SUB_UNIVERSE_SHARPE"),
-                    "units_warning": units_warning_from_check_list(checks),
-                })
-                row["score"] = round(candidate_score(row), 4)
-                self._upsert_ready_candidate(ready, row)
-
-        for row in self._collect_current_scan_pass_rows(submitted_alpha_ids | failed_submit_alpha_ids, submitted_expressions):
-            self._upsert_ready_candidate(ready, row)
-        return sorted(ready.values(), key=lambda row: row.get("score", 0.0), reverse=True)
-
-    def _collect_current_scan_pass_rows(
-        self,
-        submitted_alpha_ids: set[str],
-        submitted_expressions: set[str],
-    ) -> list[dict[str, Any]]:
-        rows: list[dict[str, Any]] = []
-        for path in self._current_scan_result_paths():
-            payload = read_json(path, [])
-            if not isinstance(payload, list):
-                continue
-            for result in payload:
-                if not isinstance(result, dict):
-                    continue
-                alpha_id = str(result.get("alpha_id") or "")
-                if not alpha_id or alpha_id in submitted_alpha_ids:
-                    continue
-                expression = normalize_expression(str(result.get("expression") or ""))
-                if expression and expression in submitted_expressions:
-                    continue
-                checks = result.get("checks") or []
-                if not row_metric_pass(result) or failed_checks_from_check_list(checks):
-                    continue
-                row = dict(result)
-                row.update({
-                    "alpha_id": alpha_id,
-                    "expression": expression,
-                    "source_path": relative_path(path, self.root),
-                    "validation_source": "scan_result",
-                    "requires_live_recheck": True,
-                    "pending_checks": [check.get("name") for check in pending_checks_from_check_list(checks)],
-                    "self_corr": check_value(checks, "SELF_CORRELATION"),
-                    "sub_universe_sharpe": check_value(checks, "LOW_SUB_UNIVERSE_SHARPE"),
-                    "units_warning": units_warning_from_check_list(checks),
-                })
-                row["score"] = round(candidate_score(row), 4)
-                rows.append(row)
-        return rows
-
-    def _upsert_ready_candidate(self, ready: dict[str, dict[str, Any]], row: dict[str, Any]) -> None:
-        alpha_id = str(row.get("alpha_id") or "")
-        if not alpha_id:
-            return
-        existing = ready.get(alpha_id)
-        if existing is None:
-            ready[alpha_id] = row
-            return
-        existing_live = existing.get("validation_source") == "live_check"
-        row_live = row.get("validation_source") == "live_check"
-        if row_live and not existing_live:
-            ready[alpha_id] = row
-            return
-        if row_live == existing_live and float(row.get("score") or 0.0) > float(existing.get("score") or 0.0):
-            ready[alpha_id] = row
-
-    def _load_candidate_rows_by_alpha(self) -> dict[str, dict[str, Any]]:
-        rows_by_alpha: dict[str, dict[str, Any]] = {}
-        for path in reversed(self._candidate_row_paths()):
-            payload = read_json(path, [])
-            if not isinstance(payload, list):
-                continue
-            for row in payload:
-                if not isinstance(row, dict) or not row.get("alpha_id"):
-                    continue
-                merged = dict(row)
-                merged["source_path"] = relative_path(path, self.root)
-                rows_by_alpha[str(row["alpha_id"])] = merged
-        return rows_by_alpha
+        return WorkflowReporter(self).collect_submit_ready()
 
     def write_daily_report(
         self,
@@ -2864,107 +2708,16 @@ class ResearchWorkflow:
         reason: str = "budget_complete",
         force: bool = False,
     ) -> tuple[Path, Path]:
-        now = now or datetime.now()
-        existing_report = ledger.get("last_budget_complete_report") or ledger.get("last_daily_report")
-        summary_json = self.run_dir / f"{REPORT_BASENAME}.json"
-        summary_md = self.run_dir / f"{REPORT_BASENAME}.md"
-        if existing_report and not force and not self.dry_run:
-            ready = self.collect_submit_ready()
-            self.run_diagnosis_triage(ledger, ready=ready, now=now)
-            write_json(self.ledger_path, ledger)
-            return summary_json, self.root / existing_report
-        ready = self.collect_submit_ready()
-        closed_loop = self.run_diagnosis_triage(ledger, ready=ready, now=now)
-        payload = {
-            "daily_run_tag": self.run_tag,
-            "generated_at": now.isoformat(timespec="seconds"),
-            "report_reason": reason,
-            "budget": {
-                "daily_budget": ledger.get("daily_budget"),
-                "spent_simulations": ledger.get("spent_simulations"),
-                "remaining_simulations_after_commitments": ledger.get("remaining_simulations_after_commitments"),
-                "stage_spend": ledger.get("stage_spend", {}),
-            },
-            "closed_loop": closed_loop,
-            "submit_ready_count": len(ready),
-            "submit_ready": ready,
-            "recommendation": ready[0]["alpha_id"] if ready else None,
-        }
-        if not self.dry_run:
-            write_json(summary_json, payload)
-            snapshot = self.run_dir / "current_submit_candidate_snapshot.json"
-            write_json(snapshot, ready)
-            lines = [
-            "# Daily Budget Complete Report",
-                "",
-                f"Daily run: `{self.run_tag}`",
-                f"Generated at: `{payload['generated_at']}`",
-                f"Reason: `{reason}`",
-                f"Budget: `{ledger.get('spent_simulations')}` / `{ledger.get('daily_budget')}` spent",
-                f"Submit-ready count: `{len(ready)}`",
-                "",
-            ]
-            if ready:
-                best = ready[0]
-                lines.extend([
-                    "## Best Candidate",
-                    "",
-                    f"- Alpha: `{best.get('alpha_id')}`",
-                    f"- Score: `{best.get('score')}`",
-                    f"- Sharpe: `{(best.get('metrics') or {}).get('sharpe')}`",
-                    f"- Fitness: `{(best.get('metrics') or {}).get('fitness')}`",
-                    f"- Turnover: `{(best.get('metrics') or {}).get('turnover')}`",
-                    f"- Self-corr: `{best.get('self_corr')}`",
-                    f"- Validation: `{best.get('validation_source')}`",
-                    f"- Requires live re-check: `{best.get('requires_live_recheck')}`",
-                    f"- Source: `{best.get('source_path')}`",
-                    "",
-                    "Expression:",
-                    "",
-                    "```text",
-                    str(best.get("expression") or ""),
-                    "```",
-                    "",
-                    "## Shortlist",
-                    "",
-                ])
-                for row in ready[:10]:
-                    metrics = row.get("metrics") or {}
-                    lines.append(
-                        f"- `{row.get('alpha_id')}` S={metrics.get('sharpe')} F={metrics.get('fitness')} "
-                        f"T={metrics.get('turnover')} self_corr={row.get('self_corr')} "
-                        f"source={row.get('validation_source')} recheck={row.get('requires_live_recheck')} "
-                        f"score={row.get('score')}"
-                    )
-            else:
-                lines.append("No scan-result or live-check PASS candidates were found when the budget completed.")
-            write_text(summary_md, "\n".join(lines) + "\n")
-            ledger["last_daily_report"] = relative_path(summary_md, self.root)
-            ledger["last_budget_complete_report"] = relative_path(summary_md, self.root)
-            ledger["current_stage"] = "budget_complete_report_written"
-            ledger.pop("completion_email_sent_at", None)
-            ledger.pop("completion_email_error", None)
-            write_json(self.ledger_path, ledger)
-            if reason == "budget_complete":
-                submit_msg = self._auto_submit_direct()
-                if submit_msg:
-                    print(submit_msg, flush=True)
-                self._emit_progress_callback(
-                    "budget_complete",
-                    ledger,
-                    stage="budget_complete_report_written",
-                    extra={
-                        "summary_json": relative_path(summary_json, self.root),
-                        "summary_md": relative_path(summary_md, self.root),
-                        "submit_ready_count": len(ready),
-                        "auto_submit_result": submit_msg,
-                    },
-                )
-                write_json(self.ledger_path, ledger)
-        return summary_json, summary_md
+        return WorkflowReporter(self).write_daily_report(
+            ledger, now=now, reason=reason, force=force
+        )
 
-    def write_17_summary(self, ledger: dict[str, Any], *, now: datetime | None = None) -> tuple[Path, Path]:
-        return self.write_daily_report(ledger, now=now, reason="manual_summary", force=True)
+    def write_17_summary(
+        self, ledger: dict[str, Any], *, now: datetime | None = None
+    ) -> tuple[Path, Path]:
+        return self.write_daily_report(
+            ledger, now=now, reason="manual_summary", force=True
+        )
 
     def _run_once_tick(self, *, now: datetime, summary_only: bool = False) -> list[str]:
         replayed = self.drain_workflow_outbox() if not self.dry_run else 0
@@ -3089,49 +2842,7 @@ class ResearchWorkflow:
             time.sleep(max(60, poll_seconds))
 
 
-def parse_date(value: str | None) -> date | None:
-    if not value:
-        return None
-    return datetime.strptime(value, "%Y-%m-%d").date()
-
-
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Run the Kimi daily alpha budget workflow.")
-    parser.add_argument("--workspace-root", default=".", help="Workspace root containing configs/, .local/data/, scripts/.")
-    parser.add_argument("--workflow-config", default=str(DEFAULT_WORKFLOW_CONFIG), help="Workflow budget config JSON.")
-    parser.add_argument("--date", help="Daily run date, YYYY-MM-DD. Defaults to today.")
-    parser.add_argument("--budget-mode", choices=["conservative", "standard", "aggressive", "expanded_1500"], help="Daily budget mode.")
-    parser.add_argument("--run-once", action="store_true", help="Advance one daily workflow tick and exit.")
-    parser.add_argument("--daemon", action="store_true", help="Keep running daily budget ledgers; each new local date starts at 00:00 and runs until budget completion.")
-    parser.add_argument("--stop-after-summary", action="store_true", help="In daemon mode, stop after the budget-complete report instead of waiting for the next day.")
-    parser.add_argument("--summary-only", action="store_true", help="Only write the current daily submit report.")
-    parser.add_argument("--execute-scans", action="store_true", help="Actually run budgeted BRAIN scans. Omit for planning only.")
-    parser.add_argument("--dry-run", action="store_true", help="Do not write files or run scans.")
-    parser.add_argument("--poll-seconds", type=int, default=900, help="Daemon polling interval.")
-    return parser.parse_args()
-
-
 def main() -> int:
-    args = parse_args()
-    workflow = ResearchWorkflow(
-        Path(args.workspace_root),
-        workflow_config=Path(args.workflow_config),
-        run_date=parse_date(args.date),
-        budget_mode=args.budget_mode,
-        execute_scans=args.execute_scans,
-        dry_run=args.dry_run,
-    )
-    if args.daemon:
-        workflow.run_daemon(poll_seconds=args.poll_seconds, continue_next_day=not args.stop_after_summary)
-        return 0
-    if not args.run_once and not args.summary_only:
-        workflow.run_until_budget_complete(poll_seconds=args.poll_seconds)
-        return 0
-    messages = workflow.run_once(summary_only=args.summary_only)
-    for message in messages:
-        print(message)
-    return 0
+    from .cli import main as cli_main
 
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+    return cli_main()
