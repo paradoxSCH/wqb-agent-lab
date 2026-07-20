@@ -21,7 +21,6 @@ from wqb_agent_lab.evaluation.diagnosis_policy import evaluate_diagnosis_policie
 from wqb_agent_lab.evaluation.failure_diagnosis import diagnose_failure_objects, primary_diagnosis_type
 from wqb_agent_lab.llm.provider import LLMProvider
 from wqb_agent_lab.workflow.llm_planning import LLMPlanAdapter
-from wqb_agent_lab.evaluation.output.evaluator import write_run_output_evaluation
 from wqb_agent_lab.governance.policy_feedback import (
     aggregate_shadow_evidence,
     cap_recommended_candidates,
@@ -48,7 +47,6 @@ from wqb_agent_lab.platform import load_operator_names
 from wqb_agent_lab.workflow.artifacts import (
     _file_sha256,
     _git_provenance,
-    _json_file_fresh,
     _workflow_artifact_schema,
     daily_run_tag,
     read_json,
@@ -64,10 +62,8 @@ from wqb_agent_lab.workflow.candidates import (
     check_value,
     choose_budgeted_candidates,
     completed_candidate_count,
-    confirmed_submission_state_alpha_ids,
     failed_check_names,
     failed_checks_from_check_list,
-    failed_submit_attempt_alpha_ids,
     metric_value,
     normalize_expression,
     pending_check_names,
@@ -75,7 +71,6 @@ from wqb_agent_lab.workflow.candidates import (
     row_near_pass,
     self_corr_bucket_from_checks,
     sub_universe_bucket_from_checks,
-    submitted_registry_entries,
     units_warning_from_check_list,
     warning_check_names,
     weak_signal_bucket_from_row,
@@ -83,8 +78,10 @@ from wqb_agent_lab.workflow.candidates import (
 )
 from wqb_agent_lab.workflow.config_selection import pick_scan_config
 from wqb_agent_lab.workflow.models import StagePlan
+from wqb_agent_lab.workflow.postprocessing import WorkflowPostprocessor
 from wqb_agent_lab.workflow.reporting import WorkflowReporter
 from wqb_agent_lab.workflow.stages import StageCheckpointStore, StageOutcome, StageRunner
+from wqb_agent_lab.workflow.submitted_registry import SubmittedRegistryService
 
 
 DEFAULT_WORKFLOW_CONFIG = Path(".local/research/workflows/production.json")
@@ -133,6 +130,7 @@ class ResearchWorkflow:
         self.research_policy: ResearchPolicy | None = (
             load_research_policy(self.config) if "research_policy" in self.config else None
         )
+        self._active_registry_snapshot: tuple[set[str], set[str]] | None = None
         self._active_ledger: dict[str, Any] | None = None
         self.llm_adapter = LLMPlanAdapter.from_config(
             self.config,
@@ -147,149 +145,25 @@ class ResearchWorkflow:
         self.dry_run = dry_run
 
     def sync_submitted_registry(self) -> str:
-        if self.dry_run:
-            return "skipped_dry_run"
-        if self.config.get("submitted_registry_sync_enabled") is False:
-            return "skipped_disabled"
-        if str(os.getenv("WQB_SKIP_SUBMITTED_REGISTRY_SYNC", "")).strip().lower() in {"1", "true", "yes", "on"}:
-            return "skipped_env"
-        if not os.getenv("WQB_EMAIL") or not os.getenv("WQB_PASSWORD"):
-            return "skipped_missing_credentials"
-        state_path = self.root / ".local" / "data" / "registry" / "registry_state.json"
-        max_age_seconds = int(self.config.get("submitted_registry_cache_max_age_seconds") or 1800)
-        if _json_file_fresh(state_path, max_age_seconds):
-            state = read_json(state_path, {})
-            if isinstance(state, dict) and state.get("status") == "ok":
-                return "cache_ok"
-        command = [
-            sys.executable,
-            "-m",
-            "scripts.workers.registry",
-            "--workspace-root",
-            str(self.root),
-            "--once",
-        ]
-        log_path = self.root / ".local" / "data" / "registry" / "registry_worker.log"
-        try:
-            log_path.parent.mkdir(parents=True, exist_ok=True)
-            creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-            with open(log_path, "a", encoding="utf-8") as log_fh:
-                subprocess.Popen(
-                    command,
-                    cwd=self.root,
-                    stdout=log_fh,
-                    stderr=subprocess.STDOUT,
-                    creationflags=creationflags,
-                )
-        except Exception as exc:
-            return f"worker_launch_failed:{str(exc)[:120]}"
-        return "worker_started"
+        return SubmittedRegistryService(self).sync()
 
     def run_registry_stage(self, *, now: datetime | None = None) -> str:
-        """Checkpoint the registry snapshot and any read-only refresh decision."""
-        now = now or datetime.now()
-        self._active_registry_snapshot = None
-        registry_root = self.root / ".local" / "data" / "registry"
-        snapshot_paths = [
-            path
-            for path in (
-                registry_root / "registry_state.json",
-                registry_root / "submitted_alphas.json",
-                registry_root / "submitted_expressions.txt",
-                registry_root / "submitted_blocklist.json",
-            )
-            if path.is_file()
-        ]
-        status = "skipped_dry_run" if self.dry_run else ""
-
-        def execute() -> StageOutcome:
-            nonlocal status
-            alpha_ids, expressions = self._read_submitted_registry()
-            self._active_registry_snapshot = (set(alpha_ids), set(expressions))
-            status = self.sync_submitted_registry()
-            artifacts = tuple(
-                relative_path(path, self.root)
-                for path in snapshot_paths
-                if path.is_file()
-            )
-            return StageOutcome.create(
-                artifacts=artifacts,
-                output={
-                    "status": status,
-                    "submitted_alpha_count": len(alpha_ids),
-                    "submitted_expression_count": len(expressions),
-                },
-                extensions={
-                    "remote_side_effects": False,
-                    "refresh_is_read_only": True,
-                    "refresh_worker_is_lock_guarded": True,
-                },
-            )
-
-        if self.dry_run:
-            return status
-        StageRunner(self.stage_checkpoint_store).run(
-            run_id=self.run_tag,
-            stage_id="registry",
-            input_digest=self._local_stage_input_digest(
-                {
-                    "sync_enabled": self.config.get("submitted_registry_sync_enabled"),
-                    "cache_max_age_seconds": self.config.get(
-                        "submitted_registry_cache_max_age_seconds"
-                    ),
-                },
-                snapshot_paths,
-            ),
-            execute=execute,
-            replay_policy="safe",
-            started_at=now,
-        )
-        return status
+        return SubmittedRegistryService(self).run_stage(now=now)
 
     def _submitted_registry(self) -> tuple[set[str], set[str]]:
-        snapshot = getattr(self, "_active_registry_snapshot", None)
-        if snapshot is not None:
-            return set(snapshot[0]), set(snapshot[1])
-        return self._read_submitted_registry()
+        return SubmittedRegistryService(self).snapshot()
 
     def _read_submitted_registry(self) -> tuple[set[str], set[str]]:
-        payload = read_json(self.root / SUBMITTED_REGISTRY_PATH, {})
-        if not isinstance(payload, dict):
-            submitted_alpha_ids: set[str] = set()
-            submitted_expressions: set[str] = set()
-        else:
-            submitted_alpha_ids, submitted_expressions = submitted_registry_entries(payload)
-        submitted_alpha_ids.update(self._confirmed_submission_state_alpha_ids())
-        return submitted_alpha_ids, submitted_expressions
+        return SubmittedRegistryService(self).read()
 
     def _confirmed_submission_state_alpha_ids(self) -> set[str]:
-        alpha_ids: set[str] = set()
-        runs_root = self.root / RUNS_ROOT
-        if not runs_root.exists():
-            return alpha_ids
-        for path in runs_root.glob("*/submission_state.json"):
-            alpha_ids.update(confirmed_submission_state_alpha_ids(read_json(path, {})))
-        return alpha_ids
+        return SubmittedRegistryService(self).confirmed_submission_ids()
 
     def _failed_submit_attempt_alpha_ids(self) -> set[str]:
-        data_roots = [self.root / RUNS_ROOT, self.root / ".local" / "data"]
-        patterns = ["**/*submit*_results*.json", "**/*resubmit*.json", "**/submission_attempts*.json"]
-        paths: set[Path] = set()
-        for data_root in data_roots:
-            if not data_root.exists():
-                continue
-            for pattern in patterns:
-                paths.update(path for path in data_root.glob(pattern) if path.is_file())
-        failed: set[str] = set()
-        for path in sorted(paths):
-            failed.update(failed_submit_attempt_alpha_ids(read_json(path, {})))
-        return failed
+        return SubmittedRegistryService(self).failed_attempt_ids()
 
     def _preferred_live_check_paths(self) -> list[Path]:
-        current_paths = sorted(self.run_dir.glob("live-check-final/*.json"))
-        if current_paths:
-            return current_paths
-        return sorted((self.root / RUNS_ROOT).glob("*/live-check-final/*.json"))
+        return SubmittedRegistryService(self).preferred_live_check_paths()
 
     def _current_scan_result_paths(self) -> list[Path]:
         return sorted(self.run_dir.glob("*_results.json"))
@@ -835,154 +709,27 @@ class ResearchWorkflow:
         *,
         now: datetime | None = None,
     ) -> None:
-        now = now or datetime.now()
-        memory_sync_report = self.run_memory_stage(now=now)
-        if memory_sync_report is not None:
-            state["artifacts"]["memory_sync_report"] = relative_path(
-                memory_sync_report,
-                self.root,
-            )
-            state["artifacts"]["memory_sync_state"] = relative_path(
-                self.stage_checkpoint_store.path_for("memory"),
-                self.root,
-            )
-        output_report_path, output_summary_path = self.run_evaluation_stage(now=now)
-        state["artifacts"]["output_evaluation_report"] = relative_path(output_report_path, self.root)
-        state["artifacts"]["output_evaluation_summary"] = relative_path(output_summary_path, self.root)
-        write_json(iteration_state_path, state)
+        WorkflowPostprocessor(self).run_closed_loop(
+            state,
+            iteration_state_path,
+            now=now,
+        )
 
     def _memory_stage_input_paths(self) -> list[Path]:
-        names = (
-            "daily_budget_ledger.json",
-            "direct_submit.json",
-            "submit_ready.json",
-            "submission_backlog.json",
-            "optimize_next.json",
-            "low_value_avoid.json",
-            "alpha_skeleton_blocklist.json",
-            "family_efficiency.json",
-            "iteration_state.json",
-            "scan_results_snapshot.json",
-            "self_corr_repair_effect_summary.json",
-        )
-        paths = [self.run_dir / name for name in names]
-        paths.extend(self.run_dir.glob("*_results.json"))
-        paths.append(
-            self.root
-            / ".local"
-            / "data"
-            / "behavioral_proxy"
-            / "behavioral_proxy_map.json"
-        )
-        return [path for path in paths if path.is_file()]
+        return WorkflowPostprocessor(self).memory_input_paths()
 
     def run_memory_stage(self, *, now: datetime | None = None) -> Path | None:
-        config = self.config.get("post_stage_memory_sync") or {}
-        if not isinstance(config, dict) or not config.get("enabled") or self.dry_run:
-            return None
-        from wqb_agent_lab.memory.sync import sync_run_memory
-
-        now = now or datetime.now()
-        db_path = self.root / str(
-            config.get("db_path") or ".local/data/memory/alpha_memory.db"
-        )
-        report_path = self.run_dir / "memory_sync_report.json"
-        result: Any = None
-
-        def execute() -> StageOutcome:
-            nonlocal result
-            result = sync_run_memory(self.root, self.run_dir, db_path=db_path)
-            return StageOutcome.create(
-                artifacts=(relative_path(report_path, self.root),),
-                output={
-                    "nodes_written": int(result.nodes_written),
-                    "edges_written": int(result.edges_written),
-                    "events_recorded": int(result.events_recorded),
-                },
-                extensions={
-                    "remote_side_effects": False,
-                    "sqlite_upserts_are_idempotent": True,
-                    "evaluation_waits_for_completion": True,
-                },
-            )
-
-        StageRunner(self.stage_checkpoint_store).run(
-            run_id=self.run_tag,
-            stage_id="memory",
-            input_digest=self._local_stage_input_digest(
-                {"db_path": relative_path(db_path, self.root)},
-                self._memory_stage_input_paths(),
-            ),
-            execute=execute,
-            replay_policy="safe",
-            started_at=now,
-        )
-        if result is None or not report_path.is_file():
-            raise RuntimeError("memory stage completed without a report")
-        return report_path
+        return WorkflowPostprocessor(self).run_memory(now=now)
 
     def _evaluation_stage_input_paths(self) -> list[Path]:
-        names = (
-            "candidate_hypothesis_queue.json",
-            "preflight_evaluation_report.json",
-            "scan_results_snapshot.json",
-            "memory_sync_report.json",
-            "policy_feedback_shadow_evaluation.json",
-            "triage_summary.md",
-            "diagnosis_policy_evaluation.md",
-            "wqb-agent-latest-workflow-uml.html",
-        )
-        return [self.run_dir / name for name in names if (self.run_dir / name).is_file()]
+        return WorkflowPostprocessor(self).evaluation_input_paths()
 
     def run_evaluation_stage(
         self,
         *,
         now: datetime | None = None,
     ) -> tuple[Path, Path]:
-        now = now or datetime.now()
-        report_path = self.run_dir / "output_evaluation_report.json"
-        summary_path = self.run_dir / "output_evaluation_summary.md"
-
-        def execute() -> StageOutcome:
-            written_report, written_summary = write_run_output_evaluation(
-                self.run_dir,
-                now=now,
-            )
-            payload = read_json(written_report, {})
-            return StageOutcome.create(
-                artifacts=(
-                    relative_path(written_report, self.root),
-                    relative_path(written_summary, self.root),
-                ),
-                output={
-                    "record_count": int(payload.get("record_count") or 0),
-                    "status_counts": payload.get("status_counts") or {},
-                },
-                extensions={
-                    "remote_side_effects": False,
-                    "consumes_completed_memory_stage": (
-                        self.run_dir / "memory_sync_report.json"
-                    ).is_file(),
-                    "policy_actions_are_observations": True,
-                },
-            )
-
-        if self.dry_run:
-            return report_path, summary_path
-        StageRunner(self.stage_checkpoint_store).run(
-            run_id=self.run_tag,
-            stage_id="evaluation",
-            input_digest=self._local_stage_input_digest(
-                {"run_tag": self.run_tag},
-                self._evaluation_stage_input_paths(),
-            ),
-            execute=execute,
-            replay_policy="safe",
-            started_at=now,
-        )
-        if not report_path.is_file() or not summary_path.is_file():
-            raise RuntimeError("evaluation stage completed without artifacts")
-        return report_path, summary_path
+        return WorkflowPostprocessor(self).run_evaluation(now=now)
 
     def _workflow_config_reference(self) -> str:
         try:
