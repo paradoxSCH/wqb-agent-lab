@@ -276,6 +276,20 @@ def _validate_cli(settings: Mapping[str, Any]) -> tuple[tuple[str, ...], str, st
     return command, prompt_transport, working_directory
 
 
+def _validate_planning_output(settings: Mapping[str, Any]) -> None:
+    output_contract = settings.get("output_contract", "legacy")
+    if output_contract not in {"legacy", "plan_proposal"}:
+        raise _invalid("output_contract must be 'legacy' or 'plan_proposal'.")
+    max_repairs = settings.get("max_structure_repairs", 2)
+    if (
+        isinstance(max_repairs, bool)
+        or not isinstance(max_repairs, int)
+        or max_repairs < 0
+        or max_repairs > 5
+    ):
+        raise _invalid("max_structure_repairs must be an integer between 0 and 5.")
+
+
 def resolve_llm_provider_config(
     workflow_config: Mapping[str, Any],
     env: Mapping[str, str] | None = None,
@@ -286,6 +300,7 @@ def resolve_llm_provider_config(
         raise _invalid("Workflow configuration must be a JSON object.")
     effective_env = os.environ if env is None else env
     settings, warnings = _select_settings(workflow_config, effective_env)
+    _validate_planning_output(settings)
     if "api_key" in settings:
         raise _invalid("Literal api_key values are forbidden; use api_key_env.")
 

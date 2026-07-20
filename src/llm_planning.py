@@ -17,6 +17,7 @@ from src.llm_provider import (
     llm_config_identity,
     resolve_llm_provider_config,
 )
+from wqb_agent_lab.planning import PlanProposalRepairExhausted, generate_plan_proposal_result
 
 
 _SAFE_ERROR_MESSAGES = {
@@ -410,6 +411,155 @@ class LLMPlanAdapter:
             "model": response.model,
             "result": payload,
         }
+
+    def call_plan_proposal(
+        self,
+        root: Path,
+        prompt: str,
+        *,
+        max_repairs: int = 2,
+    ) -> dict[str, Any]:
+        """Request the open plan-proposal contract with bounded structural repair.
+
+        This is an explicit adapter API and does not change the legacy ``call`` path.
+        It validates structure only; research-policy evaluation and side-effect execution
+        remain separate deterministic steps.
+        """
+
+        unavailable = self._unavailable_payload(root)
+        if unavailable is not None:
+            return unavailable
+        assert self.llm_provider is not None
+
+        provider = self.llm_provider
+        response_identity = {"provider": provider.provider_id, "model": provider.model}
+
+        def generate(attempt_prompt: str) -> Any:
+            request = LLMRequest(
+                system_prompt=(
+                    "You are a WQB alpha-mining research planner. Return only a JSON plan_proposal envelope. "
+                    "Preserve novel mechanisms, arbitrary expressions, alternatives, uncertainty, free-form notes, "
+                    "extension data, and reasoned requests for soft-policy exceptions. Request actions but do not "
+                    "claim that simulation or submission has executed."
+                ),
+                user_prompt=attempt_prompt,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+                response_format="json",
+                timeout_seconds=self.timeout_seconds,
+                metadata={"workflow_stage": self.stage, "output_contract": "plan_proposal"},
+            )
+            response = provider.complete(request)
+            response_identity["provider"] = response.provider
+            response_identity["model"] = response.model
+            try:
+                return json.loads(response.content)
+            except (json.JSONDecodeError, TypeError):
+                return response.content
+
+        try:
+            result = generate_plan_proposal_result(prompt, generate, max_repairs=max_repairs)
+        except PlanProposalRepairExhausted as exc:
+            payload = self._error_payload(
+                LLMProviderError(
+                    code="invalid_structured_output",
+                    message="Provider exhausted plan proposal structural repairs.",
+                    provider=response_identity["provider"],
+                    model=response_identity["model"],
+                )
+            )
+            payload["proposal_contract"] = {
+                "schema": "plan_proposal",
+                "status": "error",
+                "repair_count": max(0, len(exc.attempts) - 1),
+                "errors": [str(error) for error in exc.errors],
+            }
+            return payload
+        except LLMProviderError as exc:
+            return self._error_payload(exc)
+        except Exception:
+            return self._error_payload(
+                LLMProviderError(
+                    code="provider_error",
+                    message="Provider raised an unexpected exception.",
+                    provider=response_identity["provider"],
+                    model=response_identity["model"],
+                )
+            )
+
+        return {
+            **response_identity,
+            "proposal": result.proposal.to_dict(),
+            "proposal_contract": {
+                "schema": "plan_proposal",
+                "status": "valid",
+                "repair_count": result.repair_count,
+            },
+        }
+
+    def call_configured(self, root: Path, prompt: str) -> dict[str, Any]:
+        """Use the explicitly configured output contract while preserving legacy defaults."""
+
+        try:
+            output_contract, max_repairs = self._planning_output_settings()
+        except LLMProviderError as exc:
+            return self._error_payload(exc, disabled=True)
+        if output_contract == "plan_proposal":
+            contract_prompt = (
+                prompt
+                + "\n\nReturn the plan_proposal envelope with schema_version, plan_id, objective, "
+                "hypotheses, and requested_actions. Use extensions and freeform_notes for ideas "
+                "that do not fit known product fields."
+            )
+            return self.call_plan_proposal(root, contract_prompt, max_repairs=max_repairs)
+        return self.call(root, prompt)
+
+    def _planning_output_settings(self) -> tuple[str, int]:
+        settings = self.raw_config.get("llm_provider")
+        if not isinstance(settings, dict):
+            return "legacy", 0
+        output_contract = settings.get("output_contract", "legacy")
+        if output_contract not in {"legacy", "plan_proposal"}:
+            raise LLMProviderError(
+                code="invalid_configuration",
+                message="llm_provider.output_contract must be 'legacy' or 'plan_proposal'.",
+                provider=self.runtime_provider_id,
+                model=self.runtime_model,
+            )
+        max_repairs = settings.get("max_structure_repairs", 2)
+        if (
+            isinstance(max_repairs, bool)
+            or not isinstance(max_repairs, int)
+            or max_repairs < 0
+            or max_repairs > 5
+        ):
+            raise LLMProviderError(
+                code="invalid_configuration",
+                message="llm_provider.max_structure_repairs must be an integer between 0 and 5.",
+                provider=self.runtime_provider_id,
+                model=self.runtime_model,
+            )
+        return str(output_contract), max_repairs
+
+    def _unavailable_payload(self, root: Path) -> dict[str, Any] | None:
+        if not self.is_configured():
+            return {"disabled": True, "reason": "No LLM adapter is configured."}
+        if os.environ.get("WQB_DISABLE_LLM_TEMPLATE_BACKEND") == "1":
+            return {
+                "disabled": True,
+                "reason": "WQB_DISABLE_LLM_TEMPLATE_BACKEND=1",
+                "provider": self.provider,
+            }
+        self.prepare_for_attempt(root)
+        if self.configuration_error is not None:
+            return self._error_payload(self.configuration_error, disabled=True)
+        if self.llm_provider is None:
+            return {
+                "disabled": True,
+                "reason": "The configured LLM provider is disabled.",
+                "provider": self.provider,
+            }
+        return None
 
     def prepare_for_attempt(self, root: Path) -> bool:
         """Refresh a changed network credential and bind deferred providers to root."""

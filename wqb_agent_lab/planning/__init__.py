@@ -8,10 +8,17 @@ from .models import (
     RequestedAction,
     parse_plan_proposal,
 )
-from .repair import PlanProposalRepairExhausted, RepairAttempt, generate_plan_proposal
+from .repair import (
+    GeneratedPlanProposal,
+    PlanProposalRepairExhausted,
+    RepairAttempt,
+    generate_plan_proposal,
+    generate_plan_proposal_result,
+)
 
 __all__ = [
     "HypothesisProposal",
+    "GeneratedPlanProposal",
     "PlanProposal",
     "PlanProposalValidationError",
     "PlanProposalRepairExhausted",
@@ -19,5 +26,6 @@ __all__ = [
     "RequestedAction",
     "RepairAttempt",
     "generate_plan_proposal",
+    "generate_plan_proposal_result",
     "parse_plan_proposal",
 ]

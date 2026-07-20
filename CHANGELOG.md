@@ -22,6 +22,8 @@ The project follows Semantic Versioning after the first public release. While th
   and explicit hard-versus-soft planning policy decisions.
 - Immutable run provenance manifests with content-addressed artifact records and sensitive
   metadata rejection.
+- Explicit opt-in `plan_proposal` output for the production LLM adapter; legacy planner
+  output remains the default and structural repair does not consume WQB budget.
 
 ## [0.1.1-alpha] - 2026-07-14
 

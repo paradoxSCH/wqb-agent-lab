@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import unittest
 
-from wqb_agent_lab.planning import PlanProposalRepairExhausted, generate_plan_proposal
+from wqb_agent_lab.planning import (
+    PlanProposalRepairExhausted,
+    generate_plan_proposal,
+    generate_plan_proposal_result,
+)
 
 
 def _valid_payload() -> dict[str, object]:
@@ -54,6 +58,19 @@ class PlanningRepairTests(unittest.TestCase):
         proposal = generate_plan_proposal("Plan.", lambda _prompt: responses.pop(0), max_repairs=1)
 
         self.assertEqual("plan-repaired", proposal.plan_id)
+
+    def test_result_reports_failed_structural_attempts(self) -> None:
+        responses: list[object] = [{"schema_version": 1}, _valid_payload()]
+
+        result = generate_plan_proposal_result(
+            "Plan.",
+            lambda _prompt: responses.pop(0),
+            max_repairs=1,
+        )
+
+        self.assertEqual("plan-repaired", result.proposal.plan_id)
+        self.assertEqual(1, result.repair_count)
+        self.assertEqual(1, result.failed_attempts[0].attempt)
 
     def test_repair_attempts_are_bounded_and_auditable(self) -> None:
         calls = 0
