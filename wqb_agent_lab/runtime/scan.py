@@ -305,7 +305,12 @@ async def run_scan(config_path: str, cli_continue_on_pass: bool = False, max_con
                 seen_keys.add(key)
                 output_path.write_text(json.dumps(rows, indent=2, ensure_ascii=False), encoding="utf-8")
 
-            fail_names = [c.get("name") for c in checks if c.get("result") in ("FAIL", "ERROR")]
+            fail_names = [
+                str(check.get("name") or "unknown")
+                for check in checks
+                if check.get("result") in ("FAIL", "ERROR")
+            ]
+            reasons: list[str] = []
             passed = is_pass(metrics, checks)
             print(
                 f"  Sharpe={metrics['sharpe']:.2f}  Fitness={metrics['fitness']:.2f}  "
@@ -318,7 +323,6 @@ async def run_scan(config_path: str, cli_continue_on_pass: bool = False, max_con
             elif passed:
                 print("  All checks PASS  ->  PASS", flush=True)
             else:
-                reasons = []
                 if metrics["sharpe"] < 1.25:
                     reasons.append(f"Sharpe={metrics['sharpe']:.2f}<1.25")
                 if metrics["fitness"] < 1.0:
