@@ -44,6 +44,7 @@ class WQBClient:
         config: Config | None = None,
         *,
         run_id: str | None = None,
+        operation_journal: OperationJournal | None = None,
     ) -> "WQBClient":
         cfg = config or load_config()
         if not cfg.email or not cfg.password:
@@ -53,7 +54,8 @@ class WQBClient:
             auth_max_tries=cfg.request_max_attempts,
             auth_delay_unexpected=cfg.request_backoff_seconds,
             request_timeout_seconds=30.0,
-            operation_journal=OperationJournal(
+            operation_journal=operation_journal
+            or OperationJournal(
                 Path(
                     os.getenv(
                         "WQB_OPERATION_JOURNAL",
@@ -105,7 +107,13 @@ class WQBClient:
         confirm_polls: int = 3,
         confirm_wait_seconds: float = 5.0,
     ) -> WQBSubmitResult:
-        response = self._request("POST", f"/alphas/{alpha_id}/submit")
+        if isinstance(self.session, WQBSession):
+            response = self.session.submit_alpha(alpha_id, max_tries=1)
+            operation = self.session.last_operation_record
+            if operation is not None and operation.outcome == "unknown_commit":
+                raise SideEffectUncertainError(operation)
+        else:
+            response = self._request("POST", f"/alphas/{alpha_id}/submit")
         retry_after = _retry_after_seconds(response)
         text = str(getattr(response, "text", "") or "")[:500]
 

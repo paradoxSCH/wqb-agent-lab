@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Mapping, Protocol
 
@@ -11,6 +11,7 @@ from src.atomic_json import atomic_write_json
 from src.process_lock import PidFileLock
 from src.side_effect_governance import evaluate_side_effect_capability
 from wqb_agent_lab.platform import CheckReadiness, evaluate_check_snapshot
+from wqb_agent_lab.runtime import OperationJournal, OperationRecord, SideEffectUncertainError
 
 
 STATE_FILE = "submission_state.json"
@@ -88,6 +89,9 @@ class SubmissionWorker:
         live_check_wait_seconds: float = 15.0,
         sleep: Callable[[float], None] = time.sleep,
         env: Mapping[str, str] | None = None,
+        operation_journal: OperationJournal | None = None,
+        reconciliation_max_attempts: int = 3,
+        reconciliation_retry_seconds: int = 300,
     ) -> None:
         self.run_dir = Path(run_dir)
         self.client = client
@@ -100,6 +104,9 @@ class SubmissionWorker:
         self.live_check_polls = max(2, int(live_check_polls))
         self.live_check_wait_seconds = max(0.0, float(live_check_wait_seconds))
         self.sleep = sleep
+        self.operation_journal = operation_journal or OperationJournal(self.run_dir / "operations.db")
+        self.reconciliation_max_attempts = max(1, int(reconciliation_max_attempts))
+        self.reconciliation_retry_seconds = max(0, int(reconciliation_retry_seconds))
 
     def run_once(self) -> dict[str, Any]:
         state = enqueue_submission_jobs(self.run_dir)
@@ -117,7 +124,10 @@ class SubmissionWorker:
                 **state["summary"],
             }
         if self.client is None:
-            self.client = BrainSubmissionClient()
+            self.client = BrainSubmissionClient(
+                run_dir=self.run_dir,
+                operation_journal=self.operation_journal,
+            )
         processed = 0
         for job in jobs:
             if not isinstance(job, dict) or processed >= self.max_jobs_per_tick:
@@ -134,6 +144,25 @@ class SubmissionWorker:
 
     def _process_job(self, job: dict[str, Any]) -> None:
         status = str(job.get("status") or "queued")
+        operation = self._submission_operation(job)
+        if operation is not None:
+            job["submission_operation_id"] = operation.operation_id
+            job["submission_operation_outcome"] = operation.outcome
+            if operation.outcome == "manual_review":
+                job["status"] = "manual_review_or_platform_lag"
+                job["error"] = operation.reconciliation_reason or operation.reason
+                return
+            if operation.outcome in {"started", "unknown_commit", "reconciliation_pending"}:
+                self._reconcile_unknown_submission(job, operation)
+                return
+            if operation.outcome == "accepted" and status not in {
+                "pending_confirmation",
+                "accepted_but_unconfirmed",
+                "post_accepted",
+            }:
+                job["status"] = "post_accepted"
+                self._confirm_submission(job)
+                return
         if status in {"pending_confirmation", "accepted_but_unconfirmed", "post_accepted"}:
             self._confirm_submission(job)
             return
@@ -146,7 +175,17 @@ class SubmissionWorker:
         if not self._live_check(job):
             return
 
-        response = self.client.submit(str(job["alpha_id"]))
+        try:
+            response = self.client.submit(str(job["alpha_id"]))
+        except SideEffectUncertainError as exc:
+            job["attempts"] = int(job.get("attempts") or 0) + 1
+            job["submission_operation_id"] = exc.record.operation_id
+            job["submission_operation_outcome"] = exc.record.outcome
+            job["status"] = "submission_unknown_commit"
+            job["error"] = exc.record.reason
+            job["updated_at"] = datetime.now().isoformat(timespec="seconds")
+            self._reconcile_unknown_submission(job, exc.record)
+            return
         job["attempts"] = int(job.get("attempts") or 0) + 1
         job["last_submit_status_code"] = response.get("status_code")
         job["last_submit_response_text"] = str(response.get("text") or "")[:500]
@@ -163,7 +202,88 @@ class SubmissionWorker:
             job["error"] = job["last_submit_response_text"] or f"submit_http_{status_code}"
             return
         job["status"] = "post_accepted"
+        latest_operation = self._submission_operation(job)
+        if latest_operation is not None:
+            job["submission_operation_id"] = latest_operation.operation_id
+            job["submission_operation_outcome"] = latest_operation.outcome
         self._confirm_submission(job)
+
+    def _submission_operation(self, job: dict[str, Any]) -> OperationRecord | None:
+        alpha_id = str(job.get("alpha_id") or "")
+        operation_id = str(job.get("submission_operation_id") or "")
+        if operation_id:
+            try:
+                return self.operation_journal.get(operation_id)
+            except KeyError:
+                pass
+        candidates = self.operation_journal.records(
+            "submission.create",
+            outcomes=(
+                "started",
+                "accepted",
+                "unknown_commit",
+                "reconciliation_pending",
+                "manual_review",
+            ),
+        )
+        matches = [
+            record
+            for record in candidates
+            if str((record.payload or {}).get("alpha_id") or "") == alpha_id
+        ]
+        return matches[-1] if matches else None
+
+    def _reconcile_unknown_submission(
+        self,
+        job: dict[str, Any],
+        operation: OperationRecord,
+    ) -> None:
+        if operation.outcome == "manual_review":
+            job["status"] = "manual_review_or_platform_lag"
+            job["error"] = operation.reconciliation_reason or operation.reason
+            return
+        if not _reconciliation_due(operation):
+            job["status"] = "submission_reconciliation_pending"
+            job["next_reconcile_at"] = operation.next_reconcile_at
+            return
+        latest = self.client.detail(str(job["alpha_id"]))
+        job["last_detail_status_code"] = latest.get("status_code")
+        job["platform_status"] = latest.get("status")
+        job["dateSubmitted"] = latest.get("dateSubmitted")
+        if _is_submitted(latest):
+            resolved = self.operation_journal.finish(
+                operation.operation_id,
+                "accepted",
+                reason=f"{operation.reason};reconciled_alpha_detail".strip(";"),
+                remote_ref=f"/alphas/{job['alpha_id']}",
+            )
+            job["submission_operation_outcome"] = resolved.outcome
+            job["reconciliation_evidence"] = "submitted_alpha_detail"
+            self._mark_submitted_confirmed(job)
+            return
+        status_code = int(latest.get("status_code") or 0)
+        reason = (
+            f"alpha_detail_http_{status_code}"
+            if status_code >= 400
+            else "no_positive_submission_evidence"
+        )
+        updated = self.operation_journal.record_reconciliation_attempt(
+            operation.operation_id,
+            reason=reason,
+            retry_after_seconds=self.reconciliation_retry_seconds,
+            max_attempts=self.reconciliation_max_attempts,
+            now=datetime.now(timezone.utc),
+        )
+        job["submission_operation_outcome"] = updated.outcome
+        job["reconciliation_attempts"] = updated.reconcile_attempts
+        job["next_reconcile_at"] = updated.next_reconcile_at
+        job["error"] = reason
+        job["status"] = (
+            "manual_review_or_platform_lag"
+            if updated.outcome == "manual_review"
+            else "submission_reconciliation_pending"
+        )
+        job["updated_at"] = datetime.now().isoformat(timespec="seconds")
 
     def _live_check(self, job: dict[str, Any]) -> bool:
         job["status"] = "live_checking"
@@ -306,11 +426,21 @@ class SubmissionWorker:
 
 
 class BrainSubmissionClient:
-    def __init__(self, *, wqb_client: Any | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        wqb_client: Any | None = None,
+        run_dir: Path | str | None = None,
+        operation_journal: OperationJournal | None = None,
+    ) -> None:
         from scripts.submit.submit_alpha_v2 import _record_submission
         from wqb_agent_lab.platform import WQBClient
 
-        self.wqb_client = wqb_client or WQBClient.from_config()
+        run_path = Path(run_dir) if run_dir is not None else None
+        self.wqb_client = wqb_client or WQBClient.from_config(
+            run_id=run_path.name if run_path is not None else None,
+            operation_journal=operation_journal,
+        )
         self._record_submission = _record_submission
 
     def check(self, alpha_id: str) -> dict[str, Any]:
@@ -432,6 +562,8 @@ def _summarize_jobs(jobs: list[Any]) -> dict[str, int]:
         "waiting_for_checks_count": counts.get("waiting_for_checks", 0),
         "pending_confirmation_count": counts.get("pending_confirmation", 0),
         "accepted_but_unconfirmed_count": counts.get("accepted_but_unconfirmed", 0),
+        "submission_unknown_commit_count": counts.get("submission_unknown_commit", 0),
+        "submission_reconciliation_pending_count": counts.get("submission_reconciliation_pending", 0),
         "manual_review_or_platform_lag_count": counts.get("manual_review_or_platform_lag", 0),
         "submitted_confirmed_count": counts.get("submitted_confirmed", 0),
         "rejected_count": counts.get("rejected", 0),
@@ -484,6 +616,18 @@ def _parse_datetime(value: Any) -> datetime | None:
     if parsed.tzinfo is not None:
         parsed = parsed.astimezone().replace(tzinfo=None)
     return parsed
+
+
+def _reconciliation_due(record: OperationRecord) -> bool:
+    if not record.next_reconcile_at:
+        return True
+    try:
+        next_at = datetime.fromisoformat(record.next_reconcile_at.replace("Z", "+00:00"))
+    except ValueError:
+        return True
+    if next_at.tzinfo is None:
+        next_at = next_at.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) >= next_at
 
 
 if __name__ == "__main__":

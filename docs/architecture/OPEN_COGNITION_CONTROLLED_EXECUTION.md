@@ -24,8 +24,8 @@ The migration must preserve all of the following:
 | Proposal boundary | Implemented | Provider-neutral schema and immutable models |
 | Structural repair and policy | Implemented | Explicit opt-in adapter; legacy output remains default |
 | Provenance | In progress | Production tick checkpoints, configuration/schema/artifact digests |
-| Recoverable stages | In progress | Planning, preflight, simulation, diagnosis, and triage use atomic checkpoints |
-| Side-effect reconciliation | In progress | Simulation recovery implemented; submission recovery remains planned |
+| Recoverable stages | In progress | Planning through submission intent use atomic checkpoints |
+| Side-effect reconciliation | Implemented | Simulation and submission use evidence-first recovery |
 | Evidence-gated feedback | Planned | Shadow mode before advisory or control use |
 
 ## Delivery sequence
@@ -86,11 +86,20 @@ mechanisms, settings, extension objects, and expression forms remain in both sta
 route names are observations and recommendations, not an execution allowlist. Golden tests
 compare the staged artifacts with the previous closed-loop implementation.
 
+The submission stage checkpoints the durable queue only; it cannot enable live capability
+or issue a remote write. A separately governed worker performs live checks and submission.
+Every canonical submission POST is first recorded in the operation journal. If a response
+is lost or the worker stops after the POST, the next worker tick looks up the exact Alpha ID
+and accepts only `ACTIVE`, `SUBMITTED`, or `dateSubmitted` detail as positive evidence. A
+missing match schedules another read-only observation and eventually moves to manual review;
+it never causes an ambiguous POST to be repeated.
+
 ### 5. Side-effect reconciliation
 
 - Simulation outcomes: implemented with operation fingerprints, location polling, recent
   Alpha evidence, retry scheduling, and explicit manual review.
-- Submission outcomes: extend the same evidence-first protocol at the submission worker.
+- Submission outcomes: implemented with exact Alpha detail evidence, bounded read-only
+  observation, and manual review instead of blind POST replay.
 - Keep fault-injection coverage for response loss, hard process interruption, ambiguous
   matches, and mismatched settings.
 

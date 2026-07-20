@@ -2306,6 +2306,13 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             command = popen.call_args.args[0]
             self.assertIn("scripts.submit.submission_worker", command)
             self.assertIn("--daemon", command)
+            checkpoint = json.loads(
+                (workflow.run_dir / "stage_checkpoints" / "submission.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual("completed", checkpoint["status"])
+            self.assertTrue(
+                checkpoint["extensions"]["remote_execution_delegated_to_journaled_worker"]
+            )
 
     def test_llm_prompt_includes_behavioral_proxy_map_guidance(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
