@@ -18,7 +18,7 @@ Do not replace the committed `uv.lock` or package lockfiles during setup.
 
 - Keep tests credential-free unless the test is explicitly marked as live and skipped by default.
 - Do not commit `.env`, logs, PID files, local memory databases, callback outboxes, or real run outputs.
-- Route new WorldQuant BRAIN platform interactions through `src/wqb_agent_lab/platform`.
+- Route new WorldQuant BRAIN platform interactions through `wqb_agent_lab.platform`.
 - Keep automatic submission explicit, logged, and disabled in public examples.
 - Prefer small focused PRs with a spec or design note for behavior changes.
 
