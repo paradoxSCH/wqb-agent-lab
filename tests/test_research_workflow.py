@@ -2144,7 +2144,7 @@ class ResearchWorkflowTests(unittest.TestCase):
             })
 
             with patch.object(workflow, "run_once", side_effect=AssertionError("stop-after-summary should not start the next day")), patch(
-                "wqb_agent_lab.workflow.engine.time.sleep",
+                "wqb_agent_lab.workflow.runner.time.sleep",
                 side_effect=AssertionError("stop-after-summary should return without sleeping"),
             ):
                 workflow.run_daemon(poll_seconds=1, continue_next_day=False)
