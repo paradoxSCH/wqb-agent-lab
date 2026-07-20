@@ -2059,7 +2059,7 @@ class KimiDailyWorkflow:
         command = [
             sys.executable,
             "-m",
-            "scripts.scan",
+            "scripts.run.scan",
             "--config",
             relative_path(plan.sliced_config, self.root),
             "--continue-on-pass",

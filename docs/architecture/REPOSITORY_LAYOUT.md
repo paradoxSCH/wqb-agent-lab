@@ -18,7 +18,7 @@ wqb-agent-lab/
 |-- scripts/
 |   |-- bootstrap.ps1|sh        全新环境入口
 |   |-- dev.py                  doctor/check/test/build/release-check
-|   |-- run/                    canonical workflow launcher
+|   |-- run/                    workflow、daemon、scan 与 stop 运行入口
 |   |-- workers/                evaluation、memory、registry、submission worker
 |   |-- submit/                 提交队列与 worker 实现
 |   |-- checks/                 制品、供应链和公开快照检查

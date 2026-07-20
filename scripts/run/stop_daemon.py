@@ -1,3 +1,5 @@
+"""Stop daemon-managed workflow and dashboard processes."""
+
 from __future__ import annotations
 
 import os

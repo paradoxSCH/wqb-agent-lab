@@ -23,7 +23,7 @@ from src.workflow_daemon import (
     resolve_autonomous_run_date,
     run_completion_hooks,
 )
-from scripts.launch_daemon import (
+from scripts.run.daemon import (
     build_launch_specs,
     launch_evaluation_worker,
     main as launch_daemon_main,
@@ -392,8 +392,8 @@ class WorkflowDaemonTests(unittest.TestCase):
                 watchdog_seconds=300,
             )
 
-            with patch("scripts.launch_daemon.parse_args", return_value=args), patch(
-                "scripts.launch_daemon.build_launch_specs",
+            with patch("scripts.run.daemon.parse_args", return_value=args), patch(
+                "scripts.run.daemon.build_launch_specs",
                 side_effect=AssertionError("launcher must fail before building process specs"),
             ):
                 exit_code = launch_daemon_main()
