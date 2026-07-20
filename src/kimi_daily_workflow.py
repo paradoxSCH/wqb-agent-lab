@@ -306,16 +306,21 @@ def submitted_registry_entries(payload: dict[str, Any]) -> tuple[set[str], set[s
 
 
 def confirmed_submission_state_alpha_ids(payload: Any) -> set[str]:
+    """Return Alpha IDs already owned by another durable submission job.
+
+    The historical name is retained for compatibility. Queued and ambiguous jobs also
+    block a competing run from creating a second submission attempt.
+    """
     if not isinstance(payload, dict):
         return set()
-    blocking_statuses = {"submitted_confirmed", "pending_confirmation", "post_accepted"}
+    non_blocking_statuses = {"rejected", "failed"}
     alpha_ids: set[str] = set()
     for job in payload.get("jobs") or []:
         if not isinstance(job, dict):
             continue
-        status = str(job.get("status") or "")
+        status = str(job.get("status") or "").strip()
         alpha_id = str(job.get("alpha_id") or "").strip()
-        if alpha_id and status in blocking_statuses:
+        if alpha_id and status and status not in non_blocking_statuses:
             alpha_ids.add(alpha_id)
     return alpha_ids
 
@@ -596,7 +601,74 @@ class KimiDailyWorkflow:
             return f"worker_launch_failed:{str(exc)[:120]}"
         return "worker_started"
 
+    def run_registry_stage(self, *, now: datetime | None = None) -> str:
+        """Checkpoint the registry snapshot and any read-only refresh decision."""
+        now = now or datetime.now()
+        self._active_registry_snapshot = None
+        registry_root = self.root / ".local" / "data" / "registry"
+        snapshot_paths = [
+            path
+            for path in (
+                registry_root / "registry_state.json",
+                registry_root / "submitted_alphas.json",
+                registry_root / "submitted_expressions.txt",
+                registry_root / "submitted_blocklist.json",
+            )
+            if path.is_file()
+        ]
+        status = "skipped_dry_run" if self.dry_run else ""
+
+        def execute() -> StageOutcome:
+            nonlocal status
+            alpha_ids, expressions = self._read_submitted_registry()
+            self._active_registry_snapshot = (set(alpha_ids), set(expressions))
+            status = self.sync_submitted_registry()
+            artifacts = tuple(
+                relative_path(path, self.root)
+                for path in snapshot_paths
+                if path.is_file()
+            )
+            return StageOutcome.create(
+                artifacts=artifacts,
+                output={
+                    "status": status,
+                    "submitted_alpha_count": len(alpha_ids),
+                    "submitted_expression_count": len(expressions),
+                },
+                extensions={
+                    "remote_side_effects": False,
+                    "refresh_is_read_only": True,
+                    "refresh_worker_is_lock_guarded": True,
+                },
+            )
+
+        if self.dry_run:
+            return status
+        StageRunner(self.stage_checkpoint_store).run(
+            run_id=self.run_tag,
+            stage_id="registry",
+            input_digest=self._local_stage_input_digest(
+                {
+                    "sync_enabled": self.config.get("submitted_registry_sync_enabled"),
+                    "cache_max_age_seconds": self.config.get(
+                        "submitted_registry_cache_max_age_seconds"
+                    ),
+                },
+                snapshot_paths,
+            ),
+            execute=execute,
+            replay_policy="safe",
+            started_at=now,
+        )
+        return status
+
     def _submitted_registry(self) -> tuple[set[str], set[str]]:
+        snapshot = getattr(self, "_active_registry_snapshot", None)
+        if snapshot is not None:
+            return set(snapshot[0]), set(snapshot[1])
+        return self._read_submitted_registry()
+
+    def _read_submitted_registry(self) -> tuple[set[str], set[str]]:
         payload = read_json(self.root / SUBMITTED_REGISTRY_PATH, {})
         if not isinstance(payload, dict):
             submitted_alpha_ids: set[str] = set()
@@ -935,6 +1007,7 @@ class KimiDailyWorkflow:
             self._run_closed_loop_postprocessors(
                 state,
                 self.run_dir / "iteration_state.json",
+                now=now,
             )
             ledger["closed_loop"] = state
         return state
@@ -1163,7 +1236,11 @@ class KimiDailyWorkflow:
             write_json(paths["iteration_state"], state)
             write_text(paths["triage_summary"], "\n".join(summary_lines) + "\n")
             if run_postprocessors:
-                self._run_closed_loop_postprocessors(state, paths["iteration_state"])
+                self._run_closed_loop_postprocessors(
+                    state,
+                    paths["iteration_state"],
+                    now=now,
+                )
         ledger["closed_loop"] = state
         return state
 
@@ -1171,14 +1248,156 @@ class KimiDailyWorkflow:
         self,
         state: dict[str, Any],
         iteration_state_path: Path,
+        *,
+        now: datetime | None = None,
     ) -> None:
-        memory_sync_report = self._post_stage_memory_sync()
-        if memory_sync_report:
-            state["artifacts"]["memory_sync_state"] = memory_sync_report
-        output_report_path, output_summary_path = write_run_output_evaluation(self.run_dir)
+        now = now or datetime.now()
+        memory_sync_report = self.run_memory_stage(now=now)
+        if memory_sync_report is not None:
+            state["artifacts"]["memory_sync_report"] = relative_path(
+                memory_sync_report,
+                self.root,
+            )
+            state["artifacts"]["memory_sync_state"] = relative_path(
+                self.stage_checkpoint_store.path_for("memory"),
+                self.root,
+            )
+        output_report_path, output_summary_path = self.run_evaluation_stage(now=now)
         state["artifacts"]["output_evaluation_report"] = relative_path(output_report_path, self.root)
         state["artifacts"]["output_evaluation_summary"] = relative_path(output_summary_path, self.root)
         write_json(iteration_state_path, state)
+
+    def _memory_stage_input_paths(self) -> list[Path]:
+        names = (
+            "daily_budget_ledger.json",
+            "direct_submit.json",
+            "submit_ready.json",
+            "submission_backlog.json",
+            "optimize_next.json",
+            "low_value_avoid.json",
+            "alpha_skeleton_blocklist.json",
+            "family_efficiency.json",
+            "iteration_state.json",
+            "scan_results_snapshot.json",
+            "self_corr_repair_effect_summary.json",
+        )
+        paths = [self.run_dir / name for name in names]
+        paths.extend(self.run_dir.glob("*_results.json"))
+        paths.append(
+            self.root
+            / ".local"
+            / "data"
+            / "behavioral_proxy"
+            / "behavioral_proxy_map.json"
+        )
+        return [path for path in paths if path.is_file()]
+
+    def run_memory_stage(self, *, now: datetime | None = None) -> Path | None:
+        config = self.config.get("post_stage_memory_sync") or {}
+        if not isinstance(config, dict) or not config.get("enabled") or self.dry_run:
+            return None
+        from src.agent_memory_sync import sync_run_memory
+
+        now = now or datetime.now()
+        db_path = self.root / str(
+            config.get("db_path") or ".local/data/memory/alpha_memory.db"
+        )
+        report_path = self.run_dir / "memory_sync_report.json"
+        result: Any = None
+
+        def execute() -> StageOutcome:
+            nonlocal result
+            result = sync_run_memory(self.root, self.run_dir, db_path=db_path)
+            return StageOutcome.create(
+                artifacts=(relative_path(report_path, self.root),),
+                output={
+                    "nodes_written": int(result.nodes_written),
+                    "edges_written": int(result.edges_written),
+                    "events_recorded": int(result.events_recorded),
+                },
+                extensions={
+                    "remote_side_effects": False,
+                    "sqlite_upserts_are_idempotent": True,
+                    "evaluation_waits_for_completion": True,
+                },
+            )
+
+        StageRunner(self.stage_checkpoint_store).run(
+            run_id=self.run_tag,
+            stage_id="memory",
+            input_digest=self._local_stage_input_digest(
+                {"db_path": relative_path(db_path, self.root)},
+                self._memory_stage_input_paths(),
+            ),
+            execute=execute,
+            replay_policy="safe",
+            started_at=now,
+        )
+        if result is None or not report_path.is_file():
+            raise RuntimeError("memory stage completed without a report")
+        return report_path
+
+    def _evaluation_stage_input_paths(self) -> list[Path]:
+        names = (
+            "candidate_hypothesis_queue.json",
+            "preflight_evaluation_report.json",
+            "scan_results_snapshot.json",
+            "memory_sync_report.json",
+            "triage_summary.md",
+            "diagnosis_policy_evaluation.md",
+            "wqb-agent-latest-workflow-uml.html",
+        )
+        return [self.run_dir / name for name in names if (self.run_dir / name).is_file()]
+
+    def run_evaluation_stage(
+        self,
+        *,
+        now: datetime | None = None,
+    ) -> tuple[Path, Path]:
+        now = now or datetime.now()
+        report_path = self.run_dir / "output_evaluation_report.json"
+        summary_path = self.run_dir / "output_evaluation_summary.md"
+
+        def execute() -> StageOutcome:
+            written_report, written_summary = write_run_output_evaluation(
+                self.run_dir,
+                now=now,
+            )
+            payload = read_json(written_report, {})
+            return StageOutcome.create(
+                artifacts=(
+                    relative_path(written_report, self.root),
+                    relative_path(written_summary, self.root),
+                ),
+                output={
+                    "record_count": int(payload.get("record_count") or 0),
+                    "status_counts": payload.get("status_counts") or {},
+                },
+                extensions={
+                    "remote_side_effects": False,
+                    "consumes_completed_memory_stage": (
+                        self.run_dir / "memory_sync_report.json"
+                    ).is_file(),
+                    "policy_actions_are_observations": True,
+                },
+            )
+
+        if self.dry_run:
+            return report_path, summary_path
+        StageRunner(self.stage_checkpoint_store).run(
+            run_id=self.run_tag,
+            stage_id="evaluation",
+            input_digest=self._local_stage_input_digest(
+                {"run_tag": self.run_tag},
+                self._evaluation_stage_input_paths(),
+            ),
+            execute=execute,
+            replay_policy="safe",
+            started_at=now,
+        )
+        if not report_path.is_file() or not summary_path.is_file():
+            raise RuntimeError("evaluation stage completed without artifacts")
+        return report_path, summary_path
 
     def _workflow_config_reference(self) -> str:
         try:
@@ -1213,46 +1432,6 @@ class KimiDailyWorkflow:
                 ]
             )
         return "\n".join(lines) + "\n"
-
-    def _post_stage_memory_sync(self) -> str | None:
-        config = self.config.get("post_stage_memory_sync") or {}
-        if not isinstance(config, dict) or not config.get("enabled"):
-            return None
-        db_path = self.root / str(config.get("db_path") or ".local/data/memory/alpha_memory.db")
-        state_path = self.run_dir / "memory_sync_state.json"
-        log_path = self.run_dir / "memory_worker.log"
-        command = [
-            sys.executable,
-            "-m",
-            "scripts.workers.memory",
-            "--workspace-root",
-            str(self.root),
-            "--run-dir",
-            str(self.run_dir),
-            "--db",
-            str(db_path),
-            "--once",
-        ]
-        try:
-            creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-            with open(log_path, "a", encoding="utf-8") as log_fh:
-                subprocess.Popen(
-                    command,
-                    cwd=self.root,
-                    stdout=log_fh,
-                    stderr=subprocess.STDOUT,
-                    creationflags=creationflags,
-                )
-        except Exception as exc:
-            write_json(
-                state_path,
-                {
-                    "status": "launch_failed",
-                    "updated_at": datetime.now().isoformat(timespec="seconds"),
-                    "error": str(exc)[:500],
-                },
-            )
-        return relative_path(state_path, self.root)
 
     def _candidate_row_paths(self) -> list[Path]:
         current_paths = sorted(self.run_dir.glob("direct_submit*.json"))
@@ -3125,7 +3304,7 @@ class KimiDailyWorkflow:
         if now.date() < self.run_date:
             messages.append(f"waiting for daily start: {self.run_date.isoformat()}T{DAY_START_TIME.isoformat()}")
             return messages
-        sync_status = self.sync_submitted_registry()
+        sync_status = self.run_registry_stage(now=now)
         if sync_status not in {"ok", "skipped_dry_run", "skipped_disabled", "skipped_missing_credentials", "skipped_env"}:
             messages.append(f"submitted registry sync: {sync_status}")
         if summary_only:

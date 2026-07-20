@@ -18,7 +18,12 @@ from .validators import (
 )
 
 
-def evaluate_run_outputs(run_dir: Path | str) -> dict[str, Any]:
+def evaluate_run_outputs(
+    run_dir: Path | str,
+    *,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    now = now or datetime.now()
     run_path = Path(run_dir)
     records: list[OutputEvaluationRecord] = []
     diagnosis_policy: dict[str, Any] = {}
@@ -33,7 +38,7 @@ def evaluate_run_outputs(run_dir: Path | str) -> dict[str, Any]:
 
     scan_rows = _read_json(run_path / "scan_results_snapshot.json", None)
     if isinstance(scan_rows, list):
-        diagnosis_policy = evaluate_diagnosis_policies(scan_rows)
+        diagnosis_policy = evaluate_diagnosis_policies(scan_rows, now=now)
         records.append(
             OutputEvaluationRecord(
                 artifact="scan_results_snapshot.json",
@@ -63,7 +68,7 @@ def evaluate_run_outputs(run_dir: Path | str) -> dict[str, Any]:
     budget_saved_estimate = sum(int(record.metrics.get("budget_saved_estimate") or 0) for record in records)
     policy_actions = build_budget_policy_actions(diagnosis_policy)
     return {
-        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "generated_at": now.isoformat(timespec="seconds"),
         "run_dir": run_path.as_posix(),
         "record_count": len(records),
         "status_counts": dict(status_counts),
@@ -74,9 +79,13 @@ def evaluate_run_outputs(run_dir: Path | str) -> dict[str, Any]:
     }
 
 
-def write_run_output_evaluation(run_dir: Path | str) -> tuple[Path, Path]:
+def write_run_output_evaluation(
+    run_dir: Path | str,
+    *,
+    now: datetime | None = None,
+) -> tuple[Path, Path]:
     run_path = Path(run_dir)
-    report = evaluate_run_outputs(run_path)
+    report = evaluate_run_outputs(run_path, now=now)
     report_path = run_path / "output_evaluation_report.json"
     summary_path = run_path / "output_evaluation_summary.md"
     report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")

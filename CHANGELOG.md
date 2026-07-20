@@ -39,6 +39,8 @@ The project follows Semantic Versioning after the first public release. While th
   advisory routing.
 - Durable submission-intent checkpoints and evidence-first recovery for lost responses or
   hard worker interruptions, preventing ambiguous submission POST replay.
+- Checkpointed registry, memory, and evaluation stages with deterministic evaluation time
+  and strict memory-before-evaluation ordering, removing an asynchronous artifact race.
 
 ## [0.1.1-alpha] - 2026-07-14
 

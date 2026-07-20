@@ -2376,7 +2376,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             self.assertIn("reference_point_disposition_drift", prompt)
             self.assertIn("budget_policy=downweight", prompt)
 
-    def test_workflow_launches_memory_worker_after_closed_loop_artifacts(self) -> None:
+    def test_workflow_completes_memory_before_evaluating_closed_loop_artifacts(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._write_workflow_config(root)
@@ -2416,18 +2416,31 @@ class KimiDailyWorkflowTests(unittest.TestCase):
 
             workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
-            with patch.object(kimi_daily_workflow_module.subprocess, "Popen") as popen:
-                popen.return_value.pid = 456
-                state = workflow.write_closed_loop_artifacts(ledger)
+            state = workflow.write_closed_loop_artifacts(ledger)
 
             self.assertIn("memory_sync_state", state["artifacts"])
-            self.assertEqual(state["artifacts"]["memory_sync_state"], ".local/data/runs/continuous-alpha/kimi-daily-budget-20260505/memory_sync_state.json")
-            command = popen.call_args.args[0]
-            self.assertIn("scripts.workers.memory", command)
-            self.assertIn("--once", command)
+            self.assertEqual(
+                state["artifacts"]["memory_sync_state"],
+                ".local/data/runs/continuous-alpha/kimi-daily-budget-20260505/stage_checkpoints/memory.json",
+            )
+            self.assertEqual(
+                state["artifacts"]["memory_sync_report"],
+                ".local/data/runs/continuous-alpha/kimi-daily-budget-20260505/memory_sync_report.json",
+            )
             output_evaluation = json.loads((run_dir / "output_evaluation_report.json").read_text(encoding="utf-8"))
             artifacts = {record["artifact"] for record in output_evaluation["records"]}
-            self.assertNotIn("memory_sync_report.json", artifacts)
+            self.assertIn("memory_sync_report.json", artifacts)
+            memory_checkpoint = json.loads(
+                (run_dir / "stage_checkpoints" / "memory.json").read_text(encoding="utf-8")
+            )
+            evaluation_checkpoint = json.loads(
+                (run_dir / "stage_checkpoints" / "evaluation.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual("completed", memory_checkpoint["status"])
+            self.assertEqual("completed", evaluation_checkpoint["status"])
+            self.assertTrue(
+                evaluation_checkpoint["extensions"]["consumes_completed_memory_stage"]
+            )
 
     def _write_workflow_config(self, root: Path) -> None:
         payload = {
