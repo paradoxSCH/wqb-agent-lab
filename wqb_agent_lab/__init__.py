@@ -6,7 +6,9 @@ from types import ModuleType
 from .layout import RepositoryLayout
 
 
-_SUBMODULES = frozenset({"evaluation", "governance", "memory", "platform", "research", "runtime", "workflow"})
+_SUBMODULES = frozenset(
+    {"evaluation", "governance", "memory", "planning", "platform", "research", "runtime", "workflow"}
+)
 
 
 def __getattr__(name: str) -> ModuleType:

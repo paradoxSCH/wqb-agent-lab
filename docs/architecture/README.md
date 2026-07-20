@@ -35,3 +35,10 @@ WorldQuant BRAIN transport
 
 The architecture boundaries are executable in `tests/test_architecture_boundaries.py` and
 `tests/test_platform_boundary.py`. Developer and CI verification share `python -m scripts.dev`.
+
+## Evolution
+
+- [Open cognition / controlled execution](OPEN_COGNITION_CONTROLLED_EXECUTION.md) defines
+  the incremental workflow migration and its LLM-capability guardrails.
+- [ADR 0002](decisions/0002-open-cognition-controlled-execution.md) records why models
+  propose actions while deterministic runtime code controls side effects.
