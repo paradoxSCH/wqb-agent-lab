@@ -14,6 +14,19 @@ from wqb_agent_lab.runtime import (
 
 
 class RunManifestTests(unittest.TestCase):
+    @staticmethod
+    def _plan_proposal() -> dict[str, object]:
+        return {
+            "schema_version": 1,
+            "plan_id": "plan-001",
+            "objective": "Explore an unconstrained research idea.",
+            "hypotheses": [],
+            "requested_actions": [],
+            "alternatives": [],
+            "freeform_notes": "Preserve unknown future mechanisms.",
+            "extensions": {"unknown_llm_field": {"confidence": 0.7}},
+        }
+
     def test_manifest_is_immutable_and_has_stable_digest(self) -> None:
         code = {"git_commit": "abc123", "metadata": {"dirty": False}}
         manifest = RunManifest.create(
@@ -37,7 +50,7 @@ class RunManifestTests(unittest.TestCase):
             root = Path(tmp)
             artifact_path = root / "runs" / "run-001" / "proposal.json"
             artifact_path.parent.mkdir(parents=True)
-            artifact_path.write_text(json.dumps({"plan_id": "plan-001"}), encoding="utf-8")
+            artifact_path.write_text(json.dumps(self._plan_proposal()), encoding="utf-8")
 
             artifact = artifact_provenance(
                 root,
@@ -116,6 +129,48 @@ class RunManifestTests(unittest.TestCase):
             self.assertEqual("application/json", artifacts[0].kind)
             self.assertEqual("text/plain", artifacts[1].kind)
             self.assertTrue(all(artifact.producer == "test-workflow" for artifact in artifacts))
+
+    def test_schema_declared_artifact_is_validated_before_manifesting(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            artifact_path = root / "invalid-proposal.json"
+            artifact_path.write_text('{"plan_id": "missing-required-fields"}', encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "plan_proposal contract validation failed"):
+                artifact_provenance(
+                    root,
+                    artifact_path,
+                    kind="plan_proposal",
+                    schema_name="plan_proposal",
+                )
+
+    def test_manifest_consumer_revalidates_digests_and_artifact_content(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            artifact_path = root / "proposal.json"
+            artifact_path.write_text(json.dumps(self._plan_proposal()), encoding="utf-8")
+            artifact = artifact_provenance(
+                root,
+                artifact_path,
+                kind="plan_proposal",
+                schema_name="plan_proposal",
+            )
+            original = RunManifest.create(
+                run_id="run-consumer",
+                created_at="2026-07-20T12:00:00Z",
+            ).with_artifact(artifact)
+
+            loaded = RunManifest.from_dict(original.to_dict())
+            loaded.verify_artifacts(root)
+            historical_payload = original.to_dict()
+            historical_payload["artifacts"][0]["schema_digest"] = "0" * 64
+            historical = RunManifest.from_dict(historical_payload)
+            with self.assertRaisesRegex(ValueError, "schema version is unavailable"):
+                historical.verify_artifacts(root)
+            artifact_path.write_text('{"schema_version": 1}', encoding="utf-8")
+
+            with self.assertRaisesRegex(ValueError, "artifact size changed|artifact digest changed"):
+                loaded.verify_artifacts(root)
 
 
 if __name__ == "__main__":

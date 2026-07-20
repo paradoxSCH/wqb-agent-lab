@@ -55,6 +55,13 @@ class WorkflowRunManifestTests(unittest.TestCase):
             self.assertEqual(workflow.run_tag, payload["run_id"])
             self.assertEqual("checkpointed", payload["extensions"]["checkpoint_status"])
             self.assertEqual("plan_proposal", payload["llm"]["output_contract"])
+            self.assertRegex(payload["llm"]["prompt_sha256"], r"^[0-9a-f]{64}$")
+            self.assertRegex(
+                payload["research"]["operator_catalog_sha256"],
+                r"^[0-9a-f]{64}$",
+            )
+            self.assertGreater(payload["research"]["operator_count"], 0)
+            self.assertIn("tracked_files_dirty", payload["code"])
             self.assertRegex(payload["research"]["schema_digests"]["plan_proposal"], r"^[0-9a-f]{64}$")
             self.assertRegex(
                 payload["research"]["schema_digests"]["workflow_stage_result"],
@@ -70,6 +77,19 @@ class WorkflowRunManifestTests(unittest.TestCase):
             self.assertIn(
                 self._relative(workflow.stage_checkpoint_store.path_for("scan_preflight"), root),
                 artifact_paths,
+            )
+            checkpoint_artifacts = [
+                artifact
+                for artifact in payload["artifacts"]
+                if "/stage_checkpoints/" in artifact["path"]
+            ]
+            self.assertTrue(checkpoint_artifacts)
+            self.assertTrue(
+                all(
+                    artifact["schema_name"] == "workflow_stage_result"
+                    and len(artifact["schema_digest"]) == 64
+                    for artifact in checkpoint_artifacts
+                )
             )
             self.assertNotIn(self._relative(workflow.manifest_path, root), artifact_paths)
 

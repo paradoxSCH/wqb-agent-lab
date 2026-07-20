@@ -20,10 +20,11 @@ versioned product interfaces, not examples or generated run output.
 
 `research_policy` is currently the only configuration contract automatically enforced when
 the production runtime loads configuration. Stage-result checkpoints are also validated
-automatically when written. The other contracts are published
-validation boundaries: callers can validate them through the engine, but their
-presence does not imply that every producer and consumer is already wired to
-validate every artifact automatically.
+automatically when written and read. A run-manifest producer validates every artifact that it
+explicitly declares against one of these contracts; a manifest consumer revalidates schema
+identity and can verify both artifact bytes and contract content. The other contracts are
+published validation boundaries: callers can validate them through the engine, but their
+presence does not turn open internal diagnostics or LLM payloads into closed schemas.
 
 Changes to required fields, accepted values, or field meanings follow
 [the repository versioning policy](../docs/maintainers/VERSIONING.md). Additive
