@@ -35,6 +35,7 @@ from src.research_policy import (
 )
 from src.self_corr_policy import SELF_CORR_NEAR_REPAIR_MAX, self_corr_bucket as _policy_self_corr_bucket
 from wqb_agent_lab.runtime import OperationJournal, RunManifest, collect_artifact_provenance
+from wqb_agent_lab.workflow.stages import StageCheckpointStore, StageOutcome, StageRunner
 
 
 DEFAULT_WORKFLOW_CONFIG = Path(".local/research/workflows/production.json")
@@ -1076,6 +1077,7 @@ class KimiDailyWorkflow:
         self.ledger_path = self.run_dir / "daily_budget_ledger.json"
         self.manifest_path = self.run_dir / "run_manifest.json"
         self.operation_journal = OperationJournal(self.run_dir / "operations.db")
+        self.stage_checkpoint_store = StageCheckpointStore(self.run_dir)
 
     def _run_manifest(
         self,
@@ -1434,9 +1436,74 @@ class KimiDailyWorkflow:
         *,
         now: datetime | None = None,
     ) -> Path | None:
+        now = now or datetime.now()
+        if self.dry_run:
+            return self._run_llm_plan_uncheckpointed(ledger, now=now)
+        prompt = self._build_llm_prompt(ledger) if self.llm_adapter.is_configured() else "planner-disabled"
+        planning_input = json.dumps(
+            {
+                "prompt_sha256": hashlib.sha256(prompt.encode("utf-8")).hexdigest(),
+                "provider_config_digest": self.llm_adapter.metadata().get("config_digest", ""),
+            },
+            ensure_ascii=True,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        input_digest = hashlib.sha256(planning_input.encode("utf-8")).hexdigest()
+        artifact_path: Path | None = None
+
+        def execute() -> StageOutcome:
+            nonlocal artifact_path
+            artifact_path = self._run_llm_plan_uncheckpointed(ledger, now=now)
+            if artifact_path is None:
+                return StageOutcome.create(
+                    status="skipped",
+                    output={"reason": "planner_not_configured"},
+                )
+            artifacts = tuple(
+                relative_path(path, self.root)
+                for path in (
+                    self.llm_adapter.prompt_path(self.root, self.run_dir, self.run_tag),
+                    artifact_path,
+                )
+                if path.is_file()
+            )
+            payload = read_json(artifact_path, {})
+            plan = payload.get("llm_plan") if isinstance(payload, dict) else None
+            plan = plan if isinstance(plan, dict) else {}
+            planner_status = str(plan.get("status") or "unknown")
+            retryable = bool(plan.get("retryable"))
+            status = "deferred" if planner_status == "error" and retryable else "completed"
+            return StageOutcome.create(
+                status=status,
+                artifacts=artifacts,
+                output={
+                    "provider_stage": self.llm_adapter.stage,
+                    "planner_status": planner_status,
+                    "retryable": retryable,
+                    "artifact": relative_path(artifact_path, self.root),
+                },
+                extensions={"research_payload_preserved_in_artifact": True},
+            )
+
+        StageRunner(self.stage_checkpoint_store).run(
+            run_id=self.run_tag,
+            stage_id="llm_planning",
+            input_digest=input_digest,
+            execute=execute,
+            replay_policy="safe",
+            started_at=now,
+        )
+        return artifact_path
+
+    def _run_llm_plan_uncheckpointed(
+        self,
+        ledger: dict[str, Any],
+        *,
+        now: datetime,
+    ) -> Path | None:
         if not self.llm_adapter.is_configured():
             return None
-        now = now or datetime.now()
         prompt_path = self.llm_adapter.prompt_path(self.root, self.run_dir, self.run_tag)
         output_path = self.llm_adapter.output_path(self.root, self.run_dir, self.run_tag)
         credential_changed = self.llm_adapter.prepare_for_attempt(self.root)

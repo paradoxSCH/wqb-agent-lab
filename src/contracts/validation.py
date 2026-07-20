@@ -28,21 +28,32 @@ def assert_valid_contract(name: str, payload: dict[str, Any]) -> None:
 
 
 def _validate(schema: dict[str, Any], value: Any, path: str) -> list[ValidationError]:
+    errors: list[ValidationError] = []
     if "anyOf" in schema:
         alternatives = schema.get("anyOf")
         if isinstance(alternatives, list):
-            if any(not _validate(alt, value, path) for alt in alternatives if isinstance(alt, dict)):
-                return []
-            expected = " or ".join(_type_label(alt.get("type")) for alt in alternatives if isinstance(alt, dict))
-            return [ValidationError(path, f"expected {expected}, got {_value_type(value)}")]
+            schemas = [item for item in alternatives if isinstance(item, dict)]
+            if schemas and not any(not _validate(alt, value, path) for alt in schemas):
+                expected = " or ".join(_type_label(alt.get("type")) for alt in schemas)
+                errors.append(ValidationError(path, f"expected {expected}, got {_value_type(value)}"))
 
-    errors: list[ValidationError] = []
+    if "oneOf" in schema:
+        alternatives = schema.get("oneOf")
+        if isinstance(alternatives, list):
+            schemas = [item for item in alternatives if isinstance(item, dict)]
+            matches = sum(not _validate(alt, value, path) for alt in schemas)
+            if matches != 1:
+                errors.append(ValidationError(path, f"expected exactly one matching schema, got {matches}"))
+
     expected_type = schema.get("type")
     if expected_type is not None and not _matches_type(value, expected_type):
-        return [ValidationError(path, f"expected {_type_label(expected_type)}, got {_value_type(value)}")]
+        errors.append(ValidationError(path, f"expected {_type_label(expected_type)}, got {_value_type(value)}"))
+        return errors
 
     if "enum" in schema and value not in schema["enum"]:
         errors.append(ValidationError(path, f"expected one of {schema['enum']}, got {value!r}"))
+    if "const" in schema and value != schema["const"]:
+        errors.append(ValidationError(path, f"expected {schema['const']!r}, got {value!r}"))
 
     if isinstance(value, (int, float)) and not isinstance(value, bool):
         if "minimum" in schema and value < schema["minimum"]:
@@ -57,6 +68,19 @@ def _validate(schema: dict[str, Any], value: Any, path: str) -> list[ValidationE
         if isinstance(item_schema, dict):
             for index, item in enumerate(value):
                 errors.extend(_validate(item_schema, item, f"{path}[{index}]"))
+
+    alternatives = schema.get("allOf")
+    if isinstance(alternatives, list):
+        for alternative in alternatives:
+            if isinstance(alternative, dict):
+                errors.extend(_validate(alternative, value, path))
+
+    condition = schema.get("if")
+    if isinstance(condition, dict):
+        branch_name = "then" if not _validate(condition, value, path) else "else"
+        branch = schema.get(branch_name)
+        if isinstance(branch, dict):
+            errors.extend(_validate(branch, value, path))
 
     return errors
 

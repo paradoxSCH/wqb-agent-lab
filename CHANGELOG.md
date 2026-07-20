@@ -26,6 +26,8 @@ The project follows Semantic Versioning after the first public release. While th
   output remains the default and structural repair does not consume WQB budget.
 - Credential-safe, content-addressed `run_manifest.json` checkpoints for production daily
   workflow ticks, including failure provenance without replacing the original exception.
+- Atomic workflow stage checkpoints with replay-safe interruption recovery, mandatory
+  reconciliation for interrupted side-effect stages, and initial LLM-planning delegation.
 
 ## [0.1.1-alpha] - 2026-07-14
 

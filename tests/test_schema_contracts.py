@@ -14,6 +14,7 @@ EXPECTED_SCHEMA_NAMES = (
     "simulation_request",
     "simulation_result",
     "submission_job",
+    "workflow_stage_result",
 )
 
 
@@ -34,7 +35,7 @@ class SchemaContractTests(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertIn(f"`{name}`", readme)
         normalized = " ".join(readme.split())
-        self.assertIn("only contract automatically enforced", normalized)
+        self.assertIn("only configuration contract automatically enforced", normalized)
         self.assertIn("published validation boundaries", normalized)
 
     def test_lists_exact_p0_schema_names(self) -> None:
@@ -59,6 +60,30 @@ class SchemaContractTests(unittest.TestCase):
                 self.assertEqual("object", schema["type"])
                 self.assertIsInstance(schema["required"], list)
                 self.assertRegex(digest, r"^[0-9a-f]{64}$")
+
+    def test_stage_result_schema_enforces_lifecycle_conditionals(self) -> None:
+        from src.contracts import validate_contract
+
+        payload = {
+            "schema_version": 1,
+            "run_id": "run-invalid",
+            "stage_id": "llm_planning",
+            "attempt_id": "attempt-1",
+            "attempt_number": 1,
+            "status": "running",
+            "started_at": "2026-07-20T12:00:00",
+            "completed_at": "2026-07-20T12:00:01",
+            "input_digest": "",
+            "artifacts": [],
+            "messages": [],
+            "output": {},
+            "error": None,
+            "extensions": {},
+        }
+
+        errors = validate_contract("workflow_stage_result", payload)
+
+        self.assertTrue(any(error.path == "$.completed_at" for error in errors))
 
     def test_valid_examples_pass_contract_validation(self) -> None:
         from src.contracts import validate_contract
