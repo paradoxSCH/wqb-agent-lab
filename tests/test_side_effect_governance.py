@@ -6,9 +6,9 @@ from unittest.mock import patch
 
 class SideEffectGovernanceTests(unittest.TestCase):
     def test_scan_error_summary_preserves_status_and_detail(self) -> None:
-        import run_scan
+        from wqb_agent_lab.runtime import scan
 
-        summary = run_scan.summarize_simulation_payload(
+        summary = scan.summarize_simulation_payload(
             {
                 "diagnosis": "simulation_create_failed",
                 "status_code": 429,
@@ -20,10 +20,10 @@ class SideEffectGovernanceTests(unittest.TestCase):
         self.assertIn("too many simulations", summary)
 
     def test_scan_expression_comparison_ignores_only_whitespace(self) -> None:
-        import run_scan
+        from wqb_agent_lab.runtime import scan
 
-        self.assertEqual(run_scan._normalized_expression("rank( close )"), "rank(close)")
-        self.assertNotEqual(run_scan._normalized_expression("rank(open)"), "rank(close)")
+        self.assertEqual(scan._normalized_expression("rank( close )"), "rank(close)")
+        self.assertNotEqual(scan._normalized_expression("rank(open)"), "rank(close)")
 
     def test_capabilities_are_disabled_unless_exactly_enabled(self) -> None:
         from src.side_effect_governance import evaluate_side_effect_capability
@@ -77,14 +77,14 @@ class SideEffectGovernanceTests(unittest.TestCase):
     def test_scan_runner_refuses_before_reading_config_or_creating_session(self) -> None:
         import asyncio
 
-        import run_scan
+        from wqb_agent_lab.runtime import scan
 
         with patch.dict("os.environ", {}, clear=True), patch.object(
-            run_scan.WQBClient,
+            scan.WQBClient,
             "from_config",
         ) as create_client:
             with self.assertRaisesRegex(RuntimeError, "simulation side effect is disabled"):
-                asyncio.run(run_scan.run_scan("missing-config.json"))
+                asyncio.run(scan.run_scan("missing-config.json"))
 
         create_client.assert_not_called()
 

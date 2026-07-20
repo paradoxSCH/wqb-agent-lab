@@ -28,10 +28,3 @@ def test_repository_layout_ensure_is_idempotent() -> None:
         assert layout.ensure() is layout
         assert layout.ensure() is layout
         assert all(path.is_dir() for path in layout.mutable_directories())
-
-
-def test_legacy_layout_import_forwards_to_canonical_class() -> None:
-    from src.wqb_agent_lab.layout import RepositoryLayout as CompatibilityLayout
-    from wqb_agent_lab.layout import RepositoryLayout
-
-    assert CompatibilityLayout is RepositoryLayout

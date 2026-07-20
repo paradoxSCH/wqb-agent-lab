@@ -48,7 +48,7 @@ _SENSITIVE_KEY_PARTS = (
     "secret",
     "token",
 )
-_LLM_CONFIG_KEYS = ("llm_provider", "llm_adapter", "deepseek_v4_pro", "kimi_cli")
+_LLM_CONFIG_KEYS = ("llm_provider",)
 _KNOWN_PROVIDERS = {
     "anthropic",
     "cli",

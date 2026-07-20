@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from scripts.maintenance.evaluate_validation_run import summarize_rows
-from src.wqb.check_readiness import REQUIRED_SUBMISSION_CHECK_NAMES
+from wqb_agent_lab.platform.check_readiness import REQUIRED_SUBMISSION_CHECK_NAMES
 
 
 def passing_checks() -> list[dict[str, object]]:

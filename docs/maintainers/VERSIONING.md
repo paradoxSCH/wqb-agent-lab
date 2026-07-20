@@ -15,7 +15,6 @@ development status. `v0.1.0-alpha` was the first history-free public release.
   canonical implementation.
 - Internal duplicate implementations and unreferenced scripts may be removed immediately.
 
-The legacy continuous scheduler was removed for `0.3.0`. The provider-specific workflow
-launcher, `run_scan`, `src.wqb_agent_lab`, `src.wqb` imports, and legacy LLM config keys
-remain on the same removal track. Current documentation shows only their replacements
-except in the migration guide.
+The legacy scheduler, provider-specific workflow launcher, `run_scan`, duplicate
+`src.wqb_agent_lab` / `src.wqb` namespaces, and legacy LLM config keys were removed for
+`0.3.0`. Historical names may appear only in migration and release notes.

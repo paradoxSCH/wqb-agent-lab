@@ -3,7 +3,10 @@ from __future__ import annotations
 import unittest
 
 from wqb_agent_lab.runtime.scan import is_pass
-from src.wqb.check_readiness import REQUIRED_SUBMISSION_CHECK_NAMES, evaluate_check_snapshot
+from wqb_agent_lab.platform.check_readiness import (
+    REQUIRED_SUBMISSION_CHECK_NAMES,
+    evaluate_check_snapshot,
+)
 
 
 def complete_checks(*, self_corr_result: str = "PASS", self_corr_value: float = 0.4) -> list[dict[str, object]]:

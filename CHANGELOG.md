@@ -7,6 +7,10 @@
 - Removed the experimental continuous scheduler, its separate LLM template generator,
   compatibility command, and implementation-coupled test suite. `ResearchWorkflow` is now
   the only production orchestrator.
+- Removed the expired root scan/workflow launchers and the `src.wqb`, `src.wqb_agent_lab`,
+  and unused `src.wq` compatibility namespaces.
+- Removed legacy LLM configuration fallbacks. `llm_provider` is now the only runtime LLM
+  configuration surface, including for CLI-backed models.
 
 ## [0.2.0a1] - 2026-07-14
 

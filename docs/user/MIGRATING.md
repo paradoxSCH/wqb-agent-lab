@@ -8,9 +8,8 @@ The canonical production workflow command is:
 .\.venv\Scripts\python.exe -m scripts.run.workflow --workspace-root . --workflow-config .local\research\workflows\production.json --run-once --dry-run
 ```
 
-`python -m scripts.kimi_daily_workflow` remains a forwarding launcher for one release
-cycle. It prints a deprecation message to stderr and will be removed in version `0.3.0`.
-It does not contain a second workflow implementation.
+The provider-specific `scripts.kimi_daily_workflow` launcher was removed in `0.3.0`. Use
+the canonical command above.
 
 The default workflow config moved from the historical provider-specific path to
 `.local/research/workflows/production.json`. Explicit `--workflow-config` paths continue
@@ -19,15 +18,13 @@ to work.
 ## Python platform imports
 
 Use `wqb_agent_lab.platform` for the installed WQB client, normalized models, readiness
-checks, and operator catalog. Imports from `src.wqb_agent_lab` and `src.wqb` remain
-forwarding compatibility imports through version `0.2.x` and will be removed in version
-`0.3.0`.
+checks, and operator catalog. The `src.wqb_agent_lab`, `src.wqb`, and unused `src.wq`
+namespaces were removed in `0.3.0`.
 
 ## Scan imports
 
 Use `python -m scripts.run.scan` as the command entrypoint and
-`wqb_agent_lab.runtime.scan` for Python imports. The root `run_scan` module remains a
-forwarding compatibility import through version `0.2.x` and will be removed in version
+`wqb_agent_lab.runtime.scan` for Python imports. The root `run_scan` module was removed in
 `0.3.0`.
 
 ## Legacy scheduler
@@ -39,5 +36,6 @@ an executable compatibility surface.
 ## LLM configuration
 
 Use the top-level `llm_provider` object. The legacy `llm_adapter`, `deepseek_v4_pro`,
-`kimi_cli`, and Kimi environment fallbacks remain readable through version `0.2.x` and
-emit compatibility diagnostics. They will be removed in version `0.3.0`.
+`kimi_cli`, and implicit Kimi environment fallbacks were removed in `0.3.0`; the resolver
+now returns `invalid_configuration` for legacy blocks. CLI-backed models remain supported
+through `llm_provider.provider = "cli"` with an explicit command array.

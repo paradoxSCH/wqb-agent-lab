@@ -25,7 +25,7 @@ WorldQuant BRAIN transport
 - `wqb_agent_lab.platform` is the canonical installed WQB client, model, readiness, and operator
   catalog boundary.
 - `wqb_agent_lab.workflow.ResearchWorkflow` is the public production orchestrator.
-- `src.wqb` and `scripts.kimi_daily_workflow` are one-cycle compatibility surfaces only.
+- Removed compatibility namespaces and launchers are not part of the 0.3 runtime.
 - Transport and MCP tools expose facts and capabilities. Governance decides budgets,
   retries, pauses, promotion, and side effects.
 - Mutable runs, memory, credentials, scans, registries, logs, and PID files live under

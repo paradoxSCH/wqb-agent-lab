@@ -57,6 +57,7 @@ wqb-agent-lab/
 | 仓库工程检查 | `uv run python -m scripts.dev check` |
 | 完整发布检查 | `uv run python -m scripts.dev release-check --json` |
 
-根目录的 `run_scan.py`、`src/wqb_agent_lab/` 和 `src/wqb/` 是有移除周期的兼容边界，不是新用户或 Agent 的发现入口。根级 `scripts/` 只保留 bootstrap、工程诊断和已明确标记的兼容启动器。
+0.3 已删除根目录扫描启动器和 `src` 下的兼容命名空间。根级 `scripts/`
+只保留 bootstrap、工程诊断和按职责分类的当前命令，不再新增转发启动器。
 
 私有维护仓库可能额外出现 `.local/`、`dist/`、`logs/`、`configs/scans/` 和 `docs/archive/`。这些目录不会进入公开快照，也不构成开源用户可依赖的产品接口。

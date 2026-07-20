@@ -199,119 +199,33 @@ class LLMPlanAdapter:
 
     @staticmethod
     def _compatibility_settings(config: dict[str, Any]) -> dict[str, Any]:
-        if config.get("llm_provider") is not None:
-            settings = config.get("llm_provider") or {}
-            provider = str(settings.get("provider") or "none")
-            command = settings.get("command")
-            executable = (
-                command[0]
-                if isinstance(command, list)
-                and command
-                and isinstance(command[0], str)
-                else ""
-            )
-            return {
-                "provider": provider,
-                "display_name": str(
-                    settings.get("display_name") or provider or "LLM"
-                ),
-                "stage": str(
-                    settings.get("stage")
-                    or f"{provider}_daily_direction_plan"
-                ),
-                "prompt_file_pattern": str(
-                    settings.get("prompt_file_pattern") or ""
-                ),
-                "output_file_pattern": str(
-                    settings.get("output_file_pattern") or ""
-                ),
-                "executable": executable,
-                "model": str(settings.get("model") or ""),
-                "api_key_env": str(settings.get("api_key_env") or ""),
-                "base_url_env": str(settings.get("base_url_env") or ""),
-                "base_url": str(settings.get("base_url") or ""),
-                "thinking": settings.get("thinking"),
-                "reasoning_effort": settings.get("reasoning_effort"),
-                "response_format": settings.get("response_format"),
-            }
-        llm_config = config.get("llm_adapter") or {}
-        if llm_config:
-            provider = str(llm_config.get("provider") or "none")
-            return {
-                "provider": provider,
-                "display_name": str(
-                    llm_config.get("display_name") or provider or "LLM"
-                ),
-                "stage": str(
-                    llm_config.get("stage")
-                    or f"{provider}_daily_direction_plan"
-                ),
-                "prompt_file_pattern": str(
-                    llm_config.get("prompt_file_pattern") or ""
-                ),
-                "output_file_pattern": str(
-                    llm_config.get("output_file_pattern") or ""
-                ),
-                "executable": str(llm_config.get("executable") or ""),
-                "model": str(llm_config.get("model") or ""),
-                "api_key_env": str(llm_config.get("api_key_env") or ""),
-                "base_url_env": str(llm_config.get("base_url_env") or ""),
-                "base_url": str(llm_config.get("base_url") or ""),
-                "thinking": llm_config.get("thinking"),
-                "reasoning_effort": llm_config.get("reasoning_effort"),
-                "response_format": llm_config.get("response_format"),
-            }
-        if config.get("deepseek_v4_pro"):
-            settings = config.get("deepseek_v4_pro") or {}
-            return {
-                "provider": "deepseek",
-                "display_name": str(
-                    settings.get("display_name") or "DeepSeek v4 Pro"
-                ),
-                "stage": "deepseek_v4_pro_daily_direction_plan",
-                "prompt_file_pattern": str(
-                    settings.get("prompt_file_pattern") or ""
-                ),
-                "output_file_pattern": str(
-                    settings.get("output_file_pattern") or ""
-                ),
-                "model": str(
-                    os.getenv("DEEPSEEK_MODEL")
-                    or settings.get("model")
-                    or "deepseek-v4-pro"
-                ),
-                "api_key_env": str(
-                    settings.get("api_key_env") or "DEEPSEEK_API_KEY"
-                ),
-                "base_url_env": str(
-                    settings.get("base_url_env") or "DEEPSEEK_BASE_URL"
-                ),
-                "base_url": str(
-                    settings.get("base_url") or "https://api.deepseek.com"
-                ),
-                "thinking": settings.get("thinking") or {"type": "enabled"},
-                "reasoning_effort": str(
-                    settings.get("reasoning_effort") or "high"
-                ),
-                "response_format": settings.get("response_format")
-                or {"type": "text"},
-            }
-        if config.get("kimi_cli"):
-            settings = config.get("kimi_cli") or {}
-            return {
-                "provider": "kimi_cli",
-                "display_name": str(settings.get("display_name") or "Kimi"),
-                "stage": "kimi_daily_direction_plan",
-                "prompt_file_pattern": str(
-                    settings.get("long_prompt_file_pattern") or ""
-                ),
-                "output_file_pattern": str(
-                    settings.get("output_file_pattern") or ""
-                ),
-                "executable": str(settings.get("executable") or "kimi-cli"),
-                "model": str(settings.get("model") or "kimi-cli"),
-            }
-        return {}
+        settings = config.get("llm_provider") or {}
+        if not isinstance(settings, dict):
+            return {}
+        provider = str(settings.get("provider") or "none")
+        command = settings.get("command")
+        executable = (
+            command[0]
+            if isinstance(command, list)
+            and command
+            and isinstance(command[0], str)
+            else ""
+        )
+        return {
+            "provider": provider,
+            "display_name": str(settings.get("display_name") or provider or "LLM"),
+            "stage": str(settings.get("stage") or f"{provider}_daily_direction_plan"),
+            "prompt_file_pattern": str(settings.get("prompt_file_pattern") or ""),
+            "output_file_pattern": str(settings.get("output_file_pattern") or ""),
+            "executable": executable,
+            "model": str(settings.get("model") or ""),
+            "api_key_env": str(settings.get("api_key_env") or ""),
+            "base_url_env": str(settings.get("base_url_env") or ""),
+            "base_url": str(settings.get("base_url") or ""),
+            "thinking": settings.get("thinking"),
+            "reasoning_effort": settings.get("reasoning_effort"),
+            "response_format": settings.get("response_format"),
+        }
 
     def is_configured(self) -> bool:
         return self.llm_provider is not None or self.provider not in {
@@ -323,21 +237,13 @@ class LLMPlanAdapter:
     def prompt_path(self, root: Path, run_dir: Path, run_tag: str) -> Path:
         if self.prompt_file_pattern:
             return self._pattern_path(root, self.prompt_file_pattern, run_tag)
-        folder = (
-            "kimi_prompts"
-            if self.provider == "kimi_cli"
-            else f"{self.provider}_prompts"
-        )
+        folder = f"{self.provider}_prompts"
         return run_dir / folder / f"{self.stage}.md"
 
     def output_path(self, root: Path, run_dir: Path, run_tag: str) -> Path:
         if self.output_file_pattern:
             return self._pattern_path(root, self.output_file_pattern, run_tag)
-        folder = (
-            "kimi_outputs"
-            if self.provider == "kimi_cli"
-            else f"{self.provider}_outputs"
-        )
+        folder = f"{self.provider}_outputs"
         return run_dir / folder / f"{self.stage}.json"
 
     def _pattern_path(self, root: Path, pattern: str, run_tag: str) -> Path:

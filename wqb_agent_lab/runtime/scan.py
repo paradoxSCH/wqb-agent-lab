@@ -1,7 +1,7 @@
 """Canonical config-driven BRAIN scan runtime.
 
 Usage:
-    python run_scan.py --config scan_config.json
+    python -m scripts.run.scan --config scan_config.json
 
 scan_config.json schema:
     {
