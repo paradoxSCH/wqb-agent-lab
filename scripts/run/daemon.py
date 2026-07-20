@@ -12,7 +12,7 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Mapping
 
-from src.research_policy import ResearchPolicyError, load_research_policy
+from wqb_agent_lab.research.policy import ResearchPolicyError, load_research_policy
 
 from wqb_agent_lab.governance.side_effects import (
     CapabilityDecision,

@@ -158,8 +158,14 @@ def _proxy_signals_for_families(proxy_map_path: Path | None, families: Sequence[
 def _policy_actions_from_candidates(candidates: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
     actions: dict[str, dict[str, Any]] = {}
     for candidate in candidates:
-        feedback = candidate.get("policy_feedback") if isinstance(candidate.get("policy_feedback"), Mapping) else {}
-        budget_actions = feedback.get("budget_actions") if isinstance(feedback.get("budget_actions"), Mapping) else {}
+        raw_feedback = candidate.get("policy_feedback")
+        feedback: Mapping[str, Any] = (
+            raw_feedback if isinstance(raw_feedback, Mapping) else {}
+        )
+        raw_actions = feedback.get("budget_actions")
+        budget_actions: Mapping[str, Any] = (
+            raw_actions if isinstance(raw_actions, Mapping) else {}
+        )
         for key, action in budget_actions.items():
             if not isinstance(action, Mapping):
                 continue

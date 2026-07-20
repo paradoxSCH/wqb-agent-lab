@@ -26,8 +26,9 @@ WorldQuant BRAIN transport
   catalog boundary.
 - `wqb_agent_lab.workflow.ResearchWorkflow` is the public production orchestrator.
 - Contracts, memory, evaluation, governance, research candidates, and runtime primitives
-  are owned by `wqb_agent_lab`; canonical modules do not depend on the legacy `src` package
-  except for the pre-split workflow facade.
+  are owned by `wqb_agent_lab`; canonical modules do not depend on the legacy `src` package.
+- `wqb_agent_lab.workflow.engine.ResearchWorkflow` owns production orchestration; its
+  provider-neutral name replaces the historical provider-specific implementation name.
 - Removed compatibility namespaces and launchers are not part of the 0.3 runtime.
 - Transport and MCP tools expose facts and capabilities. Governance decides budgets,
   retries, pauses, promotion, and side effects.

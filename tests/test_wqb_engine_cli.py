@@ -182,7 +182,7 @@ class WQBEngineCLITests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             config_path = Path(tmp) / "workflow.json"
             config_path.write_text(json.dumps(config), encoding="utf-8-sig")
-            with patch("src.llm_provider.create_llm_provider") as create_provider:
+            with patch("wqb_agent_lab.llm.provider.create_llm_provider") as create_provider:
                 with patch.dict("os.environ", {}, clear=True):
                     missing_code, missing_payload, _ = self.invoke(
                         ["llm.validate", "--config", str(config_path)]
@@ -249,7 +249,7 @@ class WQBEngineCLITests(unittest.TestCase):
             self.assertEqual("invalid_configuration", payload["error"]["code"])
 
     def test_llm_success_payload_redacts_model_warning_and_probe_echoes(self) -> None:
-        from src.llm_provider import LLMResponse, LLMUsage, ResolvedLLMProvider
+        from wqb_agent_lab.llm.provider import LLMResponse, LLMUsage, ResolvedLLMProvider
 
         secret = "test-success-payload-secret"
         config = {
@@ -264,7 +264,7 @@ class WQBEngineCLITests(unittest.TestCase):
         ):
             config_path = Path(tmp) / "workflow.json"
             config_path.write_text(json.dumps(config), encoding="utf-8")
-            from src.llm_provider import resolve_llm_provider_config
+            from wqb_agent_lab.llm.provider import resolve_llm_provider_config
 
             base = resolve_llm_provider_config(config, require_credentials=False)
             resolved = ResolvedLLMProvider(
@@ -281,10 +281,10 @@ class WQBEngineCLITests(unittest.TestCase):
                 usage=LLMUsage(total_tokens=1),
             )
             with patch(
-                "src.llm_provider.resolve_llm_provider_config",
+                "wqb_agent_lab.llm.provider.resolve_llm_provider_config",
                 return_value=resolved,
             ), patch(
-                "src.llm_provider.create_llm_provider",
+                "wqb_agent_lab.llm.provider.create_llm_provider",
                 return_value=provider,
             ):
                 results = [
@@ -302,7 +302,7 @@ class WQBEngineCLITests(unittest.TestCase):
         self.assertEqual("model-<redacted>", results[2][1]["data"]["model"])
 
     def test_llm_probe_constructs_one_provider_and_sends_one_minimal_request(self) -> None:
-        from src.llm_provider import create_llm_provider
+        from wqb_agent_lab.llm.provider import create_llm_provider
 
         requests: list[dict] = []
 
@@ -341,7 +341,7 @@ class WQBEngineCLITests(unittest.TestCase):
             config_path = Path(tmp) / "workflow.json"
             config_path.write_text(json.dumps(config), encoding="utf-8")
             with patch(
-                "src.llm_provider.create_llm_provider",
+                "wqb_agent_lab.llm.provider.create_llm_provider",
                 wraps=create_llm_provider,
             ) as create_provider:
                 try:
@@ -480,7 +480,7 @@ class WQBEngineCLITests(unittest.TestCase):
             server_thread.join(timeout=2)
 
     def test_llm_probe_disabled_and_provider_errors_are_stable(self) -> None:
-        from src.llm_provider import LLMProviderError
+        from wqb_agent_lab.llm.provider import LLMProviderError
 
         with tempfile.TemporaryDirectory() as tmp:
             disabled_path = Path(tmp) / "disabled.json"
@@ -508,7 +508,7 @@ class WQBEngineCLITests(unittest.TestCase):
                 retryable=True,
                 secrets=(secret,),
             )
-            with patch("src.llm_provider.create_llm_provider") as create_provider:
+            with patch("wqb_agent_lab.llm.provider.create_llm_provider") as create_provider:
                 create_provider.return_value.complete.side_effect = provider_error
                 error_code, error_payload, _ = self.invoke(
                     ["llm.probe", "--config", str(live_path)]
@@ -580,7 +580,7 @@ import sys
 
 real_import = builtins.__import__
 def guarded_import(name, *args, **kwargs):
-    if name == "requests" or name.startswith("src.llm_provider"):
+    if name == "requests" or name.startswith("wqb_agent_lab.llm.provider"):
         raise ImportError("blocked LLM dependency: " + name)
     return real_import(name, *args, **kwargs)
 builtins.__import__ = guarded_import
@@ -604,7 +604,7 @@ code = run(argv, stdin=stdin, stdout=stdout, stderr=io.StringIO())
 loaded = sorted(
     name for name in sys.modules
     if name == "requests" or name.startswith("requests.")
-    or name == "src.llm_provider" or name.startswith("src.llm_provider.")
+    or name == "wqb_agent_lab.llm.provider" or name.startswith("wqb_agent_lab.llm.provider.")
 )
 print(json.dumps({"code": code, "loaded": loaded, "result": json.loads(stdout.getvalue())}))
 """

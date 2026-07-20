@@ -9,7 +9,7 @@ from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import patch
 
-from src.agent_callbacks import emit_agent_callback
+from wqb_agent_lab.workflow.callbacks import emit_agent_callback
 from src.workflow_daemon import (
     LaunchResult,
     ProcessSpec,

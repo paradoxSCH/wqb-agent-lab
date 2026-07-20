@@ -6,7 +6,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from src.kimi_daily_workflow import KimiDailyWorkflow
+from wqb_agent_lab.workflow.engine import ResearchWorkflow
 
 
 class PolicyFeedbackWorkflowTests(unittest.TestCase):
@@ -25,7 +25,7 @@ class PolicyFeedbackWorkflowTests(unittest.TestCase):
             ]
             self._write_json(source_config, {"output": "unused.json", "candidates": candidates})
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
             plan = workflow.prepare_budgeted_scan(workflow.plan_next_scan(ledger))
 
@@ -64,7 +64,7 @@ class PolicyFeedbackWorkflowTests(unittest.TestCase):
             source_config = root / ".local/research/scans/continuous-alpha/source-500/scan_config_round1.json"
             candidates = [self._candidate(f"rank(field_{index})", f"family_{index}", max_share=0.2) for index in range(6)]
             self._write_json(source_config, {"output": "unused.json", "candidates": candidates})
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
 
             plan = workflow.prepare_budgeted_scan(workflow.plan_next_scan(workflow.load_or_create_ledger()))
 
@@ -89,7 +89,7 @@ class PolicyFeedbackWorkflowTests(unittest.TestCase):
             candidates.append({"expression": "rank(open_field)", "behavior_family": "open_family"})
             candidates[4]["extensions"] = {"novel_llm_operator_request": "retain-even-if-overflow"}
             self._write_json(source_config, {"output": "unused.json", "candidates": candidates})
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
 
             plan = workflow.prepare_budgeted_scan(workflow.plan_next_scan(workflow.load_or_create_ledger()))
 

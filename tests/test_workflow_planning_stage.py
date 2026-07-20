@@ -8,8 +8,8 @@ from datetime import date, datetime
 from pathlib import Path
 from unittest.mock import patch
 
-from src.kimi_daily_workflow import KimiDailyWorkflow
-from src.llm_provider import LLMProviderError, LLMResponse, LLMUsage
+from wqb_agent_lab.workflow.engine import ResearchWorkflow
+from wqb_agent_lab.llm.provider import LLMProviderError, LLMResponse, LLMUsage
 from wqb_agent_lab.workflow import StageResult
 
 
@@ -54,7 +54,7 @@ class RetryablePlanningProvider(RecordingPlanningProvider):
 
 
 class WorkflowPlanningStageTests(unittest.TestCase):
-    def _workflow(self, root: Path, provider) -> KimiDailyWorkflow:
+    def _workflow(self, root: Path, provider) -> ResearchWorkflow:
         config_path = root / "workflow.json"
         config_path.write_text(
             json.dumps(
@@ -69,7 +69,7 @@ class WorkflowPlanningStageTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        return KimiDailyWorkflow(
+        return ResearchWorkflow(
             root,
             workflow_config=config_path,
             run_date=date(2026, 7, 20),

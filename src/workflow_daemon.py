@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Callable, Sequence
 
-from src.agent_callbacks import emit_agent_callback
+from wqb_agent_lab.workflow.callbacks import emit_agent_callback
 
 
 RUNS_ROOT = Path(".local/data/runs/continuous-alpha")

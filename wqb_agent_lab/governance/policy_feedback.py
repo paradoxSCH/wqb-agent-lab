@@ -338,7 +338,10 @@ def _candidate_family(candidate: Mapping[str, Any]) -> str:
 
 
 def _policy_cap_key(feedback: Mapping[str, Any]) -> str:
-    actions = feedback.get("budget_actions") if isinstance(feedback.get("budget_actions"), Mapping) else {}
+    raw_actions = feedback.get("budget_actions")
+    actions: Mapping[str, Any] = (
+        raw_actions if isinstance(raw_actions, Mapping) else {}
+    )
     diagnoses = sorted(
         str(action.get("diagnosis_type") or key)
         for key, action in actions.items()
@@ -348,7 +351,10 @@ def _policy_cap_key(feedback: Mapping[str, Any]) -> str:
 
 
 def _metric_pass(row: Mapping[str, Any]) -> bool:
-    metrics = row.get("metrics") if isinstance(row.get("metrics"), Mapping) else {}
+    raw_metrics = row.get("metrics")
+    metrics: Mapping[str, Any] = (
+        raw_metrics if isinstance(raw_metrics, Mapping) else {}
+    )
     return _float(metrics.get("sharpe")) >= 1.25 and _float(metrics.get("fitness")) >= 1.0
 
 

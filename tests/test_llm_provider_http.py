@@ -11,15 +11,15 @@ from unittest.mock import MagicMock, patch
 
 import requests
 
-from src.llm_provider import LLMProviderError, LLMRequest
-from src.llm_provider.providers.anthropic import AnthropicProvider
-from src.llm_provider.providers.common import (
+from wqb_agent_lab.llm.provider import LLMProviderError, LLMRequest
+from wqb_agent_lab.llm.provider.providers.anthropic import AnthropicProvider
+from wqb_agent_lab.llm.provider.providers.common import (
     require_nonempty_string,
     require_positive_timeout,
 )
-from src.llm_provider.providers.gemini import GeminiProvider
-from src.llm_provider.providers.ollama import OllamaProvider
-from src.llm_provider.providers.openai_compatible import OpenAICompatibleProvider
+from wqb_agent_lab.llm.provider.providers.gemini import GeminiProvider
+from wqb_agent_lab.llm.provider.providers.ollama import OllamaProvider
+from wqb_agent_lab.llm.provider.providers.openai_compatible import OpenAICompatibleProvider
 
 
 class _RecordingServer(ThreadingHTTPServer):
@@ -325,7 +325,7 @@ class OpenAICompatibleProviderTests(unittest.TestCase):
         session = MagicMock()
         session.post.return_value = _mock_response(_success("plain text"))
         with patch(
-            "src.llm_provider.providers.http.requests.Session",
+            "wqb_agent_lab.llm.provider.providers.http.requests.Session",
             return_value=session,
         ):
             provider = OpenAICompatibleProvider(
@@ -354,7 +354,7 @@ class OpenAICompatibleProviderTests(unittest.TestCase):
                 if response is not None:
                     session.post.return_value = response
                 with patch(
-                    "src.llm_provider.providers.http.requests.Session",
+                    "wqb_agent_lab.llm.provider.providers.http.requests.Session",
                     return_value=session,
                 ):
                     provider = OpenAICompatibleProvider(

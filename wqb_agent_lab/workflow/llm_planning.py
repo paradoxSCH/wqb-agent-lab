@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from src.llm_provider import (
+from wqb_agent_lab.llm.provider import (
     LLMProvider,
     LLMProviderError,
     LLMRequest,

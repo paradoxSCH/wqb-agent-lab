@@ -9,7 +9,7 @@ import time
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import BinaryIO
+from typing import BinaryIO, cast
 
 
 DEFAULT_STDOUT_LIMIT_BYTES = 1024 * 1024
@@ -117,23 +117,28 @@ def execute_bounded_process(
     stdout_limit_bytes: int,
     stderr_limit_bytes: int,
 ) -> BoundedProcessResult:
-    popen_options: dict[str, object] = {}
     if os.name == "nt":
-        popen_options["creationflags"] = (
-            subprocess.CREATE_NEW_PROCESS_GROUP | _CREATE_SUSPENDED
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE if stdin_bytes is not None else subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=cwd,
+            env=environment,
+            shell=False,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | _CREATE_SUSPENDED,
         )
     else:
-        popen_options["start_new_session"] = True
-    process = subprocess.Popen(
-        command,
-        stdin=subprocess.PIPE if stdin_bytes is not None else subprocess.DEVNULL,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        cwd=cwd,
-        env=environment,
-        shell=False,
-        **popen_options,
-    )
+        process = subprocess.Popen(
+            command,
+            stdin=subprocess.PIPE if stdin_bytes is not None else subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            cwd=cwd,
+            env=environment,
+            shell=False,
+            start_new_session=True,
+        )
     windows_job: _WindowsJob | None = None
     readers: list[threading.Thread] = []
     writer: threading.Thread | None = None
@@ -150,9 +155,13 @@ def execute_bounded_process(
         stderr_buffer = _BoundedBuffer("stderr", stderr_limit_bytes, overflow)
         stdout_done = threading.Event()
         stderr_done = threading.Event()
-        readers.append(_reader_thread(process.stdout, stdout_buffer, stdout_done))
-        readers.append(_reader_thread(process.stderr, stderr_buffer, stderr_done))
-        writer = _writer_thread(process.stdin, stdin_bytes)
+        readers.append(
+            _reader_thread(cast(BinaryIO, process.stdout), stdout_buffer, stdout_done)
+        )
+        readers.append(
+            _reader_thread(cast(BinaryIO, process.stderr), stderr_buffer, stderr_done)
+        )
+        writer = _writer_thread(cast(BinaryIO | None, process.stdin), stdin_bytes)
         deadline = time.monotonic() + timeout_seconds
         termination_reason: str | None = None
         while True:
@@ -375,7 +384,7 @@ def _create_windows_job(process: subprocess.Popen[bytes]) -> _WindowsJob | None:
     handle = kernel32.CreateJobObjectW(None, None)
     if not handle:
         return None
-    process_handle = wintypes.HANDLE(int(process._handle))
+    process_handle = wintypes.HANDLE(int(getattr(process, "_handle")))
     if not kernel32.AssignProcessToJobObject(handle, process_handle):
         kernel32.CloseHandle(handle)
         return None
@@ -392,7 +401,9 @@ def _resume_windows_process(process: subprocess.Popen[bytes]) -> None:
     ntdll = ctypes.windll.ntdll
     ntdll.NtResumeProcess.argtypes = (wintypes.HANDLE,)
     ntdll.NtResumeProcess.restype = wintypes.LONG
-    status = ntdll.NtResumeProcess(wintypes.HANDLE(int(process._handle)))
+    status = ntdll.NtResumeProcess(
+        wintypes.HANDLE(int(getattr(process, "_handle")))
+    )
     if status != 0:
         process.kill()
         process.wait(timeout=5)

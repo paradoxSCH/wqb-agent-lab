@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from wqb_agent_lab.contracts import assert_valid_contract
-from src.kimi_daily_workflow import KimiDailyWorkflow
+from wqb_agent_lab.workflow.engine import ResearchWorkflow
 
 
 class WorkflowRunManifestTests(unittest.TestCase):
@@ -16,7 +16,7 @@ class WorkflowRunManifestTests(unittest.TestCase):
     def _relative(path: Path, root: Path) -> str:
         return path.resolve().relative_to(root.resolve()).as_posix()
 
-    def _workflow(self, root: Path, *, dry_run: bool = False) -> KimiDailyWorkflow:
+    def _workflow(self, root: Path, *, dry_run: bool = False) -> ResearchWorkflow:
         config_path = root / "workflow.json"
         config_path.write_text(
             json.dumps(
@@ -34,7 +34,7 @@ class WorkflowRunManifestTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        return KimiDailyWorkflow(
+        return ResearchWorkflow(
             root,
             workflow_config=config_path,
             run_date=date(2026, 7, 20),

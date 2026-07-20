@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
-from src.self_corr_policy import self_corr_bucket as _policy_self_corr_bucket
+from wqb_agent_lab.research.self_corr_policy import self_corr_bucket as _policy_self_corr_bucket
 
 
 def diagnose_failure_objects(row: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -10,7 +10,14 @@ def diagnose_failure_objects(row: Mapping[str, Any]) -> list[dict[str, Any]]:
     failed = {str(check.get("name") or "UNKNOWN").upper() for check in checks if str(check.get("result") or "").upper() in {"FAIL", "ERROR"}}
     pending = {str(check.get("name") or "UNKNOWN").upper() for check in checks if str(check.get("result") or "").upper() == "PENDING"}
     warnings = {str(check.get("name") or "UNKNOWN").upper() for check in checks if str(check.get("result") or "").upper() == "WARNING"}
-    metrics = row.get("metrics") if isinstance(row.get("metrics"), Mapping) else {}
+    raw_metrics = row.get("metrics")
+    metrics: Mapping[str, Any] = (
+        raw_metrics if isinstance(raw_metrics, Mapping) else {}
+    )
+    raw_settings = row.get("settings")
+    settings: Mapping[str, Any] = (
+        raw_settings if isinstance(raw_settings, Mapping) else {}
+    )
     diagnoses: list[dict[str, Any]] = []
 
     error = str(row.get("error") or "")
@@ -137,7 +144,7 @@ def diagnose_failure_objects(row: Mapping[str, Any]) -> list[dict[str, Any]]:
                     "sub_universe_sharpe": sub_value,
                     "sub_universe_limit": sub_limit,
                     "sub_universe_bucket": sub_bucket,
-                    "neutralization": (row.get("settings") or {}).get("neutralization") if isinstance(row.get("settings"), Mapping) else None,
+                    "neutralization": settings.get("neutralization"),
                 },
                 recommended_action=sub_action,
                 generation_feedback=sub_feedback,
