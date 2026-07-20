@@ -23,7 +23,8 @@ WorldQuant BRAIN transport
 ```
 
 - `wqb_agent_lab.platform` is the canonical installed WQB client, model, readiness, and operator
-  catalog boundary.
+  catalog boundary. Its research-session adapter, simulation helpers, and submission
+  queue own platform-facing execution; generic result persistence lives in runtime.
 - `wqb_agent_lab.workflow.ResearchWorkflow` is the public production orchestrator.
 - Contracts, memory, evaluation, governance, research candidates, and runtime primitives
   are owned by `wqb_agent_lab`; canonical modules do not depend on the legacy `src` package.

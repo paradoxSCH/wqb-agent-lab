@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from wqb_agent_lab.evaluation.scoring import AlphaMetrics
-from .session import BrainSession
+from .research_session import BrainSession
 from wqb_agent_lab.governance.side_effects import require_side_effect_capability
 from wqb_agent_lab.platform import WQBSession
 

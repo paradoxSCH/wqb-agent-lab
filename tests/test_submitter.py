@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from wqb_agent_lab.evaluation.scoring import AlphaMetrics
-from src.submitter import (
+from wqb_agent_lab.platform.submission import (
     SubmissionPolicy,
     SubmissionQueue,
     SubmissionRecord,
@@ -90,7 +90,10 @@ class TestSubmissionQueue(unittest.TestCase):
             mock_check_resp.json.return_value = {}
             mock_check_resp.text = ""
 
-            with patch("src.submitter.asyncio.run", return_value=mock_check_resp):
+            with patch(
+                "wqb_agent_lab.platform.submission.asyncio.run",
+                return_value=mock_check_resp,
+            ):
                 candidates = [
                     AlphaMetrics(expression="a", sharpe=1.5, fitness=1.2, turnover=0.4, alpha_id="a1"),
                 ]

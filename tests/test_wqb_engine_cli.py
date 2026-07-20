@@ -528,7 +528,7 @@ class WQBEngineCLITests(unittest.TestCase):
     def test_llm_operations_do_not_import_wqb_or_loop_runtime_modules(self) -> None:
         forbidden_roots = (
             "wqb_agent_lab.evaluation.loop_validation",
-            "src.session",
+            "wqb_agent_lab.platform.research_session",
             "src.workflow_daemon",
             "src.wqb",
         )
@@ -543,7 +543,7 @@ stdout = io.StringIO()
 run([operation, "--config", config_path], stdout=stdout, stderr=io.StringIO())
 forbidden = (
     "wqb_agent_lab.evaluation.loop_validation",
-    "src.session",
+    "wqb_agent_lab.platform.research_session",
     "src.workflow_daemon",
     "src.wqb",
 )

@@ -5,7 +5,11 @@ from __future__ import annotations
 import unittest
 from unittest.mock import MagicMock
 
-from src.session import BrainAPIError, BrainSession, RetryPolicy
+from wqb_agent_lab.platform.research_session import (
+    BrainAPIError,
+    BrainSession,
+    RetryPolicy,
+)
 
 
 class FakeResponse:

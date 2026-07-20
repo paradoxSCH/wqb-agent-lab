@@ -215,7 +215,7 @@ def precheck_wqb_session(
 
             config_loader = load_config
         if session_factory is None:
-            from src.session import create_brain_session
+            from wqb_agent_lab.platform.research_session import create_brain_session
 
             session_factory = create_brain_session
         config = config_loader()
