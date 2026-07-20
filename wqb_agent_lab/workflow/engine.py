@@ -18,14 +18,14 @@ from typing import Any
 
 from dotenv import load_dotenv
 
-from src.agent_callbacks import emit_agent_callback
+from wqb_agent_lab.workflow.callbacks import emit_agent_callback
 from wqb_agent_lab.contracts import list_schema_names, schema_digest
 from wqb_agent_lab.evaluation.diagnosis_policy import evaluate_diagnosis_policies
-from src.failure_diagnosis import diagnose_failure_objects, primary_diagnosis_type
-from src.llm_provider import LLMProvider
-from src.llm_planning import LLMPlanAdapter
+from wqb_agent_lab.evaluation.failure_diagnosis import diagnose_failure_objects, primary_diagnosis_type
+from wqb_agent_lab.llm.provider import LLMProvider
+from wqb_agent_lab.workflow.llm_planning import LLMPlanAdapter
 from wqb_agent_lab.evaluation.output.evaluator import write_run_output_evaluation
-from src.policy_feedback_governance import (
+from wqb_agent_lab.governance.policy_feedback import (
     aggregate_shadow_evidence,
     cap_recommended_candidates,
     record_shadow_decision,
@@ -34,13 +34,13 @@ from src.policy_feedback_governance import (
 )
 from wqb_agent_lab.evaluation.output.types import OutputEvaluationRecord
 from wqb_agent_lab.evaluation.output.validators import validate_expression_candidates
-from src.research_policy import (
+from wqb_agent_lab.research.policy import (
     ResearchPolicy,
     evaluate_candidate_boundaries,
     load_research_policy,
     policy_digest,
 )
-from src.self_corr_policy import SELF_CORR_NEAR_REPAIR_MAX, self_corr_bucket as _policy_self_corr_bucket
+from wqb_agent_lab.research.self_corr_policy import SELF_CORR_NEAR_REPAIR_MAX, self_corr_bucket as _policy_self_corr_bucket
 from wqb_agent_lab.runtime import (
     OperationJournal,
     RunManifest,
@@ -134,7 +134,7 @@ def _git_provenance(root: Path) -> dict[str, Any]:
     except OSError:
         dirty = None
     return {
-        "component": "src.kimi_daily_workflow.KimiDailyWorkflow",
+        "component": "wqb_agent_lab.workflow.engine.ResearchWorkflow",
         "revision": revision,
         "revision_source": revision_source,
         "tracked_files_dirty": dirty,
@@ -581,7 +581,7 @@ class StagePlan:
     policy_feedback_governance: dict[str, Any] | None = None
 
 
-class KimiDailyWorkflow:
+class ResearchWorkflow:
     def __init__(
         self,
         workspace_root: Path,
@@ -1350,7 +1350,7 @@ class KimiDailyWorkflow:
         config = self.config.get("post_stage_memory_sync") or {}
         if not isinstance(config, dict) or not config.get("enabled") or self.dry_run:
             return None
-        from src.agent_memory_sync import sync_run_memory
+        from wqb_agent_lab.memory.sync import sync_run_memory
 
         now = now or datetime.now()
         db_path = self.root / str(
@@ -1602,13 +1602,13 @@ class KimiDailyWorkflow:
             self.root,
             self.run_dir,
             exclude=(self.manifest_path,),
-            producer="kimi_daily_workflow",
+            producer="research_workflow",
             schema_resolver=_workflow_artifact_schema,
         )
         artifacts += collect_artifact_provenance(
             self.root,
             self.config_dir,
-            producer="kimi_daily_workflow",
+            producer="research_workflow",
         )
         return manifest.with_artifacts(artifacts)
 
@@ -1690,6 +1690,7 @@ class KimiDailyWorkflow:
                 ledger_data = read_json(ledger_path, {})
                 queued = ledger_data.get("queued_scan_configs") or []
                 if rel_path in queued:
+                    closed_loop = ledger_data.get("closed_loop", {})
                     run_date_str = ledger_data.get("date", "")
                     try:
                         run_date = datetime.strptime(run_date_str, "%Y-%m-%d").date()
@@ -1697,9 +1698,11 @@ class KimiDailyWorkflow:
                         continue
                     if last_used is None or run_date > last_used:
                         last_used = run_date
-                        closed_loop = ledger_data.get("closed_loop", {})
                     run_count += 1
-                    total_yield += closed_loop.get("counts", {}).get("submit_ready", 0)
+                    if isinstance(closed_loop, dict):
+                        counts = closed_loop.get("counts", {})
+                        if isinstance(counts, dict):
+                            total_yield += int(counts.get("submit_ready") or 0)
 
             if last_used is None:
                 score = 1000.0
@@ -2010,7 +2013,8 @@ class KimiDailyWorkflow:
             else 0
         )
         attempt_count = max(0, previous_attempts) + 1
-        error = payload.get("error") if isinstance(payload.get("error"), dict) else {}
+        raw_error = payload.get("error")
+        error: dict[str, Any] = raw_error if isinstance(raw_error, dict) else {}
         code = error.get("code") if status == "error" else None
         if status == "error" and not code:
             code = "unsupported_capability"
@@ -2076,9 +2080,6 @@ class KimiDailyWorkflow:
                 return False
         return plan.get("process_instance_id") == self.process_instance_id
 
-    def run_kimi_plan(self, ledger: dict[str, Any]) -> Path | None:
-        return self.run_llm_plan(ledger)
-
     def _build_llm_prompt(self, ledger: dict[str, Any]) -> str:
         priors = self.config.get("current_direction_priors") or {}
         objective = self.config.get("objective") or {}
@@ -2135,9 +2136,6 @@ class KimiDailyWorkflow:
                 f"rationale_zh={row.get('rationale_zh', '')}"
             )
         return "\n".join(lines) + "\n\n"
-
-    def _build_kimi_prompt(self, ledger: dict[str, Any]) -> str:
-        return self._build_llm_prompt(ledger)
 
     def _scan_preflight_input_digest(self, ledger: dict[str, Any], *, planned_stage: str) -> str:
         paths: set[Path] = {
@@ -2829,7 +2827,7 @@ class KimiDailyWorkflow:
     def _record_decision_attribution(self, plan: StagePlan, candidates: list[dict[str, Any]]) -> None:
         if not self._decision_attribution_enabled() or plan.source_config is None or plan.sliced_config is None or plan.output_path is None:
             return
-        from src.decision_attribution import record_scan_decision
+        from wqb_agent_lab.evaluation.attribution import record_scan_decision
 
         proxy_config = self.config.get("behavioral_proxy_map") or {}
         proxy_path = (
@@ -2855,7 +2853,7 @@ class KimiDailyWorkflow:
     def _score_decision_attribution(self) -> None:
         score_shadow_decisions(self.root, self.run_dir)
         if self._decision_attribution_enabled():
-            from src.decision_attribution import score_decision_outcomes
+            from wqb_agent_lab.evaluation.attribution import score_decision_outcomes
 
             score_decision_outcomes(self.run_dir)
 
@@ -3583,7 +3581,7 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    workflow = KimiDailyWorkflow(
+    workflow = ResearchWorkflow(
         Path(args.workspace_root),
         workflow_config=Path(args.workflow_config),
         run_date=parse_date(args.date),

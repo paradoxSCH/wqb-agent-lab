@@ -13,6 +13,9 @@
   configuration surface, including for CLI-backed models.
 - Moved contracts, memory, evaluation, governance, candidate-generation, configuration,
   locking, and atomic-write implementations into the canonical `wqb_agent_lab` package.
+- Moved the provider-neutral `ResearchWorkflow`, LLM provider stack, research policy,
+  memory sync, decision attribution, and feedback governance into `wqb_agent_lab`; the
+  canonical package no longer imports `src`.
 
 ## [0.2.0a1] - 2026-07-14
 

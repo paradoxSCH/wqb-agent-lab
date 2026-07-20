@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
-from src.agent_memory_sync import sync_run_memory
+from wqb_agent_lab.memory.sync import sync_run_memory
 from wqb_agent_lab.runtime.atomic_json import atomic_write_json
 from wqb_agent_lab.runtime.process_lock import PidFileLock
 

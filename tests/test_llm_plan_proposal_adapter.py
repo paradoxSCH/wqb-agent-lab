@@ -6,8 +6,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from src.llm_planning import LLMPlanAdapter
-from src.llm_provider import LLMRequest, LLMResponse, LLMUsage
+from wqb_agent_lab.workflow.llm_planning import LLMPlanAdapter
+from wqb_agent_lab.llm.provider import LLMRequest, LLMResponse, LLMUsage
 
 
 def _valid_proposal() -> dict[str, object]:

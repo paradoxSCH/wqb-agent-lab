@@ -6,7 +6,7 @@ import unittest
 from datetime import datetime
 from pathlib import Path
 
-from src.policy_feedback_governance import (
+from wqb_agent_lab.governance.policy_feedback import (
     aggregate_shadow_evidence,
     evaluate_promotion_gate,
     record_shadow_decision,

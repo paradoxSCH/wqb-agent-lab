@@ -8,12 +8,12 @@ from datetime import date
 from pathlib import Path
 from unittest.mock import patch
 
-from src.kimi_daily_workflow import KimiDailyWorkflow, StagePlan
+from wqb_agent_lab.workflow.engine import ResearchWorkflow, StagePlan
 from wqb_agent_lab.workflow import StageResult
 
 
 class WorkflowSimulationStageTests(unittest.TestCase):
-    def _prepared(self, root: Path) -> tuple[KimiDailyWorkflow, dict, StagePlan, dict]:
+    def _prepared(self, root: Path) -> tuple[ResearchWorkflow, dict, StagePlan, dict]:
         source = root / "configs" / "novel-candidates.json"
         source.parent.mkdir(parents=True)
         source.write_text(
@@ -52,7 +52,7 @@ class WorkflowSimulationStageTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        workflow = KimiDailyWorkflow(
+        workflow = ResearchWorkflow(
             root,
             workflow_config=workflow_config,
             run_date=date(2026, 7, 20),
@@ -64,7 +64,7 @@ class WorkflowSimulationStageTests(unittest.TestCase):
         sliced = json.loads(plan.sliced_config.read_text(encoding="utf-8"))
         return workflow, ledger, plan, sliced["candidates"][0]
 
-    def _interrupt_stage(self, workflow: KimiDailyWorkflow) -> None:
+    def _interrupt_stage(self, workflow: ResearchWorkflow) -> None:
         workflow.stage_checkpoint_store.write(
             StageResult.create(
                 run_id=workflow.run_tag,
@@ -102,7 +102,7 @@ class WorkflowSimulationStageTests(unittest.TestCase):
                 commands.append(command)
                 return subprocess.CompletedProcess(command, 3)
 
-            with patch("src.kimi_daily_workflow.subprocess.run", side_effect=unresolved):
+            with patch("wqb_agent_lab.workflow.engine.subprocess.run", side_effect=unresolved):
                 spent = workflow.execute_scan(plan, ledger)
 
             self.assertEqual(0, spent)
@@ -163,7 +163,7 @@ class WorkflowSimulationStageTests(unittest.TestCase):
                     )
                 return subprocess.CompletedProcess(command, 0)
 
-            with patch("src.kimi_daily_workflow.subprocess.run", side_effect=reconciled):
+            with patch("wqb_agent_lab.workflow.engine.subprocess.run", side_effect=reconciled):
                 spent = workflow.execute_scan(plan, ledger)
 
             self.assertEqual(1, spent)

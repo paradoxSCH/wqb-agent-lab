@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from src.agent_memory_sync import sync_run_memory
+from wqb_agent_lab.memory.sync import sync_run_memory
 
 
 def main() -> int:

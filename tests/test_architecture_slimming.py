@@ -26,10 +26,11 @@ class ArchitectureSlimmingTests(unittest.TestCase):
     def test_expired_compatibility_surfaces_are_absent(self) -> None:
         retired = (
             "run_scan.py",
-            "scripts/kimi_daily_workflow.py",
+            "scripts/research_workflow.py",
             "src/wqb",
             "src/wqb_agent_lab",
             "src/wq",
+            "src/research_workflow.py",
         )
 
         remaining = []
@@ -47,9 +48,9 @@ class ArchitectureSlimmingTests(unittest.TestCase):
 
     def test_llm_runtime_has_no_legacy_config_resolver(self) -> None:
         runtime_sources = (
-            ROOT / "src" / "llm_provider" / "config.py",
-            ROOT / "src" / "llm_provider" / "identity.py",
-            ROOT / "src" / "llm_planning.py",
+            ROOT / "wqb_agent_lab" / "llm" / "provider" / "config.py",
+            ROOT / "wqb_agent_lab" / "llm" / "provider" / "identity.py",
+            ROOT / "wqb_agent_lab" / "workflow" / "llm_planning.py",
         )
         source = "\n".join(path.read_text(encoding="utf-8") for path in runtime_sources)
 
@@ -62,7 +63,7 @@ class ArchitectureSlimmingTests(unittest.TestCase):
             encoding="utf-8"
         )
 
-        self.assertNotIn("python -m scripts.kimi_daily_workflow", migration)
+        self.assertNotIn("python -m scripts.research_workflow", migration)
 
 
 if __name__ == "__main__":

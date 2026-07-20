@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from dataclasses import FrozenInstanceError
 
-from src.llm_provider import (
+from wqb_agent_lab.llm.provider import (
     LLMProviderError,
     LLMRequest,
     LLMResponse,
@@ -14,9 +14,9 @@ from src.llm_provider import (
     resolve_llm_provider_config,
     validate_structured_content,
 )
-from src.llm_provider.identity import invalid_llm_config_identity, llm_config_identity
-from src.llm_provider.errors import sanitize_url
-from src.llm_provider.registry import create_llm_provider
+from wqb_agent_lab.llm.provider.identity import invalid_llm_config_identity, llm_config_identity
+from wqb_agent_lab.llm.provider.errors import sanitize_url
+from wqb_agent_lab.llm.provider.registry import create_llm_provider
 
 
 class LLMProviderModelTests(unittest.TestCase):

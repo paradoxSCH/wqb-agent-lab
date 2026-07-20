@@ -11,9 +11,9 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from src.llm_provider import LLMProviderError, LLMRequest
-from src.llm_provider import cli_process
-from src.llm_provider.providers.cli import CLIProvider
+from wqb_agent_lab.llm.provider import LLMProviderError, LLMRequest
+from wqb_agent_lab.llm.provider import cli_process
+from wqb_agent_lab.llm.provider.providers.cli import CLIProvider
 
 
 class CLIProviderTests(unittest.TestCase):
@@ -83,7 +83,7 @@ class CLIProviderTests(unittest.TestCase):
                 workspace_root=root,
             )
             with patch(
-                "src.llm_provider.cli_process.subprocess.Popen",
+                "wqb_agent_lab.llm.provider.cli_process.subprocess.Popen",
                 wraps=subprocess.Popen,
             ) as popen:
                 provider.complete(LLMRequest("sys", "user"))
@@ -448,9 +448,9 @@ class CLIProviderTests(unittest.TestCase):
 
     def test_post_spawn_initialization_failures_cleanup_process_tree(self):
         targets = (
-            "src.llm_provider.cli_process._create_windows_job",
-            "src.llm_provider.cli_process._reader_thread",
-            "src.llm_provider.cli_process._writer_thread",
+            "wqb_agent_lab.llm.provider.cli_process._create_windows_job",
+            "wqb_agent_lab.llm.provider.cli_process._reader_thread",
+            "wqb_agent_lab.llm.provider.cli_process._writer_thread",
         )
         real_popen = subprocess.Popen
         for target in targets:
@@ -493,7 +493,7 @@ class CLIProviderTests(unittest.TestCase):
                     raise RuntimeError("injected lifecycle failure")
 
                 with patch(
-                    "src.llm_provider.cli_process.subprocess.Popen",
+                    "wqb_agent_lab.llm.provider.cli_process.subprocess.Popen",
                     side_effect=record_popen,
                 ), patch(target, side_effect=fail_initialization):
                     with self.assertRaises(RuntimeError):

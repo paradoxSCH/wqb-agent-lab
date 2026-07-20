@@ -19,10 +19,10 @@ class ArchitectureBoundaryTests(unittest.TestCase):
             self.assertTrue(module.__all__, namespace)
 
     def test_workflow_boundary_exports_only_the_production_orchestrator(self) -> None:
-        from src.kimi_daily_workflow import KimiDailyWorkflow
         from wqb_agent_lab import workflow
+        from wqb_agent_lab.workflow.engine import ResearchWorkflow
 
-        self.assertIs(workflow.ResearchWorkflow, KimiDailyWorkflow)
+        self.assertIs(workflow.ResearchWorkflow, ResearchWorkflow)
         self.assertNotIn("ContinuousAlphaScheduler", workflow.__all__)
 
     def test_canonical_namespace_does_not_depend_on_legacy_src_package(self) -> None:
@@ -40,15 +40,11 @@ class ArchitectureBoundaryTests(unittest.TestCase):
                 ):
                     violations.append(str(path.relative_to(ROOT)))
 
-        self.assertEqual(
-            [str(Path("wqb_agent_lab/workflow/__init__.py"))],
-            sorted(set(violations)),
-            "Only the workflow facade may depend on the pre-split orchestrator.",
-        )
+        self.assertEqual([], sorted(set(violations)))
 
     def test_active_agent_layers_do_not_call_wqb_http_directly(self) -> None:
         active_paths = [
-            ROOT / "src" / "kimi_daily_workflow.py",
+            ROOT / "wqb_agent_lab" / "workflow" / "engine.py",
             ROOT / "src" / "workflow_daemon.py",
             ROOT / "src" / "submission_governance",
             ROOT / "src" / "wqb_mcp",

@@ -11,7 +11,7 @@ from urllib.parse import parse_qs, urlparse
 
 from wqb_agent_lab.runtime.atomic_json import atomic_write_json
 from src.daily_workflow_dashboard import EVALUATIONS_ROOT, RUNS_ROOT, build_dashboard_model, collect_evaluation_reports, collect_run_snapshots
-from src.research_policy import ResearchPolicyError, load_research_policy, policy_digest
+from wqb_agent_lab.research.policy import ResearchPolicyError, load_research_policy, policy_digest
 
 
 class DashboardHandler(BaseHTTPRequestHandler):

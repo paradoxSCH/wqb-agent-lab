@@ -1,6 +1,6 @@
 """Run one production daily research workflow."""
 
-from src.kimi_daily_workflow import main
+from wqb_agent_lab.workflow.engine import main
 
 __all__ = ["main"]
 

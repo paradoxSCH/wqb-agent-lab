@@ -6,12 +6,12 @@ import unittest
 from datetime import date, datetime
 from pathlib import Path
 
-from src.kimi_daily_workflow import KimiDailyWorkflow
+from wqb_agent_lab.workflow.engine import ResearchWorkflow
 from wqb_agent_lab.workflow import StageResult
 
 
 class WorkflowScanPreflightStageTests(unittest.TestCase):
-    def _workflow(self, root: Path, *, dry_run: bool = False) -> tuple[KimiDailyWorkflow, Path]:
+    def _workflow(self, root: Path, *, dry_run: bool = False) -> tuple[ResearchWorkflow, Path]:
         source = root / "configs" / "novel-candidates.json"
         source.parent.mkdir(parents=True)
         source.write_text(
@@ -52,7 +52,7 @@ class WorkflowScanPreflightStageTests(unittest.TestCase):
             encoding="utf-8",
         )
         return (
-            KimiDailyWorkflow(
+            ResearchWorkflow(
                 root,
                 workflow_config=workflow_config,
                 run_date=date(2026, 7, 20),

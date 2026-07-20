@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from src.failure_diagnosis import diagnose_failure_objects
+from wqb_agent_lab.evaluation.failure_diagnosis import diagnose_failure_objects
 
 
 class FailureDiagnosisTests(unittest.TestCase):

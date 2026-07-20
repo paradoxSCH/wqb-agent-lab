@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from src.decision_attribution import record_scan_decision, score_decision_outcomes
+from wqb_agent_lab.evaluation.attribution import record_scan_decision, score_decision_outcomes
 from src.policy_effectiveness import write_policy_effectiveness_report
 
 

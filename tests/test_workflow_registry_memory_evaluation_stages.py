@@ -6,12 +6,12 @@ import unittest
 from datetime import date, datetime
 from pathlib import Path
 
-from src.kimi_daily_workflow import KimiDailyWorkflow
+from wqb_agent_lab.workflow.engine import ResearchWorkflow
 from wqb_agent_lab.workflow import StageResult
 
 
 class WorkflowRegistryMemoryEvaluationStageTests(unittest.TestCase):
-    def _workflow(self, root: Path, *, dry_run: bool = False) -> KimiDailyWorkflow:
+    def _workflow(self, root: Path, *, dry_run: bool = False) -> ResearchWorkflow:
         config = root / "workflow.json"
         config.write_text(
             json.dumps(
@@ -31,7 +31,7 @@ class WorkflowRegistryMemoryEvaluationStageTests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        workflow = KimiDailyWorkflow(
+        workflow = ResearchWorkflow(
             root,
             workflow_config=config,
             run_date=date(2026, 7, 21),

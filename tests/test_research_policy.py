@@ -43,7 +43,7 @@ def valid_workflow_config() -> dict[str, object]:
 
 class ResearchPolicyContractTests(unittest.TestCase):
     def test_missing_policy_has_stable_error_code(self) -> None:
-        from src.research_policy import ResearchPolicyError, load_research_policy
+        from wqb_agent_lab.research.policy import ResearchPolicyError, load_research_policy
 
         with self.assertRaises(ResearchPolicyError) as raised:
             load_research_policy({"workflow_name": "missing-policy"})
@@ -52,7 +52,7 @@ class ResearchPolicyContractTests(unittest.TestCase):
         self.assertEqual("$.research_policy", raised.exception.path)
 
     def test_stage_allocations_must_equal_daily_limit(self) -> None:
-        from src.research_policy import ResearchPolicyError, load_research_policy
+        from wqb_agent_lab.research.policy import ResearchPolicyError, load_research_policy
 
         config = valid_workflow_config()
         config["research_policy"]["budget"]["stage_allocations"]["holdout"] = 3
@@ -63,7 +63,7 @@ class ResearchPolicyContractTests(unittest.TestCase):
         self.assertEqual("budget_allocation_mismatch", raised.exception.code)
 
     def test_mechanism_ids_must_be_unique(self) -> None:
-        from src.research_policy import ResearchPolicyError, load_research_policy
+        from wqb_agent_lab.research.policy import ResearchPolicyError, load_research_policy
 
         config = valid_workflow_config()
         mechanisms = config["research_policy"]["behavioral_boundaries"]["mechanisms"]
@@ -75,7 +75,7 @@ class ResearchPolicyContractTests(unittest.TestCase):
         self.assertEqual("duplicate_behavioral_mechanism", raised.exception.code)
 
     def test_exploration_stages_must_respect_share_limit(self) -> None:
-        from src.research_policy import ResearchPolicyError, load_research_policy
+        from wqb_agent_lab.research.policy import ResearchPolicyError, load_research_policy
 
         config = valid_workflow_config()
         config["research_policy"]["budget"]["exploration_share_limit"] = 0.2
@@ -86,7 +86,7 @@ class ResearchPolicyContractTests(unittest.TestCase):
         self.assertEqual("exploration_budget_exceeded", raised.exception.code)
 
     def test_valid_policy_builds_domain_model_and_stable_digest(self) -> None:
-        from src.research_policy import load_research_policy, policy_digest
+        from wqb_agent_lab.research.policy import load_research_policy, policy_digest
 
         policy = load_research_policy(valid_workflow_config())
 
@@ -99,12 +99,12 @@ class ResearchPolicyContractTests(unittest.TestCase):
 
 class CandidateBoundaryEvaluationTests(unittest.TestCase):
     def setUp(self) -> None:
-        from src.research_policy import load_research_policy
+        from wqb_agent_lab.research.policy import load_research_policy
 
         self.policy = load_research_policy(valid_workflow_config())
 
     def evaluate(self, **overrides: object):
-        from src.research_policy import evaluate_candidate_boundaries
+        from wqb_agent_lab.research.policy import evaluate_candidate_boundaries
 
         candidate = {
             "candidate_id": "candidate-1",

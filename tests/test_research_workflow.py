@@ -10,10 +10,10 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
 
-from src import kimi_daily_workflow as kimi_daily_workflow_module
-from src.kimi_daily_workflow import KimiDailyWorkflow, LLMPlanAdapter, choose_budgeted_candidates
-from src.llm_provider import LLMProviderError, LLMResponse, LLMUsage
-from src.research_policy import load_research_policy, policy_digest
+from wqb_agent_lab.workflow import engine as research_workflow_module
+from wqb_agent_lab.workflow.engine import ResearchWorkflow, LLMPlanAdapter, choose_budgeted_candidates
+from wqb_agent_lab.llm.provider import LLMProviderError, LLMResponse, LLMUsage
+from wqb_agent_lab.research.policy import load_research_policy, policy_digest
 
 
 os.environ.setdefault("WQB_DISABLE_LLM_TEMPLATE_BACKEND", "1")
@@ -130,7 +130,7 @@ class ConfigurableFailingProvider:
         )
 
 
-class KimiDailyWorkflowTests(unittest.TestCase):
+class ResearchWorkflowTests(unittest.TestCase):
     def test_canonical_provider_drives_llm_plan(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -151,7 +151,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 patch("requests.post", side_effect=AssertionError("direct HTTP transport used")),
                 patch("subprocess.run", side_effect=AssertionError("direct CLI transport used")),
             ):
-                workflow = KimiDailyWorkflow(
+                workflow = ResearchWorkflow(
                     root,
                     workflow_config=config_path,
                     run_date=date(2026, 5, 5),
@@ -187,7 +187,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             )
 
             with patch.dict(os.environ, {"WQB_DISABLE_LLM_TEMPLATE_BACKEND": "0"}):
-                workflow = KimiDailyWorkflow(
+                workflow = ResearchWorkflow(
                     root,
                     workflow_config=config_path,
                     run_date=date(2026, 5, 5),
@@ -235,7 +235,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                     "WQB_DISABLE_LLM_TEMPLATE_BACKEND": "0",
                 },
             ):
-                workflow = KimiDailyWorkflow(
+                workflow = ResearchWorkflow(
                     root,
                     workflow_config=config_path,
                     run_date=date(2026, 5, 5),
@@ -264,7 +264,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 },
             )
 
-            workflow = KimiDailyWorkflow(
+            workflow = ResearchWorkflow(
                 root,
                 workflow_config=config_path,
                 run_date=date(2026, 5, 5),
@@ -287,7 +287,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 },
             )
             provider = RecordingProvider()
-            workflow = KimiDailyWorkflow(
+            workflow = ResearchWorkflow(
                 root,
                 workflow_config=config_path,
                 run_date=date(2026, 5, 5),
@@ -353,7 +353,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 },
             )
             provider = FailThenSucceedProvider()
-            workflow = KimiDailyWorkflow(
+            workflow = ResearchWorkflow(
                 root,
                 workflow_config=config_path,
                 run_date=date(2026, 5, 5),
@@ -396,7 +396,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 provider_id="ollama",
                 model="qwen-test",
             )
-            workflow = KimiDailyWorkflow(
+            workflow = ResearchWorkflow(
                 root,
                 workflow_config=config_path,
                 run_date=date(2026, 5, 5),
@@ -442,7 +442,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 provider_id="ollama",
                 model="qwen-test",
             )
-            workflow = KimiDailyWorkflow(
+            workflow = ResearchWorkflow(
                 root,
                 workflow_config=config_path,
                 run_date=date(2026, 5, 5),
@@ -499,11 +499,11 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                     },
                 ),
                 patch(
-                    "src.llm_planning.create_llm_provider",
+                    "wqb_agent_lab.workflow.llm_planning.create_llm_provider",
                     side_effect=lambda *args, **kwargs: next(providers),
                 ) as create_provider,
             ):
-                workflow = KimiDailyWorkflow(
+                workflow = ResearchWorkflow(
                     root,
                     workflow_config=config_path,
                     run_date=date(2026, 5, 5),
@@ -554,11 +554,11 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                     },
                 ),
                 patch(
-                    "src.llm_planning.create_llm_provider",
+                    "wqb_agent_lab.workflow.llm_planning.create_llm_provider",
                     return_value=provider,
                 ) as create_provider,
             ):
-                workflow = KimiDailyWorkflow(
+                workflow = ResearchWorkflow(
                     root,
                     workflow_config=config_path,
                     run_date=date(2026, 5, 5),
@@ -617,7 +617,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                     "WQB_DISABLE_LLM_TEMPLATE_BACKEND": "0",
                 },
             ):
-                workflow = KimiDailyWorkflow(
+                workflow = ResearchWorkflow(
                     root,
                     workflow_config=config_path,
                     run_date=date(2026, 5, 5),
@@ -627,7 +627,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 ledger = workflow.load_or_create_ledger()
                 workflow.run_llm_plan(ledger, now=started)
                 os.environ["OPENAI_API_KEY"] = "new-secret"
-                with patch("src.llm_planning.create_llm_provider") as create_provider:
+                with patch("wqb_agent_lab.workflow.llm_planning.create_llm_provider") as create_provider:
                     workflow.run_llm_plan(
                         ledger,
                         now=started + timedelta(days=1),
@@ -655,7 +655,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 provider_id="ollama",
                 model="qwen-test",
             )
-            first_workflow = KimiDailyWorkflow(
+            first_workflow = ResearchWorkflow(
                 root,
                 workflow_config=config_path,
                 run_date=date(2026, 5, 5),
@@ -673,7 +673,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 provider_id="ollama",
                 model="qwen-test",
             )
-            second_workflow = KimiDailyWorkflow(
+            second_workflow = ResearchWorkflow(
                 root,
                 workflow_config=config_path,
                 run_date=date(2026, 5, 5),
@@ -716,7 +716,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             self._write_json(config_path, base_config)
             first_provider = RecordingProvider()
             first_provider.model = "qwen-one"
-            first_workflow = KimiDailyWorkflow(
+            first_workflow = ResearchWorkflow(
                 root,
                 workflow_config=config_path,
                 run_date=date(2026, 5, 5),
@@ -733,7 +733,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             self._write_json(config_path, changed_config)
             second_provider = RecordingProvider()
             second_provider.model = "qwen-two"
-            second_workflow = KimiDailyWorkflow(
+            second_workflow = ResearchWorkflow(
                 root,
                 workflow_config=config_path,
                 run_date=date(2026, 5, 5),
@@ -780,7 +780,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                     env_patch[key_env] = ""
 
                 with patch.dict(os.environ, env_patch):
-                    workflow = KimiDailyWorkflow(
+                    workflow = ResearchWorkflow(
                         root,
                         workflow_config=config_path,
                         run_date=date(2026, 5, 5),
@@ -815,7 +815,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                     "WQB_DISABLE_LLM_TEMPLATE_BACKEND": "0",
                 },
             ):
-                workflow = KimiDailyWorkflow(
+                workflow = ResearchWorkflow(
                     root,
                     workflow_config=config_path,
                     run_date=date(2026, 5, 5),
@@ -838,7 +838,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                     },
                 ),
                 patch(
-                    "src.llm_planning.create_llm_provider",
+                    "wqb_agent_lab.workflow.llm_planning.create_llm_provider",
                     return_value=repaired_provider,
                 ) as create_provider,
             ):
@@ -877,7 +877,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             self.assertEqual(str(root.resolve()), payload["workspace"])
 
     def test_kimi_workflow_reexports_extracted_llm_plan_adapter(self) -> None:
-        from src.llm_planning import LLMPlanAdapter as ExtractedLLMPlanAdapter
+        from wqb_agent_lab.workflow.llm_planning import LLMPlanAdapter as ExtractedLLMPlanAdapter
 
         self.assertIs(ExtractedLLMPlanAdapter, LLMPlanAdapter)
 
@@ -886,7 +886,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             root = Path(tmp)
 
             with self.assertRaisesRegex(FileNotFoundError, "Workflow config does not exist"):
-                KimiDailyWorkflow(
+                ResearchWorkflow(
                     root,
                     workflow_config=Path("configs/missing-workflow.json"),
                     run_date=date(2026, 5, 5),
@@ -915,7 +915,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 },
             )
 
-            workflow = KimiDailyWorkflow(
+            workflow = ResearchWorkflow(
                 root,
                 workflow_config=config_path,
                 run_date=date(2026, 5, 5),
@@ -1003,7 +1003,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 },
             )
 
-            workflow = KimiDailyWorkflow(
+            workflow = ResearchWorkflow(
                 root,
                 workflow_config=config_path,
                 run_date=date(2026, 5, 5),
@@ -1045,7 +1045,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
 
             policy["behavioral_boundaries"]["mechanisms"][0]["kill_conditions"].append("HIGH_TURNOVER")
             self._write_json(config_path, {**json.loads(config_path.read_text(encoding="utf-8")), "research_policy": policy})
-            changed_workflow = KimiDailyWorkflow(
+            changed_workflow = ResearchWorkflow(
                 root,
                 workflow_config=config_path,
                 run_date=date(2026, 5, 5),
@@ -1132,7 +1132,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 "queued_scan_configs": [".local/research/scans/continuous-alpha/source-500/scan_config_round1.json"],
             })
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             messages = workflow.run_once(now=datetime(2026, 5, 5, 9, 0), summary_only=False)
 
             self.assertTrue(any("prepared 6 candidates" in message for message in messages))
@@ -1149,11 +1149,11 @@ class KimiDailyWorkflowTests(unittest.TestCase):
         ):
             root = Path(tmp)
             self._write_workflow_config(root)
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             workflow.config["submitted_registry_sync_enabled"] = True
             workflow.config["submitted_registry_sync_timeout_seconds"] = 1
 
-            with patch("src.kimi_daily_workflow.subprocess.Popen") as popen:
+            with patch("wqb_agent_lab.workflow.engine.subprocess.Popen") as popen:
                 popen.return_value.pid = 123
                 status = workflow.sync_submitted_registry()
 
@@ -1180,7 +1180,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 },
             )
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
             plan = workflow.prepare_budgeted_scan(workflow.plan_next_scan(ledger))
 
@@ -1236,7 +1236,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             ]
             self._write_json(source_config, {"output": "unused.json", "candidates": candidates})
 
-            workflow = KimiDailyWorkflow(
+            workflow = ResearchWorkflow(
                 root,
                 workflow_config=Path(".local/research/workflows/continuous-alpha/kimi_daily_budget_20260504.json"),
                 run_date=date(2026, 5, 5),
@@ -1269,7 +1269,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             ]
             self._write_json(source_config, {"output": "unused.json", "candidates": candidates})
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             workflow.config["stage_order"] = ["direction_probe", "scale_winners"]
             previous_slice = workflow.config_dir / "direction_probe_source-500_2.json"
             self._write_json(previous_slice, {
@@ -1297,7 +1297,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._write_workflow_config(root)
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5))
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5))
             workflow.config.pop("stage_order", None)
             workflow.research_policy = load_research_policy(
                 {
@@ -1315,7 +1315,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
 
             used = workflow._used_candidate_identities_before_stage("scale_winners")
 
-            self.assertEqual({kimi_daily_workflow_module.candidate_identity(candidate)}, used)
+            self.assertEqual({research_workflow_module.candidate_identity(candidate)}, used)
 
     def test_reconcile_existing_stage_progress_updates_ledger_before_planning(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1331,7 +1331,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             ]
             self._write_json(source_config, {"output": "unused.json", "candidates": candidates})
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             workflow.config["stage_order"] = ["direction_probe", "scale_winners"]
             ledger = workflow.load_or_create_ledger()
             ledger["stage_order"] = ["direction_probe", "scale_winners"]
@@ -1379,7 +1379,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             ]
             self._write_json(source_config, {"output": "unused.json", "candidates": candidates})
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             workflow.config["stage_order"] = ["direction_probe", "scale_winners"]
             ledger = workflow.load_or_create_ledger()
             ledger["stage_order"] = ["direction_probe", "scale_winners"]
@@ -1425,7 +1425,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             ]
             self._write_json(source_config, {"output": "unused.json", "candidates": candidates})
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             workflow.config["stage_order"] = ["scale_winners"]
             scale_slice = workflow.config_dir / "scale_winners_source-500_6.json"
             scale_output = workflow.run_dir / "scale_winners_source-500_results.json"
@@ -1481,7 +1481,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 },
             )
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
             plan = workflow.prepare_budgeted_scan(workflow.plan_next_scan(ledger))
 
@@ -1513,7 +1513,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 },
             })
 
-            workflow = KimiDailyWorkflow(
+            workflow = ResearchWorkflow(
                 root,
                 workflow_config=Path(".local/research/workflows/continuous-alpha/deepseek.json"),
                 run_date=date(2026, 5, 5),
@@ -1575,7 +1575,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 self._live_result("A2", self_corr=0.85, failed=True),
             ])
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
             ledger["spent_simulations"] = 10
             ledger["remaining_simulations_after_commitments"] = 0
@@ -1598,7 +1598,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 self._scan_result_row("A3", "expr-low-fitness", sharpe=1.5, fitness=0.8, turnover=0.10, self_corr=0.45),
             ])
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
             ledger["spent_simulations"] = 10
             ledger["remaining_simulations_after_commitments"] = 0
@@ -1627,7 +1627,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             low_row["behavior_family"] = "weak_behavior"
             self._write_json(run_dir / "scale_winners_source-500_results.json", [direct_row, optimize_row, low_row])
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
             ledger["spent_simulations"] = 10
             ledger["remaining_simulations_after_commitments"] = 0
@@ -1672,7 +1672,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             extreme_row = self._scan_result_row("A2", "expr-extreme-self-corr", sharpe=1.7, fitness=1.2, turnover=0.10, self_corr=0.94, failed=True)
             self._write_json(run_dir / "scale_winners_source-500_results.json", [mild_row, not_near_row, extreme_row])
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
             ledger["spent_simulations"] = 10
             ledger["remaining_simulations_after_commitments"] = 0
@@ -1706,7 +1706,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             concentrated["checks"].append({"name": "CONCENTRATED_WEIGHT", "result": "FAIL", "limit": 0.10, "value": 0.24})
             self._write_json(run_dir / "scale_winners_source-500_results.json", [severe_sub, deep_weak, concentrated])
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
             ledger["spent_simulations"] = 10
             ledger["remaining_simulations_after_commitments"] = 0
@@ -1758,7 +1758,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             }
             self._write_json(run_dir / "scale_winners_source-500_results.json", [optimize_row, low_row, event_error_row])
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
             ledger["spent_simulations"] = 10
             ledger["remaining_simulations_after_commitments"] = 0
@@ -1810,7 +1810,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 "queued_scan_configs": [".local/research/scans/continuous-alpha/source-500/scan_config_round1.json"],
             })
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
             ledger["spent_simulations"] = 10
             ledger["remaining_simulations_after_commitments"] = 0
@@ -1842,7 +1842,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 ],
             })
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 6), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 6), execute_scans=False)
             messages = workflow.run_once(now=datetime(2026, 5, 5, 17, 30), summary_only=False)
 
             self.assertTrue(any("waiting for daily start" in message for message in messages))
@@ -1867,7 +1867,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             ]
             self._write_json(source_config, {"output": "unused.json", "candidates": candidates})
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=True)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=True)
             ledger = workflow.load_or_create_ledger()
             plan = workflow.plan_next_scan(ledger)
             plan = workflow.prepare_budgeted_scan(plan)
@@ -1902,7 +1902,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 plan.output_path.write_text(json.dumps(rows, indent=2, ensure_ascii=False), encoding="utf-8")
                 return subprocess.CompletedProcess(args[0], 0)
 
-            with patch("src.kimi_daily_workflow.subprocess.run", side_effect=fake_run):
+            with patch("wqb_agent_lab.workflow.engine.subprocess.run", side_effect=fake_run):
                 spent = workflow.execute_scan(plan, ledger)
 
             self.assertEqual(spent, 6)
@@ -1924,7 +1924,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             ]
             self._write_json(source_config, {"output": "unused.json", "candidates": candidates})
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=True)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=True)
             ledger = workflow.load_or_create_ledger()
             ledger["stage_budgets"] = {"scale_winners": 6}
             ledger["stage_spend"] = {"scale_winners": 5}
@@ -1951,7 +1951,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 plan.output_path.write_text(json.dumps(rows, indent=2, ensure_ascii=False), encoding="utf-8")
                 return subprocess.CompletedProcess(args[0], 0)
 
-            with patch("src.kimi_daily_workflow.subprocess.run", side_effect=fake_run):
+            with patch("wqb_agent_lab.workflow.engine.subprocess.run", side_effect=fake_run):
                 spent = workflow.execute_scan(plan, ledger)
 
             self.assertEqual(spent, 1)
@@ -1964,7 +1964,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._write_workflow_config(root)
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
             ledger["spent_simulations"] = 10
             ledger["remaining_simulations_after_commitments"] = 0
@@ -2011,7 +2011,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 ]
             })
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ready = workflow.collect_submit_ready()
 
             self.assertEqual([row["alpha_id"] for row in ready], ["A1"])
@@ -2042,7 +2042,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 ]
             })
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ready = workflow.collect_submit_ready()
 
             self.assertEqual(ready, [])
@@ -2068,7 +2068,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 ]
             })
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ready = workflow.collect_submit_ready()
 
             self.assertEqual([row["alpha_id"] for row in ready], ["A2"])
@@ -2077,7 +2077,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._write_workflow_config(root)
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
             ledger["spent_simulations"] = 10
             ledger["remaining_simulations_after_commitments"] = 0
@@ -2102,7 +2102,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._write_workflow_config(root)
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 8), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 8), execute_scans=False)
             self._write_json(workflow.ledger_path, {
                 "daily_run_tag": workflow.run_tag,
                 "date": "2026-05-08",
@@ -2133,7 +2133,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             root = Path(tmp)
             self._write_workflow_config(root)
             run_date = date(2000, 1, 1)
-            workflow = KimiDailyWorkflow(root, run_date=run_date, execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=run_date, execute_scans=False)
             self._write_json(workflow.ledger_path, {
                 "daily_run_tag": workflow.run_tag,
                 "date": run_date.isoformat(),
@@ -2144,7 +2144,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             })
 
             with patch.object(workflow, "run_once", side_effect=AssertionError("stop-after-summary should not start the next day")), patch(
-                "src.kimi_daily_workflow.time.sleep",
+                "wqb_agent_lab.workflow.engine.time.sleep",
                 side_effect=AssertionError("stop-after-summary should return without sleeping"),
             ):
                 workflow.run_daemon(poll_seconds=1, continue_next_day=False)
@@ -2160,14 +2160,14 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             def fake_run_until_budget_complete(self, *, poll_seconds=900):
                 print(f"looped:{self.run_tag}:{poll_seconds}")
 
-            with patch.object(kimi_daily_workflow_module.KimiDailyWorkflow, "run_until_budget_complete", fake_run_until_budget_complete), patch.object(
-                kimi_daily_workflow_module.KimiDailyWorkflow,
+            with patch.object(research_workflow_module.ResearchWorkflow, "run_until_budget_complete", fake_run_until_budget_complete), patch.object(
+                research_workflow_module.ResearchWorkflow,
                 "run_once",
                 side_effect=AssertionError("run_once should not be the default entrypoint"),
             ), patch(
                 "sys.argv",
                 [
-                    "kimi_daily_workflow",
+                    "research_workflow",
                     "--workspace-root",
                     str(root),
                     "--workflow-config",
@@ -2176,7 +2176,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                     "2026-05-05",
                 ],
             ), patch("sys.stdout", new_callable=io.StringIO) as stdout:
-                exit_code = kimi_daily_workflow_module.main()
+                exit_code = research_workflow_module.main()
 
             self.assertEqual(exit_code, 0)
             self.assertIn("looped:kimi-daily-budget-20260505:900", stdout.getvalue())
@@ -2210,7 +2210,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
         for family in required:
             self.assertGreaterEqual(sum(1 for row in candidates if row["behavior_family"] == family), 120)
 
-        workflow = KimiDailyWorkflow(
+        workflow = ResearchWorkflow(
             root,
             workflow_config=Path(".local/research/workflows/continuous-alpha/deepseek_v4_pro_daily_budget.json"),
             run_date=date(2026, 7, 5),
@@ -2250,7 +2250,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             self._write_workflow_config(root)
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 7, 5), budget_mode="standard", execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 7, 5), budget_mode="standard", execute_scans=False)
             workflow.config["auto_submit_direct"] = {"enabled": True}
             self._write_json(
                 workflow.run_dir / "submission_backlog.json",
@@ -2261,7 +2261,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
             )
 
             with patch.dict(os.environ, {"WQB_LIVE_SUBMIT_CAPABILITY": "1"}), patch.object(
-                kimi_daily_workflow_module.subprocess,
+                research_workflow_module.subprocess,
                 "Popen",
             ) as popen:
                 popen.return_value.pid = 1234
@@ -2329,7 +2329,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 ],
             })
 
-            workflow = KimiDailyWorkflow(
+            workflow = ResearchWorkflow(
                 root,
                 workflow_config=Path(".local/research/workflows/continuous-alpha/kimi_daily_budget_20260504.json"),
                 run_date=date(2026, 5, 5),
@@ -2382,7 +2382,7 @@ class KimiDailyWorkflowTests(unittest.TestCase):
                 ],
             )
 
-            workflow = KimiDailyWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
+            workflow = ResearchWorkflow(root, run_date=date(2026, 5, 5), execute_scans=False)
             ledger = workflow.load_or_create_ledger()
             state = workflow.write_closed_loop_artifacts(ledger)
 

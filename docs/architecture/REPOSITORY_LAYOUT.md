@@ -30,18 +30,18 @@ wqb-agent-lab/
 |   `-- maintenance/            仓库与本地状态维护任务
 |-- wqb_agent_lab/              唯一 canonical 产品命名空间
 |   |-- contracts/              JSON contract registry 与验证
-|   |-- evaluation/             agent、输出与诊断评估
+|   |-- evaluation/             agent、输出、归因与诊断评估
 |   |-- governance/             副作用、提交与规划治理
 |   |-- memory/                 记忆核心与证据治理
 |   |-- platform/               WorldQuant BRAIN 访问边界
-|   |-- research/               候选生成与研究域
+|   |-- llm/                    Provider 协议与本地 CLI 进程边界
+|   |-- research/               候选生成与研究政策
 |   |-- runtime/                配置、锁、原子写入、journal 与 scan runtime
-|   `-- workflow/               编排公共接口与 stage runtime
+|   `-- workflow/               ResearchWorkflow、LLM 规划与 stage runtime
 |-- src/
 |   |-- wqb_engine/             机器可读 CLI
 |   |-- wqb_mcp/                Python MCP adapter
-|   |-- research_policy/        预算与行为边界
-|   `-- */                      尚待 0.3 迁移的工作流与研究实现
+|   `-- */                      尚待 0.3 迁移的 research/runtime 实现
 |-- tests/                      默认无凭证、无真实副作用的测试
 |-- .python-version             推荐 Python 3.12
 |-- .nvmrc                      推荐 Node 24 LTS

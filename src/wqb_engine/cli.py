@@ -88,7 +88,7 @@ def run(
             return 0
 
         if operation in {"policy.validate", "policy.show"}:
-            from src.research_policy import (
+            from wqb_agent_lab.research.policy import (
                 ResearchPolicyError,
                 load_research_policy,
                 policy_digest,
@@ -279,14 +279,14 @@ def _run_llm_operation(
     import os
 
     from dotenv import dotenv_values, find_dotenv
-    from src.llm_provider import (
+    from wqb_agent_lab.llm.provider import (
         LLMProviderError,
         LLMRequest,
         create_llm_provider,
         llm_config_identity,
         resolve_llm_provider_config,
     )
-    from src.llm_provider.errors import redact_secrets
+    from wqb_agent_lab.llm.provider.errors import redact_secrets
 
     try:
         parsed = _parse_llm_args(operation, args)
