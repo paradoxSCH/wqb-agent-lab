@@ -1,3 +1,5 @@
+"""Rebuild alpha-memory indexes."""
+
 from __future__ import annotations
 
 import argparse
@@ -51,18 +53,16 @@ def _store_or_error(value: str | None) -> SQLiteMemoryStore | None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Export local alpha memory to JSONL.")
+    parser = argparse.ArgumentParser(description="Rebuild alpha memory search indexes.")
     parser.add_argument("--db", default=None)
-    parser.add_argument("--out", required=True)
     args = parser.parse_args()
 
     store = _store_or_error(args.db)
     if store is None:
         return 2
 
-    output_path = Path(args.out).expanduser()
-    store.export_jsonl(output_path)
-    print(output_path)
+    store.rebuild_indexes()
+    print("rebuilt")
     return 0
 
 

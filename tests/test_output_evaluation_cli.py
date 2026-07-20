@@ -32,7 +32,7 @@ class OutputEvaluationCliTests(unittest.TestCase):
             )
 
             completed = subprocess.run(
-                [sys.executable, "-m", "scripts.evaluate_output_artifacts", "--run-dir", str(run_dir)],
+                [sys.executable, "-m", "scripts.evaluation.output_artifacts", "--run-dir", str(run_dir)],
                 cwd=Path(__file__).resolve().parents[1],
                 text=True,
                 capture_output=True,

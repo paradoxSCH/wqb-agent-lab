@@ -1,3 +1,5 @@
+"""Evaluate alpha-memory retrieval quality."""
+
 from __future__ import annotations
 
 import argparse

@@ -130,7 +130,7 @@ class SelfCorrRepairTests(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "scripts.build_self_corr_repair_scan",
+                    "scripts.research.build_self_corr_repair_scan",
                     "--workspace-root",
                     str(root),
                     "--run-dir",

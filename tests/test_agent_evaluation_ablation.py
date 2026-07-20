@@ -102,7 +102,7 @@ class AgentEvaluationAblationTests(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "scripts.evaluate_agent_ablation",
+                    "scripts.evaluation.agent_ablation",
                     "--variant",
                     f"baseline={baseline}",
                     "--variant",

@@ -88,7 +88,7 @@ WQB_LIVE_SUBMIT_CAPABILITY=0
 安装 `full` profile 后，React 工作台由 Python 运行 API 托管：
 
 ```powershell
-uv run python -m scripts.daily_workflow_dashboard --host 127.0.0.1 --port 8765
+uv run python -m scripts.run.dashboard --host 127.0.0.1 --port 8765
 ```
 
 ## 项目状态

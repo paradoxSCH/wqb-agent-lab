@@ -13,7 +13,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TextIO
 
-from scripts.json_output import write_json_line
+from scripts.lib.json_output import write_json_line
 
 
 ROOT = Path(__file__).resolve().parents[1]

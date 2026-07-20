@@ -1,3 +1,5 @@
+"""Evaluate diagnosis-policy fixtures."""
+
 from __future__ import annotations
 
 import argparse

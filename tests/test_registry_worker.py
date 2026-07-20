@@ -32,7 +32,7 @@ class RegistryWorkerTests(unittest.TestCase):
 
             self.assertEqual(result["status"], "ok")
             self.assertEqual(len(calls), 1)
-            self.assertIn("scripts.fetch_submitted", calls[0])
+            self.assertIn("scripts.registry.fetch_submitted", calls[0])
             state = json.loads(registry_state_path(root).read_text(encoding="utf-8"))
             self.assertEqual(state["status"], "ok")
             self.assertEqual(state["last_exit_code"], 0)

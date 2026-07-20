@@ -8,7 +8,7 @@ import subprocess
 import sys
 from typing import Iterable, Sequence, TextIO
 
-from scripts.json_output import write_json_line
+from scripts.lib.json_output import write_json_line
 
 
 _PRIVATE_PREFIXES = (

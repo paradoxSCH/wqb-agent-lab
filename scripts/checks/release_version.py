@@ -12,7 +12,7 @@ from typing import Any
 
 from packaging.version import InvalidVersion, Version
 
-from scripts.json_output import write_json_line
+from scripts.lib.json_output import write_json_line
 
 
 TAG_PATTERN = re.compile(r"^v(?P<version>\d+\.\d+\.\d+(?:(?:a|b|rc)\d+)?)$")

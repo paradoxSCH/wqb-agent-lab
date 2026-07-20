@@ -1,3 +1,5 @@
+"""Build behavioral proxy mappings."""
+
 from __future__ import annotations
 
 import argparse

@@ -4,7 +4,7 @@ import io
 import json
 import unittest
 
-from scripts.json_output import write_json_line
+from scripts.lib.json_output import write_json_line
 
 
 class JsonOutputTests(unittest.TestCase):

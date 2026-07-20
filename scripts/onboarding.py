@@ -14,7 +14,7 @@ from pathlib import Path
 from collections.abc import Callable
 from typing import TextIO
 
-from scripts.json_output import write_json_line
+from scripts.lib.json_output import write_json_line
 
 
 PYTHON_TARGET = "3.12"

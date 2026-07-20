@@ -35,7 +35,7 @@ class RegistryWorker:
         command = [
             sys.executable,
             "-m",
-            "scripts.fetch_submitted",
+            "scripts.registry.fetch_submitted",
             "--output",
             ".local/data/registry/submitted_alphas.json",
             "--expressions",

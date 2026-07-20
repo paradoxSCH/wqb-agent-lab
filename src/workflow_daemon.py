@@ -104,7 +104,7 @@ def build_dashboard_spec(*, python_exe: Path, host: str, port: int) -> ProcessSp
     command = [
         str(python_exe),
         "-m",
-        "scripts.daily_workflow_dashboard",
+        "scripts.run.dashboard",
         "--host",
         host,
         "--port",
@@ -115,7 +115,7 @@ def build_dashboard_spec(*, python_exe: Path, host: str, port: int) -> ProcessSp
         command=command,
         pid_file=Path(".dashboard.pid"),
         log_file=Path("logs") / "dashboard.log",
-        expected_command_tokens=["scripts.daily_workflow_dashboard"],
+        expected_command_tokens=["scripts.run.dashboard"],
     )
 
 
@@ -279,7 +279,7 @@ def run_completion_hooks(
     command = [
         sys.executable,
         "-m",
-        "scripts.evaluate_agent_ablation",
+        "scripts.evaluation.agent_ablation",
         "--auto-runs-root",
         (workspace / runs_root).as_posix(),
         "--suite-output-dir",
@@ -296,8 +296,8 @@ def run_completion_hooks(
 
     run_dir = ledger_path.parent
     chained_commands = [
-        [sys.executable, "-m", "scripts.evaluate_output_artifacts", "--run-dir", run_dir.as_posix()],
-        [sys.executable, "-m", "scripts.evaluate_policy_effectiveness", "--run-dir", run_dir.as_posix()],
+        [sys.executable, "-m", "scripts.evaluation.output_artifacts", "--run-dir", run_dir.as_posix()],
+        [sys.executable, "-m", "scripts.evaluation.policy_effectiveness", "--run-dir", run_dir.as_posix()],
     ]
     for chained in chained_commands:
         chained_exit = command_runner(chained)

@@ -1,3 +1,5 @@
+"""Inspect and maintain the research hypothesis ledger."""
+
 from __future__ import annotations
 
 import argparse

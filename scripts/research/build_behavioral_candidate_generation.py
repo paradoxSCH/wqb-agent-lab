@@ -1,3 +1,5 @@
+"""Build behavioral candidate-generation inputs."""
+
 from __future__ import annotations
 
 import argparse

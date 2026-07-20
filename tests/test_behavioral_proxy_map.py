@@ -129,7 +129,7 @@ class BehavioralProxyMapTests(unittest.TestCase):
                 [
                     sys.executable,
                     "-m",
-                    "scripts.build_behavioral_proxy_map",
+                    "scripts.research.build_behavioral_proxy_map",
                     "--fields",
                     str(fields_path),
                     "--results",
