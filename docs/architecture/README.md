@@ -29,8 +29,10 @@ WorldQuant BRAIN transport
   are owned by `wqb_agent_lab`; canonical modules do not depend on the legacy `src` package.
 - `wqb_agent_lab.workflow.engine.ResearchWorkflow` owns production orchestration; its
   provider-neutral name replaces the historical provider-specific implementation name.
-- Workflow artifact/provenance helpers, candidate selection, and immutable planning data
-  live in focused modules; the engine retains only stateful orchestration.
+- Workflow artifact/provenance helpers, candidate selection, configuration rotation,
+  reporting, immutable planning data, and the command-line adapter live in focused
+  modules. They expose explicit functions or services instead of inheriting engine
+  mixins; the engine retains stateful orchestration and stage sequencing.
 - Removed compatibility namespaces and launchers are not part of the 0.3 runtime.
 - Transport and MCP tools expose facts and capabilities. Governance decides budgets,
   retries, pauses, promotion, and side effects.

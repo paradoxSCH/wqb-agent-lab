@@ -18,6 +18,8 @@
   canonical package no longer imports `src`.
 - Split workflow artifact/provenance I/O, candidate budget selection, and stage planning
   data out of the orchestration engine.
+- Split workflow reporting, scan-configuration rotation, and CLI parsing into explicit
+  services with typed orchestration boundaries.
 
 ## [0.2.0a1] - 2026-07-14
 

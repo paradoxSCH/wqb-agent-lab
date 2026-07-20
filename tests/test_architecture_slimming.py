@@ -70,10 +70,12 @@ class ArchitectureSlimmingTests(unittest.TestCase):
 
         self.assertTrue((workflow / "artifacts.py").is_file())
         self.assertTrue((workflow / "candidates.py").is_file())
+        self.assertTrue((workflow / "config_selection.py").is_file())
         self.assertTrue((workflow / "models.py").is_file())
+        self.assertTrue((workflow / "reporting.py").is_file())
         self.assertLess(
             len((workflow / "engine.py").read_text(encoding="utf-8").splitlines()),
-            3200,
+            2850,
         )
 
 
